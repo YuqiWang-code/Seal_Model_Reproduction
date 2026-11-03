@@ -24,7 +24,7 @@ DNA-Net 是 IRSTD 领域最常用的全监督基线之一，在 awesome-infrared
 | 网络 | `DNANet(num_classes=1, input_channels=3, block=Res_CBAM_block, num_blocks=[2,2,2,2], nb_filter=[16,32,64,128,256], deep_supervision='True')`，即官方 `channel_size=three, backbone=resnet_18` |
 | 损失 | 官方 `SoftIoULoss`，对 4 个深监督输出求和取平均 |
 | 优化器 | Adagrad，lr 0.05，CosineAnnealingLR（T_max=epochs，eta_min=1e-5），官方默认 |
-| epoch / batch | 400 / 8（官方 1,500 / 4；为在 2×RTX 5090 上与其他基线同等时间预算，统一降到 400 epoch，并利用显存把 batch 提到 8） |
+| epoch / batch | 250 / 8（官方 1,500 / 4；为与其余基线同等时间预算，降到 250 epoch 跑完完整 cosine 日程，并利用显存把 batch 提到 8） |
 | 裁剪 | 256×256（官方默认） |
 | 增强 | 官方 `TrainSetLoader`：随机水平翻转、长边 0.5–2.0× 随机缩放、随机裁剪、50% 高斯模糊 |
 | 模型选择 | Seal **val** 500 张，滑窗推理像素 IoU@0.5，取最佳 `best.pth`；test 不参与选择（官方脚本用 test 选模型，这里改为 val） |

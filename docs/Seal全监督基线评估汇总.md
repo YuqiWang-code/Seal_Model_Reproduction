@@ -7,7 +7,7 @@
 | 项目 | 说明 |
 |---|---|
 | 输入 | Seal 热红外 `T`：16 位 TIFF 逐图 min-max → 8 位 → 3 通道（`Seal_IRSTD/`） |
-| 训练 | Seal train，crop 256×256，batch 8，官方优化器/损失/学习率日程（DNA-Net 400 epoch，MSHNet 400，UIU-Net 500） |
+| 训练 | Seal train，crop 256×256，batch 8，官方优化器/损失/学习率日程（DNA-Net 250 epoch，MSHNet 400，UIU-Net 500） |
 | 选择 | Seal val 500 张滑窗像素 IoU@0.5 最优；test 不参与任何选择 |
 | 推理 | 原生分辨率 256×256 滑窗、步长 128，重叠 logits 平均后 sigmoid → 8 位 PNG |
 | 四项指标 | 根目录 `evaluate.py` 四个原函数（S / Fw / E / MAE），同一批 1,983 张预测 |

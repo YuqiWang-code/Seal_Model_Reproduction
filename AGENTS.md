@@ -33,7 +33,7 @@
 
 - 定位：与上面的弱监督跨域表并列的全监督对照。方法为 DNA-Net（TIP22）、MSHNet（CVPR24）、UIU-Net（TIP23），均取自 [awesome-infrared-small-targets](https://github.com/Tianfang-Zhang/awesome-infrared-small-targets) 的 Single-Frame 全监督条目（对照 GrokCV 出版物页），代码为作者官方实现，根目录各一个文件夹：`DNANet-main/`、`MSHNet-main/`、`UIU-Net-main/`。ACM（WACV21）也已完成代码与训练入口（`ACM-main/`），但官方 SoftIoU 在 Seal 的 0.02% 前景上不收敛（val IoU 恒 0，两个随机种子、官方 warm-up 均复现），作为负结果存档，不进入主表，见 [ACM 记录](docs/ACM_Seal实验记录.md)。
 - 数据：服务器 `Seal_IRSTD/`。`Seal_data/{split}/T/*.tif`（16 位热红外）逐图 **min-max** 拉伸到 8 位并复制为 3 通道 PNG，`GT` 二值化；`trainval.txt` 1,500 / `val.txt` 500 / `test.txt` 1,983，沿用 Seal 原划分。生成脚本 [tools/prepare_seal_irstd.py](tools/prepare_seal_irstd.py)，指标合并脚本 [tools/merge_seal_metrics.py](tools/merge_seal_metrics.py)，单方法评估脚本 [tools/eval_fullsup_method.sh](tools/eval_fullsup_method.sh)。
-- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8。epoch 与优化器沿用官方默认：DNA-Net 400（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE。不使用 Seal 的 `box`、点提示或伪标签。
+- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8。epoch 与优化器沿用官方默认：DNA-Net 250（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE（实际在第 114 epoch 提前停止）。不使用 Seal 的 `box`、点提示或伪标签。
 - 选择与推理：模型选择只用 Seal **val**（500 张，滑窗像素 IoU@0.5），test 不参与选择、不据此换检查点；测试为原生分辨率 256×256 滑窗、步长 128、重叠区 logits 平均后 sigmoid，输出与 test GT 同名的 8 位 PNG。
 - 指标：同行八项仍由根目录 `evaluate.py` 的四个原函数与 `evaluate_small_targets.py` 计算，同一检查点、同一批 1,983 张预测，口径与第 3～20 行完全一致。
 - 结果（全部为 test 1,983 张、val 最优检查点）：
