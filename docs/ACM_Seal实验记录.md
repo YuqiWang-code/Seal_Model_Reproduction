@@ -15,6 +15,24 @@ ACM 使用官方 SoftIoU 损失在 Seal 上无法收敛：训练损失停在 0.6
 | 输入 | Seal 热红外 `T`（单模态，复制为 3 通道） |
 | 监督 | 全像素 GT（Seal train 1,500 张） |
 
+## 数据准备
+
+全部全监督基线共用同一份 `Seal_IRSTD/`，由 [tools/prepare_seal_irstd.py](../tools/prepare_seal_irstd.py) 从 `Seal_data/` 生成，划分沿用 Seal 原划分：
+
+| 项目 | 处理 |
+|---|---|
+| 输入 | `Seal_data/{split}/T/*.tif`（16 位热红外），`Seal_data/{split}/GT/*.png` |
+| 热图 | 逐图 min-max 拉伸到 0–255（`(x - min) / max(max - min, 1e-6) * 255`，四舍五入）后存 uint8，再 `GRAY2BGR` 保存为三通道 PNG；单通道方法取首通道 |
+| GT | `(gt > 127) * 255` 二值化 PNG |
+| 划分 | `trainval.txt` 1,500 / `val.txt` 500 / `test.txt` 1,983（文件名列表） |
+| 元数据 | `dataset_meta.json` 记录 `normalization: per-image min-max over the full 16-bit range -> uint8` 与各划分数量 |
+
+转换口径的结论（由 ACM 与 DNA-Net/MSHNet/UIU-Net 的对照训练得到）：
+
+- 用 1–99 百分位裁剪再拉伸时，背景噪声被放大约 10 倍（背景 std 约 68/255），目标 SNR 降到约 1.5；纯区域损失（SoftIoU 一类）因此退化为常数输出，val 像素 IoU 恒为 0。
+- 改为逐图 min-max 后，目标与背景的差值是背景 std 的 2.2–29.7 倍，DNANet/MSHNet/UIU-Net 正常收敛、ACM 仍不收敛 → 后续不得再用百分位裁剪生成输入。
+- Seal 的 `T` 是 16 位，训练与推理都必须先做上述映射；跨域实验中各方法的 16 位映射见各自记录（与本节的 min-max 一致）。
+
 ## 训练配置
 
 | 项目 | 值 |
