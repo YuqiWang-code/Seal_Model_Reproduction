@@ -1,0 +1,42 @@
+{
+  "method": "MSHNet",
+  "protocol": "Seal train full-GT supervised retraining -> Seal test",
+  "eight_metrics": {
+    "S": 0.49818002377239706,
+    "Fw": 0.5410405511582486,
+    "E": 0.6860122984777131,
+    "MAE": 0.0002469544706400484,
+    "IoU": 0.2922581328339659,
+    "F1": 0.4523215995445645,
+    "Pd": 0.8094270621698496,
+    "Fa": 6.727668733083446e-05
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/MSHNet/Seal/fullsup_test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "four_metric_source": "/share_datasets/Seal_Model_Reproduction/results/MSHNet/Seal/fullsup_metrics.json",
+  "small_metric_source": "/share_datasets/Seal_Model_Reproduction/results/MSHNet/Seal/fullsup_small_metrics.json",
+  "small_metric_counts": {
+    "n_images": 1983,
+    "tp": 52439,
+    "fp": 73715,
+    "fn": 53273,
+    "n_gt": 7383,
+    "n_pred": 8984,
+    "n_detected": 5976,
+    "false_alarm_pixels": 34603,
+    "total_pixels": 514338642
+  },
+  "small_metric_protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  }
+}

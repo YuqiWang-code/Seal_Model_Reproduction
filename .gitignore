@@ -1,4 +1,4 @@
-# 数据归档：本地 data/ 为约 9.6 GB 的源域数据 zip（S-COD/NESS-Net/SSFam），
+﻿# 数据归档：本地 data/ 为约 9.6 GB 的源域数据 zip（S-COD/NESS-Net/SSFam），
 # 超过 GitHub 单文件与仓库容量限制，仅保留本地/服务器副本。
 data/
 
@@ -6,6 +6,8 @@ data/
 *.pth
 *.pth.tar
 *.ckpt
+*.tar
+*.pkl
 
 # 凭据：SFTP 明文密码不进入公开仓库，模板见 .vscode/sftp.example.json
 .vscode/sftp.json

@@ -11,7 +11,7 @@
 - 本项目五个对比方法的 Seal 框监督、点监督及 SAM 伪标签适配任务停止执行，历史产物仅在实验文档中存档，不进入跨域主表；相关自动跟进不得重启这些适配任务。
 - 本地 `data/TrainDataset.zip`、`data/TestDataset.zip` 为 S-COD 相关训练与测试归档，`data/Scribble-COD.zip` 提供独立涂鸦标注；须按实际内容区分完整 GT 与 0/1/2 稀疏标签。`data/NESS-Net/`、`data/SSFam/` 另有各自数据归档。优先复用服务器已解压源数据，缺失时再上传对应归档。
 
-最终汇总表为 `docs/Seal量化SOTA表.xlsx`，仅保留第 1～20 行，每个对比方法只填一组指标，不在第 20 行之后增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
+最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21 行之后只放全监督 IRSTD 基线（见下一节），每个基线一行，不增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
 
 该表来自腾讯文档，可能新增列或更新协议。合并下载版本时按方法及列标题对应，采用新版本的布局和明确更新；新版本空白处保留现有有效评估结果，同协议的五位小数保留完整精度。新增 IoU、F1、Pd、Fa 四列后，每个方法仍只保留一行；填写时按标题定位列，不依赖旧列号。
 
@@ -28,6 +28,26 @@
 - LRDNet 的公开权重链接失效，主表采用已完成的原始 S-COD 涂鸦监督训练：4,040 张 S-COD/CAMO 训练图像及公开涂鸦标注，两阶段均取预先确定的第 100 epoch 权重；不使用 Seal 数据选权重。Seal 框适配仅作历史实验存档。结果记录在 [docs/LRDNet_Seal实验记录.md](docs/LRDNet_Seal实验记录.md)。
 - 不根据 Seal 测试集指标选择权重。先依据论文配置、代码结构和检查点参数确定主方法权重，再运行完整测试集。
 - 所有指标必须如实记录，不能根据 Seal 测试结果挑选、修改或隐去权重及预测。跨域主表不采用 Seal 适配结果。Ours 的 `Ours/test_maps.zip` 含 1,983 张测试预测，使用指定四个原函数评估：S 0.49915、Fw 0.67338、E 0.66731、MAE 0.00015；预测与评估记录见 [docs/Ours_Seal实验记录.md](docs/Ours_Seal实验记录.md)。Ours 的训练来源须单独注明，不能仅凭测试预测认定其属于跨域训练。腾讯表格原有 Ours 数值保留来源记录。
+
+## 全监督 IRSTD 基线（Seal 训练 → Seal 测试）
+
+- 定位：与上面的弱监督跨域表并列的全监督对照。方法为 DNA-Net（TIP22）、MSHNet（CVPR24）、UIU-Net（TIP23），均取自 [awesome-infrared-small-targets](https://github.com/Tianfang-Zhang/awesome-infrared-small-targets) 的 Single-Frame 全监督条目（对照 GrokCV 出版物页），代码为作者官方实现，根目录各一个文件夹：`DNANet-main/`、`MSHNet-main/`、`UIU-Net-main/`。ACM（WACV21）也已完成代码与训练入口（`ACM-main/`），但官方 SoftIoU 在 Seal 的 0.02% 前景上不收敛（val IoU 恒 0，两个随机种子、官方 warm-up 均复现），作为负结果存档，不进入主表，见 [ACM 记录](docs/ACM_Seal实验记录.md)。
+- 数据：服务器 `Seal_IRSTD/`。`Seal_data/{split}/T/*.tif`（16 位热红外）逐图 **min-max** 拉伸到 8 位并复制为 3 通道 PNG，`GT` 二值化；`trainval.txt` 1,500 / `val.txt` 500 / `test.txt` 1,983，沿用 Seal 原划分。生成脚本 [tools/prepare_seal_irstd.py](tools/prepare_seal_irstd.py)，指标合并脚本 [tools/merge_seal_metrics.py](tools/merge_seal_metrics.py)，单方法评估脚本 [tools/eval_fullsup_method.sh](tools/eval_fullsup_method.sh)。
+- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8。epoch 与优化器沿用官方默认：DNA-Net 400（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE。不使用 Seal 的 `box`、点提示或伪标签。
+- 选择与推理：模型选择只用 Seal **val**（500 张，滑窗像素 IoU@0.5），test 不参与选择、不据此换检查点；测试为原生分辨率 256×256 滑窗、步长 128、重叠区 logits 平均后 sigmoid，输出与 test GT 同名的 8 位 PNG。
+- 指标：同行八项仍由根目录 `evaluate.py` 的四个原函数与 `evaluate_small_targets.py` 计算，同一检查点、同一批 1,983 张预测，口径与第 3～20 行完全一致。
+- 结果（全部为 test 1,983 张、val 最优检查点）：
+
+  | 方法 | val 最优 epoch | S | Fw | E | MAE | IoU | F1 | Pd | Fa |
+  |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+  | DNA-Net | 120 | 0.49803 | 0.50562 | 0.67979 | 0.00028725 | 0.30000 | 0.46154 | 0.79046 | 8.7299e-05 |
+  | MSHNet | 140 | 0.49818 | 0.54104 | 0.68601 | 0.00024695 | 0.29226 | 0.45232 | 0.80943 | 6.7277e-05 |
+  | UIU-Net | 20 | 0.49876 | 0.27240 | 0.68115 | 0.00037482 | 0.21485 | 0.35371 | 0.68739 | 2.9648e-05 |
+
+  UIU-Net 只监督 BCE，第 20 epoch 后滑向"全背景"不动点（val IoU 0），按 val 连续 5 次无改善停止，表中为其 val 最优检查点。
+- 热红外 8 位转换结论：用 1–99 百分位裁剪再拉伸会放大约 10 倍背景噪声（目标 SNR 降到 1.5），纯区域损失退化为常数输出（val IoU 恒为 0）；改为逐图 min-max 后目标与背景差值是背景 std 的 2.2–29.7 倍，训练正常。后续不得再用百分位裁剪生成输入。
+- 表中位置：第 21～23 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
+- 实验记录：[ACM](docs/ACM_Seal实验记录.md)、[DNA-Net](docs/DNANet_Seal实验记录.md)、[MSHNet](docs/MSHNet_Seal实验记录.md)、[UIU-Net](docs/UIU-Net_Seal实验记录.md)。
 
 ## FCT-SAM-WSCOD
 
