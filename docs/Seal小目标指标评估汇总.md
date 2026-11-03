@@ -12,10 +12,12 @@
 | LRDNet | 0.00064195 | 0.00128307 | 0.00067723 | 0.0107905600 |
 | MIR-Net | 0.00080272 | 0.00160416 | 0.00243803 | 0.0182267484 |
 | SSFam | 0.00099438 | 0.00198679 | 0.28741704 | 0.0402274131 |
-| NESS-Net | 0.25151885 | 0.40194177 | 0.56738453 | 0.0000779817 |
+| NESS-Net | 0.00073333 | 0.00146558 | 0.00514696 | 0.0329542496 |
 | Ours | 0.44835069 | 0.61911897 | 0.82730597 | 0.0000020998 |
 
 每组 GT 共 7,383 个连通域、514,338,642 个像素。PNG 文件名及原尺寸须完全对应；不额外进行归一化、形态学处理或面积筛选。原四项指标及其固定函数保持不变。
+
+NESS-Net 行采用量化主表同一行的公开 refinement + NAMLab 跨域预测。Seal 框监督适配第 5 epoch 的历史小目标结果为 IoU 0.25151885、F1 0.40194177、Pd 0.56738453、Fa 0.0000779817，仅存档于 [NESS-Net_Seal框适配_epoch5.json](小目标指标评估_20261103/NESS-Net_Seal框适配_epoch5.json) 与 [NESS-Net_Seal实验记录.md](NESS-Net_Seal实验记录.md)，不进入主表。
 
 ## 预测及原四项指标来源
 
@@ -55,11 +57,11 @@ S-COD原始涂鸦训练；stage2 epoch100；Seal跨域测试。
 
 ### NESS-Net
 
-Seal框监督适配；Canny/general；原Fw验证选择epoch5；T替代深度。
+作者公开refinement完整权重+NAMLab边缘的跨域测试；源域Scribble；T替代深度。
 
-- 预测：`/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_maps`。
-- 原四项指标记录：`/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_metrics.json`。
-- 小目标完整结果：[NESS-Net.json](小目标指标评估_20261103/NESS-Net.json)。
+- 预测：`/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/refinement_namlab_test_maps`。
+- 原四项指标记录：`/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/original_eval/published_metrics.json` 的 `refinement_namlab`。
+- 小目标完整结果：[NESS-Net.json](小目标指标评估_20261103/NESS-Net.json)（与 [refinement_namlab_small_target_metrics.json](NESS-Net_Seal评估产物/refinement_namlab_small_target_metrics.json) 同源）。
 
 ### Ours
 
@@ -78,6 +80,15 @@ cd /share_datasets/Seal_Model_Reproduction
   --gt_dir /share_datasets/Seal_Model_Reproduction/Seal_data/test/GT \
   --json_output <结果JSON路径>
 ```
+
+## 核对结果
+
+1. **计数自洽**：六个 JSON 的 IoU、F1、Pd、Fa 均可由存储的 `tp/fp/fn/n_detected/n_gt/false_alarm_pixels/total_pixels` 精确复算，差值 0（复算脚本 `tmp/verify_small_target_jsons.py`）。`n_gt = 7,383`、`total_pixels = 514,338,642` 在六组间完全一致，即同一批 GT 与同一批 1,983 张原尺寸预测。
+2. **像素数与独立记录一致**：`total_pixels / 1,983 = 259,374 = 417×622`，与 Ours 记录的 GT 尺寸、GT 前景占比 0.00020553（tp+fn = 105,712）一致；Ours 的像素 precision/recall 64.64%/59.39% 也可由 tp+fp、tp+fn 复现。
+3. **协议一致**：六组均为 `AS1000Metrics` 默认参数（阈值 >0.5、GT >128、8 连通、距离 <3、全数据集累计），`protocol` 字段逐项相同。
+4. **与 `docs/小目标评价指标.pdf` 草稿的差异**：该草稿使用 `pred > 0`、像素级假阳 Fa、`距离 <= 3` 与 ×100 百分数；本项目按已发表官方代码采用 `prob > 0.5`、未匹配连通域 Fa、`距离 < 3` 和 0～1 原始比例。差异明细与数值影响（Ours 的 Fa 相差 31.8 倍）见[小目标评价指标：定义与代码对照](小目标评价指标_定义与代码对照.md#与-docs小目标评价指标pdf-参考实现的差异)。表值只与同口径结果比较。
+
+主表行值可由 `python tmp/apply_ness_cross_domain_row.py` 写回 `docs/Seal量化SOTA表.xlsx`（需先关闭 Excel）；本次核对已生成同内容副本 `tmp/backup/Seal量化SOTA表.with_ness_cross_domain.xlsx`。
 
 ## 待评估方法
 

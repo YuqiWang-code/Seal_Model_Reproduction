@@ -186,20 +186,20 @@
   },
   "NESS-Net": {
     "metrics": {
-      "IoU": 0.2515188538720313,
-      "F1": 0.4019417735399922,
-      "Pd": 0.567384532033049,
-      "Fa": 7.798169673590265e-05
+      "IoU": 0.0007333271181027003,
+      "F1": 0.001465579487023831,
+      "Pd": 0.005146959230665041,
+      "Fa": 0.032954249624511
     },
     "counts": {
       "n_images": 1983,
-      "tp": 45084,
-      "fp": 73535,
-      "fn": 60628,
+      "tp": 12554,
+      "fp": 17013524,
+      "fn": 93158,
       "n_gt": 7383,
-      "n_pred": 6019,
-      "n_detected": 4189,
-      "false_alarm_pixels": 40109,
+      "n_pred": 8410,
+      "n_detected": 38,
+      "false_alarm_pixels": 16949644,
       "total_pixels": 514338642
     },
     "protocol": {
@@ -215,10 +215,11 @@
       "Fa_definition": "unmatched prediction component area / total image pixels",
       "units": "raw ratios [0,1]"
     },
-    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_maps",
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/refinement_namlab_test_maps",
     "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
     "method": "NESS-Net",
-    "experiment_protocol": "Seal框监督适配；Canny/general；原Fw验证选择epoch5；T替代深度",
-    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_metrics.json"
+    "experiment_protocol": "作者公开 refinement 完整权重 + NAMLab 边缘跨域测试；源域涂鸦监督；T 替代深度",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/original_eval/published_metrics.json",
+    "notes": "主表 NESS-Net 行使用该批预测。Seal 框监督适配第 5 epoch 的历史小目标结果存档于 NESS-Net_Seal框适配_epoch5.json，不进入主表。"
   }
 }
