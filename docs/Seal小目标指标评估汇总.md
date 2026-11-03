@@ -91,6 +91,20 @@ cd /share_datasets/Seal_Model_Reproduction
 
 主表行值可由 `python tmp/apply_ness_cross_domain_row.py` 写回 `docs/Seal量化SOTA表.xlsx`（需先关闭 Excel）；本次核对已生成同内容副本 `tmp/backup/Seal量化SOTA表.with_ness_cross_domain.xlsx`。
 
+## 全监督 IRSTD 基线（Seal 训练 → Seal 测试）
+
+新增的三个全监督基线**不是**跨域结果：训练用 Seal train 全像素 GT，推理在 Seal test，属于同域全监督，单独列出，不与上表混填。协议、配置与四项指标见[全监督基线汇总](Seal全监督基线评估汇总.md)。
+
+| 方法 | IoU↑ | F1↑ | Pd↑ | Fa↓（原始比例） |
+|---|---:|---:|---:|---:|
+| DNA-Net（TIP22，val 第 120 epoch） | 0.30000332 | 0.46154239 | 0.79046458 | 0.0000872985 |
+| MSHNet（CVPR24，val 第 140 epoch） | 0.29225813 | 0.45232160 | 0.80942706 | 0.0000672767 |
+| UIU-Net（TIP23，val 第 20 epoch） | 0.21485370 | 0.35371124 | 0.68738995 | 0.0000296478 |
+
+三组预测目录为 `results/{DNANet,MSHNet,UIU-Net}/Seal/fullsup_test_maps`，GT 计数与上表相同（7,383 个连通域、514,338,642 像素），因为用的是同一批 test GT 与同名原尺寸 PNG。完整计数见 `docs/<Method>_Seal评估产物/fullsup_small_metrics.json`。
+
+这一组 Fa（约 3e-5～9e-5）比五个弱监督跨域方法低 2～3 个数量级，Pd 却高得多：全监督模型确实学到了目标响应，但预测连通域更"干净"；与 Ours（IoU 0.44835、Fa 2.10e-06）相比仍有明显差距。
+
 ## 待评估方法
 
 WSSA、SCWSSOD、DENet、CRNet、RGBTScribble、WS-SAM、DHFR、SAM-COD、MIRV、RPPS、PSOD、P-COD 尚无主表原四项指标及对应的 Seal 测试预测，新增指标保留空白。后续完成各自协议下的测试后，使用同一预测同时补齐八项指标。
