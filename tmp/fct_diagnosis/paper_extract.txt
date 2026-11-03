@@ -1,0 +1,511 @@
+122                                                                                                                                           ECAI 2025
+                                                                                                                                     I. Lynce et al. (Eds.)
+                                                                                                                                     © 2025 The Authors.
+                                                           This article is published online with Open Access by IOS Press and distributed under the terms
+                                                                      of the Creative Commons Attribution Non-Commercial License 4.0 (CC BY-NC 4.0).
+                                                                                                                               doi:10.3233/FAIA250797
+
+
+    Scribble-Based Weakly Supervised Camouflaged Object
+        Detection via SAM-Guided Feature Correlation
+                        Transformer
+                                       Zi-Jie Wua , Rongrong Gaob and Tian-Zhu Xiangc, *
+                a School of Computer Science and Engineering, Guangxi Normal University, Guilin, China
+                      b Department of Computer Science and Engineering, HKUST, Hong Kong, China
+                                               c Space42, Abu Dhabi, UAE
+
+
+
+Abstract. Weakly Supervised Camouﬂaged Object Detection (WS-
+COD) aims to locate camouﬂaged objects with only sparse super-
+vision, thereby substantially reducing the reliance on costly pixel-
+level annotations. This task poses two major challenges: limited su-
+pervision arising from sparse annotations (e.g., scribbles), and weak
+discriminability due to the inherent high visual similarity between
+camouﬂaged objects and their surroundings. To tackle these chal-
+lenges, this paper proposes a novel multi-scale feature correlation
+transformer guided by the Segment Anything Model (SAM) for
+scribble-based WSCOD. Speciﬁcally, we introduce a cross-scale cor-
+relation module built upon Transformers, which exploits enriched
+cross-attention mechanisms to capture long-range global correla-
+tions and multi-scale discriminative cues, enabling accurate seg-
+mentation of camouﬂaged objects. In addition, we develop a SAM-
+based pseudo-label generation module that leverages sparse anno-
+tations as prompts to produce high-quality object masks, thereby
+enhancing supervision. Extensive experiments on three challenging            Figure 1: Illustration of the proposed method, including SAM-based pseudo
+                                                                             label generation and multi-scale feature correlation transformer. The pro-
+datasets demonstrate that our proposed method consistently and sig-          posed method adopts sparse annotations as prompts for SAM to generate
+niﬁcantly surpasses existing state-of-the-art approaches for scribble-       high-quality pseudo labels for model training. To enhance the quality of
+based WSCOD. The code will be available at: http://github.com/               pseudo masks, we introduce a set of strategies, including a density-based grid
+farewellIamLoser/FCT-SAM-WSCOD.                                              sampling for prompt enhancement and a label-response ﬁltering mechanism.
+
+                                                                             to annotate a pixel-wise camouﬂaged object from its highly simi-
+1     Introduction                                                           lar background. To this end, Weakly Supervised Camouﬂaged Ob-
+Camouﬂaged object detection (COD) refers to identifying and seg-             ject Detection (WSCOD) is proposed to detect camouﬂaged objects
+menting objects that are intentionally designed or naturally evolved         in complex scenes using only weak supervision (e.g., sparse anno-
+to blend in with their surroundings [12, 52]. Gaining growing at-            tations) rather than precise pixel-level labels. This setting imposes
+tention within the computer vision community, camouﬂaged object              greater demands on a model’s ability to learn from limited supervi-
+detection holds considerable promise for a variety of applications, in-      sion while maintaining robust visual detection performance. By alle-
+cluding species discovery [39], medical image segmentation [27, 28],         viating the need for costly pixel-wise annotations, weak supervision
+agricultural pest detection [1], and industrial defect detection [13].       greatly reduces data annotation overhead, making WSCOD more
+   In recent years, there has been a considerable amount of research         practical and scalable for real-world applications where large-scale
+for deep learning-based camouﬂaged object detection, such as bi-             pixel-wise annotations are expensive and time-consuming to obtain.
+ologically inspired approaches [12, 35, 37], coarse-to-ﬁne learning          CRNet [17] introduces the ﬁrst weakly-supervised COD framework
+methods [18, 19], multi-task joint learning methods [26, 32, 41],            trained with scribble annotations. To enhance weak supervision, [16]
+conﬁdence-aware learning methods [26, 54], and multi-source in-              explores the use of Segment Anything Model (SAM) [23] to generate
+formation guidance, e.g., frequency [57] and depth [45]. Although            dense pseudo-labels as supervision from sparse annotations.
+great progress has been achieved, obviously, these methods heavily              Nevertheless, these methods still show a signiﬁcant performance
+depend on large-scale datasets with high-quality pixel-wise annota-          gap compared to fully supervised COD methods. Based on our obser-
+tions [8, 48]. As we know, it is time-consuming and labor-intensive          vation, there are two main limitations. (1) The sparse annotation only
+                                                                             provides limited supervision for model training, thus greatly restrict-
+∗ Corresponding Author. Email: tianzhu.xiang19@gmail.com
+                                                                             ing the discrimination capacity of models. Although [16] has shed
+            Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer        123
+
+some light, there is still signiﬁcant room for improvement. It is de-        and aggregating global and local camouﬂaged cues, such as FSP-
+sirable to explore how to obtain accurate and effective dense pseudo         Net [19] and HitNet [18]. The multi-task joint learning facilitates ob-
+labels from sparse labels. (2) The intrinsic high similarity between         ject segmentation through joint modeling of multiple related tasks,
+camouﬂaged objects and their backgrounds makes it far more chal-             such as boundary detection [41], saliency detection [26], and rank-
+lenging to identify camouﬂaged objects. How to effectively explore           ing [32]. The multi-source information guidance introduces multi-
+and aggregate subtle camouﬂaged cues remains a challenge.                    modal cues to guide camouﬂage feature learning, such as frequency
+   To this end, in this paper, we propose a novel Segment Anything           domain [57], depth [45], and temporal cues [38]. More recently, sev-
+Model (SAM) guided multi-scale Feature Correlation Transformer,              eral approaches have integrated generative models into COD, with
+termed FCT-SAM, shown in Fig. 1, for the challenging scribble-               diffusion-based methods showing notable potential in enhancing de-
+based weakly-supervised camouﬂaged object detection. The pro-                tection performance, such as [6, 7]. Nevertheless, these signiﬁcant
+posed method designs a novel SAM-based pseudo-label generation               achievements have been made in a fully supervised manner that re-
+strategy to strongly guide the global context learning of camou-             lies on a large amount of training data with pixel-level labels [25, 44].
+ﬂaged features, which explores and aggregates effective discrimina-             Compared to fully supervised COD, its weakly supervised coun-
+tive camouﬂage cues from different scales for accurate object seg-           terpart, relying on sparse annotations such as points, boxes, or scrib-
+mentation. Speciﬁcally, to improve the weak supervision of sparse            bles, is even more challenging and has not been relatively under-
+annotations, we introduce the recently proposed segment anything             explored. CRNet [17] introduces the ﬁrst weakly-supervised COD
+model and explore the use of sparse annotations as prompts to gener-         model using scribble annotations, which designs a group of loss func-
+ate dense segmentation masks (pseudo labels) for model training. It is       tions to supervise the convolution model for accurate predictions.
+well known that direct use of SAM for camouﬂaged scenes does not             Note that the scribble annotations used in this work are sourced from
+always yield satisfactory results [21]. To alleviate the issues afore-       the public WSCOD dataset provided by CRNet. WS-SAM [16] pro-
+mentioned, we design two strategies, that is, prompt enhancement             poses a multi-scale feature grouping module to mine discriminative
+and label response ﬁlter, to ﬁlter out the optimal masks and enhance         cues at different granularities, with enhanced supervision from SAM-
+the label quality for more reliable supervision. Moreover, to enhance        generated pseudo labels. SAM-COD [3] employs a prompt adapter
+the exploration of camouﬂage cues, we present a novel cross-scale            to handle scribbles as prompts based on SAM to improve the quality
+correlation (CSC) module, which leverages enriched cross-attention           of masks. According to our observations, the limitation of sparse an-
+mechanisms to model global context and capture long-range corre-             notations and the intrinsic high similarity between objects and back-
+lations from multi-scale features for strengthening feature represen-        grounds remain challenges that restrict the discrimination capacity
+tation. The proposed module can effectively excavate and aggregate           and diminish the segmentation performance. In this paper, we pro-
+discriminative camouﬂage cues for accurate segmentation. In sum-             pose a novel multi-scale feature correlation transformer to explore
+mary, our contributions are as follows.                                      subtle discriminative camouﬂage cues from global context learning,
+                                                                             guided by our designed SAM-based pseudo-label generation strat-
+• We introduce a novel SAM-based pseudo-label generation mod-                egy, signiﬁcantly enhancing the WSCOD performance.
+  ule, which uses sparse labels as prompts for SAM to generate
+  high-quality dense segmentation masks by the designed prompt
+  enhancement and label response ﬁlter strategies. The gener-
+                                                                             2.2     Segment Anything Model in COD
+  ated pseudo-labels offer reliable guidance for training models in          Segment Anything Model (SAM) [23] is a recently proposed ad-
+  weakly-supervised camouﬂaged object segmentation.                          vanced vision foundation model designed for general object segmen-
+• We propose a cross-scale correlation (CSC) module to extract and           tation. SAM is a promptable segmentation model that produces ob-
+  aggregate subtle camouﬂage cues from features at different scales          ject masks in any given image from input prompts such as points or
+  for WSCOD. It adopts enriched cross-attention operations to cap-           boxes. Its remarkably exceptional performance has rapidly propelled
+  ture discriminative cues from global context learning, signiﬁcantly        its extensive application across various computer vision tasks.
+  improving the representation of camouﬂaged features.                          However, recent studies have found that SAM faces challenges
+• Extensive experiments show that our proposed method achieves               and performs poorly when segmenting objects in certain complex or
+  superior performance over the existing state-of-the-art approaches         ambiguous scenes, such as camouﬂaged object segmentation [21].
+  by a large margin on three COD benchmark datasets, for scribble-           To mitigate issues, SAM-adapter [5] introduces adapters for efﬁcient
+  based weakly supervised camouﬂaged object detection.                       tuning to combine domain-speciﬁc information or visual prompts
+                                                                             into a segmentation model. Unlike ﬁne-tuning with full pixel-wise
+                                                                             labels, SAM is also adopted as a pseudo-label generator for weakly
+2     Related Work                                                           supervised semantic segmentation, which explores the potential of
+                                                                             “prompt to masks” [4]. In particular, recent WS-SAM [16] and
+2.1    Camouﬂaged Object Detection                                           SAM-COD [3] utilize sparse labels as prompts for SAM to gener-
+                                                                             ate pseudo-object masks for WSCOD. In contrast to these works, we
+The rapid advancement of deep learning has given rise to numer-
+                                                                             explore prompt enhancement for weakly supervised labels and a re-
+ous fully supervised models within the realm of camouﬂaged object
+                                                                             sponse ﬁlter strategy to generate more precise and reliable masks as
+detection (COD) [13]. The existing COD methods can be broadly
+                                                                             strong supervision signals for performance improvement.
+categorized into the following categories, including bio-inspired
+approaches, coarse-to-ﬁne learning, multi-task joint learning, and
+multi-source information guidance.                                           3     Proposed Method
+  The bio-inspired approaches mimic the human visual system,
+                                                                             3.1     Overall Architecture
+such as search and identiﬁcation [12], positioning and focus [35],
+and zoom in and out [37]. The coarse-to-ﬁne learning methods                 The overall framework of our proposed method is illustrated in
+perform COD by exploring camouﬂage features at different scales              Fig. 1, which consists of two components: SAM-based pseudo-label
+124         Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer
+
+
+
+
+Figure 2: The proposed SAM-based pseudo-label generation. The method mainly contains two operations: prompt enhancement based on density-based grid
+sampling and label response ﬁlter, to enhance the quality of pseudo labels for more reliable supervision.
+
+
+                                                                             3.2     SAM-based Pseudo Label Generation
+                                                                             SAM [23] has demonstrated remarkable performance in generating
+                                                                             high-quality object masks in an image, a feat attributed to its exten-
+                                                                             sive training on a large-scale dataset comprising over one billion ob-
+                                                                             ject masks. However, recent studies found that SAM still struggles in
+                                                                             some confusing scenes [21], such as concealed scenes where objects
+                                                                             are highly similar to their background, as shown in Fig. 3.
+                                                                                SAM is a promptable segmentation model that requires input
+                                                                             prompts to generate masks. We observe that SAM has a limitation:
+                                                                             when there are too many input prompts, the prompt points may affect
+                                                                             the model’s judgment, causing it to focus excessively on certain ar-
+                                                                             eas or ignore background prompt information. To address these chal-
+                                                                             lenges, this paper proposes a series of strategies based on the SAM
+                                                                             model, including prompt enhancement and label response ﬁlter, as
+                                                                             shown in Fig. 2. Through these operations, SAM can generate high-
+                                                                             quality and reliable pseudo-labels.
+                                                                             Prompt Enhancement. The input camouﬂaged images and corre-
+Figure 3: Visual comparisons of our proposed method and the SAM method       sponding scribble labels are represented as D = {xi , yi }n   i=1 , where
+for pseudo mask generation.                                                  {xi }n
+                                                                                  i=1  is the input image and  {yi } n
+                                                                                                                     i=1 is the scribble label. To im-
+                                                                             prove prompt generation, we apply ﬂipping, rotation, and scaling op-
+generation and multi-scale feature correlation transformer. The for-         erations to the input image for image augmentation. By performing K
+mer, shown in Fig. 2, is designed to generate high-quality pseudo            rounds of random augmentation, we obtain multiple augmented im-
+labels for model training using SAM. Speciﬁcally, we ﬁrst adopt a            ages. For each augmented image, we sample P discrete pixel points
+density-based grid sampling strategy to enhance the prompts from             L = {f g, bg} in foreground and background scribbles as point
+scribble annotations, then feed them into SAM to produce multiple            prompts. More details about the sampling data can be found in Tab. 4.
+masks, which are then fused to generate the ﬁnal pseudo labels via              To sample these points, we design a density-based grid sampling
+the response ﬁlter strategy. The latter, shown in Fig. 4, is an end-         to sample a sufﬁcient number of point prompts from various loca-
+to-end transformer framework for camouﬂaged object segmentation.             tions across the scribbles. The density-based grid sampling will ﬁnd
+The proposed transformer accepts two kinds of inputs: the original           the leftmost, rightmost, highest, and lowest points of the scribble la-
+image and the corresponding augmented images.                                bel based on their positions. A rectangle is then formed using these
+   In the proposed model, the transformer encoder extracts multi-            four points, and the rectangle is evenly divided into a m × m grid. In
+scale features from the inputs, which are utilized for camouﬂage fea-        this paper, m = 3. Assuming the number of pixel labels as Ns , we
+ture learning in the designed cross-scale correlation module. The en-        divide the total number of label pixels within each grid GNi by Ns ,
+riched cross-attention operations are employed to explore the global         thus obtaining the density Di for each grid, represented as:
+correlations and aggregate discriminative camouﬂage cues across
+different scales. The model ultimately produces two types of pre-                                        Di = GNi /Ns .                           (1)
+dictions from two inputs. Self-supervision (between two types of
+predictions) and pseudo-label supervision (between predictions and           Based on the predeﬁned number of sampling points P, we calculate
+pseudo-labels) are applied separately for model training.                    the number of randomly sampled points Ni for each grid according
+             Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer                 125
+
+
+
+
+Figure 4: Overview of our proposed multi-scale feature correlation transformer. Four features at different scales ({Fi }4i=1 ) are extracted from the transformer
+encoder and subsequently fed into the designed cross-scale correlation (CSC) module for feature decoding and mask predictions. The last encoder feature F4 is
+enhanced through a pyramid pooling module (PPM) before being fed into the CSC module. “ConvT” is transposed convolution.
+
+
+to its density value Di , denoted as:                                              Then we calculate the average response occurrence frequency μ:
+                              Ni = P × Di .                               (2)                                      1 
+                                                                                                            μ=         M(i, j) ,                             (5)
+                                                                                                                  |S|
+Next, within each grid cell, the Ni points are randomly sampled. The                                                  (i,j)∈S
+
+greater the density, the proportionally more sampling points. Based
+                                                                                   where S is the set of response pixels on the pseudo mask. |S| is
+on this rule, we randomly sampled point prompts in each grid on
+                        Nf g                          Nbg                          the total number of pixels of this type. Next, a threshold strategy is
+the foreground ({f gi }i=1   ) and background ({bgi }i=1  ) scribbles,             adopted to discard low-conﬁdence responses, deﬁned as
+respectively. Through multiple iterative samplings, we obtain diverse
+                                                                                                                 
+SAM-generated masks M , which can be denoted as:                                                                   0, M(i, j) < μτ
+                                                                                                      M̃(i, j) =                     ,                (6)
+                                                                                                                   1, M(i, j) ≥ μτ
+                   Mike ×ka = SAM(xki a , f g i , bg i ),                 (3)
+where ka is the number of image augmentation for xi and ke is the                  where τ is the balance factor, and we set τ = 4 in our work. M̃ is
+number of iteration sampling. Therefore, we obtain the initial SAM-                the ﬁnal generated pseudo label for model supervision.
+generated object pseudo-mask set. As shown in Fig. 3, randomly
+sampled prompt points often result in suboptimal mask predictions                  3.3     Multi-scale Feature Correlation Transformer
+due to their limited representativeness. Our method enforces a more
+uniform distribution across the entire scribble, improving prompt                  To effectively capture camouﬂage cues, we design an end-to-end
+quality for the target region and boosting mask accuracy.                          multi-scale feature correlation transformer. It utilizes the enriched
+                                                                                   cross-attention mechanisms of the transformer to mine global con-
+Label Response Filter. The generated pseudo-labels are not always                  text cues of the camouﬂaged object, and then progressively aggre-
+reliable. Therefore, we design a label response ﬁlter to ﬁlter out                 gates these discriminative features scale by scale, for accurate seg-
+the unreliable response pixels and improve pseudo-label robustness.                mentation of camouﬂaged objects. As shown in Fig. 1, the proposed
+Speciﬁcally, we ﬁrst sum up all generated label responses to produce               model receives two kinds of input separately, that is, the normal im-
+a pixel-wise response occurrence frequency map M, denoted as:                      age and the augmented image. Then the model produces two sets
+                                         ke
+                                           ×ka                                    of corresponding mask predictions at different scales ({{Zi }5i=1 and
+                                   1                                               {Z̃i }5i=1 ). {Zi }5i=2 and {Z̃i }5i=2 are the side outputs, and Z1 and Z̃1
+                       M=                       Mi .                      (4)
+                               |ke × ka | i=0                                      are the ﬁnal main output. To supervise the model training, two kinds
+126         Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer
+
+of loss functions are adopted: (a) the structure consistency loss, and       Next, a feed-forward network (FFN) is adopted to generate the output
+(b) the pseudo-label supervision for model training. The former can          feature Pi−1 for the next CSC module, which is formulated as:
+supervise the mask predictions based on two kinds of input images                     
+to maintain consistency over different images.                                       O        = W1 (O) ⊕ Pc
+   The entire model architecture is illustrated in Fig. 4. Let                                                                                   (10)
+                                                                                     Pi−1     = W3 (W1 ((FFN(O ) + O ) ⊗ Pc ⊕ Pc )),
+I∈ RH×W ×3 denotes the input image. The PVT-v2 [43] is adopted
+as the transformer encoder to encode the input images into four fea-
+                                                                             where W1 is the 1 × 1 convolution, W3 is the 3 × 3 convolution,
+tures at different scales {Fi }4i=1 . These encoded features are fed into
+                                                                             ⊕, ⊗ are element-wise addition and multiplication, respectively. For
+the designed multi-scale correlation decoder to excavate and aggre-
+                                                                             each feature {Pi }5i=1 , a 1 × 1 convolution is adopted, followed by a
+gate discriminative camouﬂage features for mask prediction. For fea-
+                                                                             Sigmoid function, to generate each mask prediction.
+ture decoding, a pyramid pooling module [55] is ﬁrst adopted to en-
+hance the feature representation for the last layer encoder output F4        Loss Function. Our model utilizes three kinds of loss functions
+and obtain the enhanced feature P5 . Speciﬁcally, four pooling op-           to supervise the prediction outputs: {Zi }5i=1 and {Z̃i }5i=1 . Based
+erations of different sizes are applied to obtain multi-scale features,      on SAM-generated pseudo labels, we adopt binary cross-entropy
+followed by a standard 1 × 1 convolution block. With concatenation           loss [13] and intersection over union (IoU) loss [34], denoted as:
+and convolution operations, we get the output feature P5 .
+                                                                                           
+                                                                                           5                                    
+   In our decoder, two features of adjacent scales Fj and Pi are fed
+                                                                                   LZ =      21−i LBCE (Zi , M̃) + LIoU (Zi , M̃) .                (11)
+into the designed cross-scale correlation (CSC) module for feature                         i=1
+exploration and progressive aggregation. The output feature Pi−1 of
+CSC will then be fed into the next CSC module together with the              In the same way, LZ̃ can be calculated for the predictions of aug-
+encoder feature Fj−1 of the previous layer. The CSC module is cas-           mented images. Furthermore, a structural consistency loss [50] is
+caded until the aggregation of ﬁrst-layer encoder features. The pro-         adopted to ensure the prediction consistency over different images.
+cess can be denoted as:
+
+        Pi−1 = CSC (Pi , Fj ), i ∈ {5, ..., 2} , j ∈ {4, ..., 1}     (7)                             SM (p1 , p2 ) = 1−SSIM(p
+                                                                                                                           2
+                                                                                                                              1 ,p2 )
+
+
+                                                                                                                                               ,   (12)
+where P1 is the ﬁnal output for object mask prediction.                            Lsc = n1           (1 − β)·SM(Z1i , Z̃1i ) + β Z1i − Z̃1i
+                                                                                                 i
+
+Cross-scale Correlation. To effectively mine and aggregate subtle
+discriminative camouﬂage cues from multiple scales, we design a              where SSIM is structural similarity [14], p1 and p2 are two pixels.
+cross-scale correlation (CSC) module, which utilizes enriched cross-         n is the total number of pixels, and i is the index of each pixel. β
+attention operations to fully capture long-range pixel correlations          is set as 0.85. Note that the structure consistency loss is only cal-
+from features at different scales and model global connectivity.             culated on ﬁnal predictions (Z1 and Z̃1 ). Thus, the overall loss is:
+   As shown in Fig. 4, the CSC module receives two feature inputs:           Ltotal = LZ + LZ̃ + Lsc .
+the output feature Pi of the previous CSC module and the backbone
+feature Fj of the previous scale. To align the two feature sizes, a
+transposed convolution and a standard convolution are used to get Pc         4     Experiments
+and Fc , respectively. Note that P5 does not require transposed con-
+volution before being fed into the CSC module. To enhance feature            4.1     Experimental Setup
+representation, the proposed CSC then applies three separate 1 × 1
+convolutions followed by a 3 × 3 depth-wise convolution to explore           Dataset. We test our method on three widely used COD benchmarks:
+the local context, thus generating query (Q), key (K) and value (V )         CAMO [24], COD10K [11], and NC4K [32]. We adopt the scribble-
+projections for cross-attention computation. Similar to the conven-          annotated dataset S-COD [17] for model training.
+tional multi-head self-attention in the transformer, Q, K, V are also        Evaluation Metrics. We adopt four widely used evaluation met-
+extended to a multi-head version for learning separate attention maps        rics, including structure-measure (Sα ) [10], mean absolute error (M)
+in parallel. Therefore, we obtain two sets of features Qp , Kp , Vp and      [12], adaptive F-measure (Fβ ) [33], and mean E-measure (Eφ ) [9],
+Qf , Kf , Vf , respectively. Next, we reshape query and key projec-          to evaluate the performance of the proposed method.
+tions and use matrix multiplication for cross-interaction to generate
+                                                                             Implementation Details. The model is implemented using PyTorch.
+correlation attention maps, which encode the global context implic-
+                                                                             We utilized SAM-ViT-H [23] as the pre-trained model. For the SAM-
+itly. This is deﬁned as:
+                                                                             based pseudo-label generation, we conduct 10 iterations for random
+                                                  
+                     Apf = Softmax QTp Kf /α                                 sampling, with about 20 points from foreground and background, re-
+                                                   ,               (8)     spectively, in each iteration. The pre-trained PVT-v2-b4 [43] model
+                     Af p = Softmax QTf Kp /α                                trained on ImageNet is adopted as the backbone. During training,
+where α is a learnable scaling parameter to control the magnitude of         Adam is used as the optimizer with a learning rate of 1e-5 for the en-
+the matrix multiplication. These two attention maps then interact to         coder and 1e-4 for the decoder. The images are resized to 384×384
+generate the ﬁnal correlation attention map A, that is, A = Apf ·            for input. The complete training process spent 60 epochs with a
+Af p . Before the attention operation, the two value projections Vp          batch size of 4. It took about 10 hours on a machine with a sin-
+and Vf also interact with each other, yielding Vpf = VpT · Vf . Then         gle NVIDIA 4090 GPU with 24GB of memory. Note that we per-
+the attention map is assigned to the value projections to get the fully      form three types of image augmentation: (a) SAM-based pseudo-
+interactive feature O, denoted as:                                           label generation (Fig. 2), (b) standard data augmentation (e.g., ran-
+                                                                             dom ﬂips) for model training, and (c) the dual-input data augmenta-
+                         O = (A · Vp ) · Vpf .                       (9)     tion used to construct structural consistency loss, as shown in Fig. 1.
+                Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer                          127
+
+Table 1: Quantitative comparison of our proposed method and state-of-the-art methods on three benchmark datasets. ↑ (or ↓) denotes the higher (or the lower)
+the better. The best three results are marked in red , green and blue, respectively. "∗ " indicates a CRNet variant that is integrated with the PVT-v2 encoder and
+our pseudo-label generation framework.
+
+                                                         CAMO                                            COD10K                                     NC4K
+      Method                     M↓               Fβ ↑            Eφ ↑         Sα ↑           M↓      Fβ ↑     Eφ ↑       Sα ↑      M↓       Fβ ↑      Eφ ↑      Sα ↑
+                                                                          Fully-Supervised Camouﬂaged Object Detection
+      SINet20                   .100             .709           .771           .751           .051    .593     .806      .771      .058      .758      .871      .808
+      TINet21                   .087             .678           .847           .781           .043    .635     .848      .793      .055      .766      .879      .829
+      PFNet21                   .085             .751           .842           .782           .040    .676     .877      .800      .053      .779      .888      .829
+      UJSC21                    .073             .779           .859           .800           .035    .705     .884      .809      .047      .803      .898      .842
+      UGTR21                    .086             .748           .822           .784           .036    .671     .853      .817      .052      .778      .875      .839
+      C2 F-Net-v222             .077             .763           .842           .790           .034    .731     .880      .813      .050      .805      .887      .834
+      SINet-v222                .070             .779           .881           .820           .037    .682     .887      .815      .048      .792      .902      .847
+      SegMaR22                  .071             .795           .874           .815           .034    .739     .899      .833      .046      .821      .896      .841
+      ZoomNet22                 .066             .792           .877           .820           .029    .741     .888      .838      .043      .814      .896      .853
+      DGNet23                   .057             .803           .900           .838           .033    .698     .895      .822      .042      .802      .911      .857
+      FEDER23                   .071             .786           .867           .802           .032    .740     .899      .822      .044      .822      .907      .847
+      EVP23                     .059             .808           .897           .846           .029    .736     .908      .844      .039      .822      .918      .874
+      FSPNet23                  .050             .829           .899           .856           .026    .736     .895      .851      .035      .826      .915      .879
+      SAM-Adapter23             .070             .818           .873           .847           .025    .824     .918      .883      .042      .841      .904      .884
+      DSAM24                    .061             .824           .915           .832           .033    .759     .921      .846      .040      .844      .932      .871
+      CamoFormer24              .045             .841           .923           .873           .024    .784     .925      .861      .031      .843      .931      .887
+      CDP25                     .072             -              .844           .798           .036    -        .863      .791      .051      -         .902      .880
+      DSNet25                   .073             -              .870           .817           .038    -        .878      .809      .050      -         .894      .843
+      MAM-FFC25                 .045             .856           .929           .872           .023    .789     .933      .871      .031      .860      .937      .890
+      MCF25                     .050             -              .915           .864           .023    -        .933      .872      .033      -         .932      .885
+      FLRNet25                  .045             -              .927           .877           .024    -        .929      .868      .032      -         .937      .884
+      Ours                      .045             .836           .927           .874           .021    .794     .934      .870      .029      .848      .938      .890
+                                                                         Weakly-Supervised Camouﬂaged Object Detection
+      SAM23                     .160             .597           .639           .643           .093    .673     .737      .730      .118      .675      .723      .717
+      SAM-S23                   .105             .682           .774           .731           .046    .695     .828      .772      .071      .747      .832      .763
+      WSSA20                    .118             .625           .786           .696           .071    .536     .770      .684      .091      .657      .779      .761
+      SCWS21                    .102             .658           .795           .713           .055    .602     .805      .710      .073      .723      .814      .784
+      TEL22                     .104             .681           .797           .717           .057    .633     .826      .724      .075      .754      .832      .782
+      CRNet23                   .092             .709           .815           .735           .049    .637     .832      .733      .064      .751      .853      .779
+      WS-SAM23                  .092             .742           .818           .759           .038    .719     .878      .803      .052      .802      .886      .829
+      MiNet24                   .091             -              .840           .750           .049    -        .840      .749      .061      -         .869      .793
+      SAM-COD24                 .060             -              .903           .836           .029    -        .904      .833      .039      -         .912      .859
+      CRNet-PVT∗                .064             .811           .889           .835           .030    .738     .894      .834      .044      .819      .902      .855
+      Ours                      .055             .828             .911         .849           .029    .768     .910      .838      .039      .836      .918      .862
+
+Table 2: Ablation study of proposed prompt enhancement on COD10K. DGS                                  3) 7 weakly-supervised methods, such as WSSA [53], SCWS [50],
+means density-based grid sampling and AUG means image augmentation.                                    TEL [29], CRNet [17], WS-SAM [16], MiNet [36] and SAM-
+                                                                                                       COD [3]. Besides, we also introduce two SAM methods for com-
+                 Settings          M↓            Fβ ↑       Eφ ↑            Sα ↑                       parison, one of which applies SAM directly on the test, and the other
+                 WS-SAM            0.038         0.719      0.878           0.803                      SAM-S [16] ﬁne-tunes SAM with scribble annotations. For compar-
+                 w/o AUG           0.030         0.749      0.902           0.830
+                 w/o DGS           0.030         0.753      0.904           0.833                      ison, we also introduce a variant of CRNet that employs the same
+                 Ours              0.029         0.768      0.910           0.838
+                                                                                                       PVT-v2-b4 backbone and adopts our pseudo-label generation strat-
+                                                                                                       egy for prediction supervision.
+Table 3: Ablation study of proposed components on COD10K. “SCL” is the
+structural consistency loss. “AL” is the auxiliary loss for auxiliary outputs.                         Qualitative Evaluation. Fig. 5 shows visual comparisons across
+                                                                                                       several challenging scenarios, including single-object, multi-object,
+  #
+      Encoder               Decoder                Loss Setting                COD10K                  large-object, and small-object cases. Our method demonstrates ro-
+      PVT-v2     CRNet      ViT Block      CSC     SCL     AL       M↓       Fβ ↑     Eφ ↑    Sα ↑     bust performance, producing more accurate and complete predictions
+ x                                                              0.030    0.739    0.894   0.834    than existing approaches, including some fully supervised methods.
+ y                                                              0.031    0.731    0.899   0.833
+ z                                                                0.031    0.756    0.889   0.822
+ {                                                               0.029    0.769    0.899   0.833
+                                                                                                       Quantitative Evaluation. Tab. 1 shows quantitative comparisons on
+ |                                                               0.030    0.745    0.904   0.834    three COD benchmarks. Our method achieves the best performance
+ }                                                              0.029    0.768    0.910   0.838
+                                                                                                       among weakly supervised methods, showing signiﬁcant improve-
+                                                                                                       ments over recent models such as MiNet and SAM-COD. Notably, it
+4.2     Comparison with State-of-the-arts                                                              even surpasses several outstanding fully supervised models, includ-
+Competitors. Our proposed method is compared with 31 re-                                               ing ZoomNet, DGNet, and FEDER. To further validate the effective-
+cent state-of-the-art methods, including 1) 12 CNN-based fully-                                        ness, we integrate the proposed pseudo-label generation strategy and
+supervised methods, such as SINet [11], TINet [58], PFNet [35],                                        transformer backbone into the recently proposed CRNet, resulting in
+UJSC [26], C2 F-Net-v2 [2], SINet-v2 [12], SegMaR [22], Zoom-                                          a variant referred to as CRNet-PVT. As shown in the results, CRNet-
+Net [37], FEDER [15], DSNet [47], CDP [31] and MCF [40]; 2) 9                                          PVT exhibits marked performance gains, demonstrating the beneﬁt
+Transformer-based fully-supervised methods, such as UGTR [46],                                         of our model components. Nonetheless, our method still outperforms
+CamoFormer [49], FSPNet [19], DGNet [20], EVP [30], SAM-                                               this variant, highlighting the advantages of incorporating SAM-based
+Adapter [5], DSAM [51], MAM-FFC [42] and FLRNet [56]; and                                              pseudo-labeling and transformer architecture.
+128         Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer
+
+
+
+
+                                Figure 5: Visual comparison of our proposed method and other representative COD methods.
+
+                                           CAMO                                      COD10K                                      NC4K
+      K     P       τ     M↓        Fβ ↑       Eφ ↑       Sα ↑       M↓        Fβ ↑      Eφ ↑        Sα ↑       M↓        Fβ ↑       Eφ ↑        Sα ↑
+      10    20      1    .070       .819      .868       .811       .033      .762       .888       .813       .052       .833       .885       .829
+      10    20      2    .061       .836      .892       .831       .030      .782       .904       .831       .044       .840       .904       .847
+      10    20      3    .056       .841      .904       .847       .029      .774       .906       .835       .042       .840       .907       .855
+      10    20      4    .055       .828      .911       .849       .029      .768       .910       .838       .039       .836       .918       .862
+      5     20      4    .056       .825      .908       .851       .029      .767       .903       .834       .041       .836       .908       .856
+      10    20      4    .055       .828      .911       .849       .029      .768       .910       .838       .039       .836       .918       .862
+      15    20      4    .057       .806      .905       .850       .030      .737       .903       .830       .040       .821       .915       .861
+      20    20      4    .055       .814      .909       .853       .030      .745       .902       .829       .040       .826       .914       .861
+      10    10      4    .057       .822      .901       .837       .030      .748       .900       .827       .042       .824       .907       .854
+      10    20      4    .055       .828      .911       .849       .029      .768       .910       .838       .039       .836       .918       .862
+      10    30      4    .055       .821      .906       .849       .029      .749       .904       .830       .041       .827       .912       .859
+      10    50      4    .055       .834      .906       .853       .029      .762       .907       .837       .041       .831       .913       .862
+
+                 Table 4: Ablation study on parameter settings of the SAM-based pseudo label generation. The best results are marked in red.
+
+4.3    Ablation Study                                                            5     Conclusions
+Prompt Enhancement. To verify the effectiveness of the proposed                  In this paper, we propose a novel SAM-guided multi-scale feature
+prompt enhancement strategy, we made adjustments by removing                     correlation transformer for WSCOD. Firstly, to improve weak su-
+density-based grid sampling and image augmentation, respectively,                pervision, we design a SAM-based label generation module that
+for comparison, shown in Tab. 2. It is evident that our method                   leverages sparse annotations as prompts of SAM to generate reli-
+achieves the best performance and improves the quality of SAM-                   able pseudo object masks for model training, under two strategies,
+based mask generation (WS-SAM).                                                  i.e., density-based grid sampling for prompt enhancement and label
+Cross-scale Correlation Module. To demonstrate the effectiveness                 response ﬁlter. Then, to capture multi-scale camouﬂage cues, we pro-
+of our cross-scale correlation module, we compare it with the CR-                pose a novel cross-scale correlation module in the transformer frame-
+Net decoder and standard ViT decoder, as shown in x, y, and }                    work, which utilizes enriched cross-attention operations to excavate
+of Tab. 3. We can see that the proposed module achieves signiﬁcant               global context and aggregate multi-scale discriminative features for
+performance improvement, especially in terms of Fβ and Eφ .                      accurate segmentation. Extensive experiments on three benchmark
+SAM-based Pseudo Label Generation. We performed ablation ex-                     datasets demonstrate the state-of-the-art performance of our method
+periments on the number of image augmentation K, the number of                   over existing weakly supervised methods, even surpassing some fully
+sample points P, and the threshold τ . As shown in Tab. 4, the setting           supervised methods.
+K = 10, P = 20, τ = 4 achieves the best overall performance.
+Loss Function. We test the effectiveness of loss functions, as shown             References
+in z, {, |, and } of Tab. 3. With auxiliary loss and structure con-
+                                                                                  [1] J. S. Chahl and H. Liu. Bioinspired invertebrate pest detection on stand-
+sistency loss, the model performance has been enhanced to different                   ing crops. In Bioinspiration, Biomimetics, and Bioreplication VIII, vol-
+extents. The combined version yields the best performance.                            ume 10593, pages 68–81. SPIE, 2018.
+             Z.-J. Wu et al. / Scribble-Based Weakly Supervised Camouflaged Object Detection via SAM-Guided Feature Correlation Transformer              129
+
+ [2] G. Chen, S.-J. Liu, Y.-J. Sun, G.-P. Ji, Y.-F. Wu, and T. Zhou. Camou-          detection: Unifying salient object detection and camouﬂaged object de-
+     ﬂaged object detection via context-aware cross-level fusion. TCSVT, 32          tection. ESWA, 274:126912, 2025.
+     (10):6981–6993, 2022.                                                      [32] Y. Lv, J. Zhang, Y. Dai, A. Li, B. Liu, N. Barnes, and D.-P. Fan. Si-
+ [3] H. Chen, P. Wei, G. Guo, and S. Gao. SAM-COD: SAM-guided uni-                   multaneously localize, segment and rank the camouﬂaged objects. In
+     ﬁed framework for weakly-supervised camouﬂaged object detection. In             CVPR, pages 11591–11601, 2021.
+     ECCV, 2024.                                                                [33] R. Margolin, L. Zelnik-Manor, and A. Tal. How to evaluate foreground
+ [4] T. Chen, Z. Mai, R. Li, and W.-L. Chao. Segment anything model                  maps? In CVPR, pages 248–255, 2014.
+     (SAM) enhanced pseudo labels for weakly supervised semantic seg-           [34] G. Máttyus, W. Luo, and R. Urtasun. Deeproadmapper: Extracting road
+     mentation. In NeurIPS Workshop, 2023.                                           topology from aerial images. In ICCV, pages 3438–3446, 2017.
+ [5] T. Chen, L. Zhu, C. Deng, R. Cao, Y. Wang, S. Zhang, Z. Li, L. Sun,        [35] H. Mei, G.-P. Ji, Z. Wei, X. Yang, X. Wei, and D.-P. Fan. Camouﬂaged
+     Y. Zang, and P. Mao. Sam-adapter: Adapting segment anything in un-              object segmentation with distraction mining. In CVPR, pages 8772–
+     derperformed scenes. In ICCVW, pages 3367–3375, 2023.                           8781, 2021.
+ [6] Z. Chen, R. Gao, T.-Z. Xiang, and F. Lin. Diffusion model for camou-       [36] Y. Niu, L. Yang, R. Xu, Y. Li, and Y. Chen. Minet: Weakly-supervised
+     ﬂaged object detection. In ECAI, volume 372, pages 445–452, 2023.               camouﬂaged object detection through mutual interaction between re-
+ [7] Z. Chen, K. Sun, X. Lin, and R. Ji. Camodiffusion: Camouﬂaged object            gion and edge cues. In ACM MM, page 6316–6325, 2024.
+     detection via conditional diffusion models. In AAAI, volume 38, pages      [37] Y. Pang, X. Zhao, T.-Z. Xiang, L. Zhang, and H. Lu. Zoom in and out: A
+     1272–1280, 2023.                                                                mixed-scale triplet network for camouﬂaged object detection. In CVPR,
+ [8] B. Dong, J. Pei, R. Gao, T.-Z. Xiang, S. Wang, and H. Xiong. A uniﬁed           pages 2160–2170, 2022.
+     query-based paradigm for camouﬂaged instance segmentation. In ACM          [38] Y. Pang, X. Zhao, T.-Z. Xiang, L. Zhang, and H. Lu. Zoomnext: A uni-
+     MM, pages 2131–2138, 2023.                                                      ﬁed collaborative pyramid network for camouﬂaged object detection.
+ [9] D. Fan, C. Gong, Y. Cao, B. Ren, M. Cheng, and A. Borji. Enhanced-              IEEE TPAMI, 46(12):9205–9220, 2024.
+     alignment measure for binary foreground map evaluation. In IJCAI,          [39] R. Pérez-de la Fuente, X. Delclòs, E. Peñalver, M. Speranza, J. Wierz-
+     pages 698–704, 2018.                                                            chos, C. Ascaso, and M. S. Engel. Early evolution and ecology of cam-
+[10] D.-P. Fan, M.-M. Cheng, Y. Liu, and etc. Structure-measure: A new               ouﬂage in insects. PNAS, 109(52):21414–21419, 2012.
+     way to evaluate foreground maps. In ICCV, pages 4548–4557, 2017.           [40] W. Sun, Q. Wang, Y. Tian, X. Yang, X. Kong, Y. Dong, and Y. Zhang.
+[11] D.-P. Fan, G.-P. Ji, G. Sun, M.-M. Cheng, J. Shen, and L. Shao. Cam-            Multi-level cross-knowledge fusion with edge guidance for camou-
+     ouﬂaged object detection. In CVPR, pages 2777–2787, 2020.                       ﬂaged object detection. KBS, page 113070, 2025.
+[12] D.-P. Fan, G.-P. Ji, M.-M. Cheng, and L. Shao. Concealed object detec-     [41] Y. Sun, S. Wang, C. Chen, and T.-Z. Xiang. Boundary-guided camou-
+     tion. IEEE TPAMI, 44(10):6024–6042, 2022.                                       ﬂaged object detection. In IJCAI, pages 1335–1341, 2022.
+[13] D.-P. Fan, G.-P. Ji, P. Xu, M.-M. Cheng, C. Sakaridis, and L. Van Gool.    [42] T. Wang, Z. Yu, J. Fang, J. Xie, F. Yang, H. Zhang, L. Zhang, M. Du,
+     Advances in deep concealed scene understanding. VI, 1(1):16, 2023.              L. Li, and X. Ning. Multidimensional fusion of frequency and spatial
+[14] C. Godard, O. Mac Aodha, and G. J. Brostow. Unsupervised monocular              domain information for enhanced camouﬂaged object detection. Infor-
+     depth estimation with left-right consistency. In CVPR, 2017.                    mation Fusion, 117:102871, 2025.
+[15] C. He, K. Li, Y. Zhang, L. Tang, Y. Zhang, Z. Guo, and X. Li. Cam-         [43] W. Wang, E. Xie, X. Li, D.-P. Fan, K. Song, D. Liang, T. Lu, P. Luo, and
+     ouﬂaged object detection with feature decomposition and edge recon-             L. Shao. Pvt v2: Improved baselines with pyramid vision transformer.
+     struction. In CVPR, pages 22046–22055, 2023.                                    CVM, 8(3):415–424, 2022.
+[16] C. He, K. Li, Y. Zhang, G. Xu, L. Tang, Y. Zhang, Z. Guo, and              [44] R. Wu, T.-Z. Xiang, G.-S. Xie, R. Gao, X. Shu, F. Zhao, and L. Shao.
+     X. Li. Weakly-supervised concealed object segmentation with sam-                Uncertainty-aware transformer for referring camouﬂaged object detec-
+     based pseudo labeling and multi-scale feature grouping. NeurIPS, 2023.          tion. IEEE TIP, pages 1–1, 2025.
+[17] R. He, Q. Dong, J. Lin, and etc. Weakly-supervised camouﬂaged object       [45] Z. Wu, D. P. Paudel, D.-P. Fan, J. Wang, S. Wang, C. Demonceaux,
+     detection with scribble annotations. In AAAI, pages 781–789, 2023.              R. Timofte, and L. Van Gool. Source-free depth for object pop-out. In
+[18] X. Hu, S. Wang, X. Qin, H. Dai, W. Ren, D. Luo, Y. Tai, and L. Shao.            ICCV, pages 1032–1042, 2023.
+     High-resolution iterative feedback network for camouﬂaged object de-       [46] F. Yang, Q. Zhai, X. Li, R. Huang, A. Luo, H. Cheng, and D.-P. Fan.
+     tection. In AAAI, pages 881–889, 2023.                                          Uncertainty-guided transformer reasoning for camouﬂaged object de-
+[19] Z. Huang, H. Dai, T.-Z. Xiang, S. Wang, H.-X. Chen, J. Qin, and                 tection. In ICCV, pages 4146–4155, 2021.
+     H. Xiong. Feature shrinkage pyramid for camouﬂaged object detection        [47] H. Yang, Y. Zhu, K. Sun, H. Ding, and X. Lin. Camouﬂaged object de-
+     with transformers. In CVPR, pages 5557–5566, 2023.                              tection via dual-branch fusion and dual self-similarity constraints. PR,
+[20] G.-P. Ji, D.-P. Fan, Y.-C. Chou, D. Dai, A. Liniger, and L. Van Gool.           157:110895, 2025.
+     Deep gradient learning for efﬁcient camouﬂaged object detection. MIR,      [48] S. Yao, H. Sun, T.-Z. Xiang, X. Wang, and X. Cao. Hierarchical graph
+     20(1):92–108, 2023.                                                             interaction transformer with dynamic token clustering for camouﬂaged
+[21] G.-P. Ji, D.-P. Fan, P. Xu, M.-M. Cheng, B. Zhou, and L. Van Gool. Sam          object detection. IEEE TIP, 33:5936–5948, 2024.
+     struggles in concealed scenes–empirical study on" segment anything".       [49] B. Yin, X. Zhang, D.-P. Fan, S. Jiao, M.-M. Cheng, L. Van Gool, and
+     SCIS, 66(226101), 2023.                                                         Q. Hou. Camoformer: Masked separable attention for camouﬂaged ob-
+[22] Q. Jia, S. Yao, Y. Liu, X. Fan, R. Liu, and Z. Luo. Segment, magnify            ject detection. IEEE TPAMI, 46(12):10362–10374, 2024.
+     and reiterate: Detecting camouﬂaged objects the hard way. In CVPR,         [50] S. Yu, B. Zhang, J. Xiao, and E. G. Lim. Structure-consistent weakly
+     pages 4713–4722, 2022.                                                          supervised salient object detection with local saliency coherence. In
+[23] A. Kirillov, E. Mintun, N. Ravi, H. Mao, C. Rolland, L. Gustafson,              AAAI, pages 3234–3242, 2021.
+     T. Xiao, S. Whitehead, A. C. Berg, W.-Y. Lo, P. Dollar, and R. Girshick.   [51] Z. Yu, X. Zhang, L. Zhao, Y. Bin, and G. Xiao. Exploring deeper!
+     Segment anything. In ICCV, pages 4015–4026, 2023.                               segment anything model with depth perception for camouﬂaged object
+[24] T.-N. Le, T. V. Nguyen, Z. Nie, M.-T. Tran, and A. Sugimoto.                    detection. In ACM MM, pages 4322–4330, 2024.
+     Anabranch network for camouﬂaged object segmentation. CVIU, 184:           [52] C. Zhang, H. Bi, T.-Z. Xiang, R. Wu, J. Tong, and X. Wang. Collabora-
+     45–56, 2019.                                                                    tive camouﬂaged object detection: A large-scale dataset and benchmark.
+[25] C. Lei, J. Fan, X. Li, T. Xiang, A. Li, C. Zhu, and L. Zhang. Towards           IEEE TNNLS, 2023.
+     real zero-shot camouﬂaged object segmentation without camouﬂaged           [53] J. Zhang, X. Yu, A. Li, P. Song, B. Liu, and Y. Dai. Weakly-supervised
+     annotations. IEEE TPAMI, pages 1–1, 2025.                                       salient object detection via scribble annotations. In CVPR, pages
+[26] A. Li, J. Zhang, Y. Lv, B. Liu, T. Zhang, and Y. Dai. Uncertainty-aware         12546–12555, 2020.
+     joint salient object and camouﬂaged object detection. In CVPR, pages       [54] Y. Zhang, J. Zhang, W. Hamidouche, and O. Deforges. Predictive un-
+     10071–10081, 2021.                                                              certainty estimation for camouﬂaged object detection. IEEE TIP, 2023.
+[27] L. Li, J. Liu, F. Yu, X. Wang, and T.-Z. Xiang. MVDI25K: A large-scale     [55] H. Zhao, J. Shi, X. Qi, X. Wang, and J. Jia. Pyramid scene parsing
+     dataset of microscopic vaginal discharge images. TBench, 1(1), 2021.            network. In CVPR, pages 2881–2890, 2017.
+[28] L. Li, J. Liu, S. Wang, X. Wang, and T.-Z. Xiang. Trichomonas vaginalis    [56] Y. Zhao, Q. Zhang, and Y. Li. Flrnet: A bio-inspired three-stage net-
+     segmentation in microscope images. In MICCAI, pages 68–78, 2022.                work for camouﬂaged object detection via ﬁltering, localization and re-
+[29] Z. Liang, T. Wang, X. Zhang, J. Sun, and J. Shen. Tree energy loss:             ﬁnement. Neurocomputing, page 129523, 2025.
+     Towards sparsely annotated semantic segmentation. In CVPR, pages           [57] Y. Zhong, B. Li, L. Tang, and etc. Detecting camouﬂaged object in
+     16907–16916, 2022.                                                              frequency domain. In CVPR, pages 4504–4513, 2022.
+[30] W. Liu, X. Shen, C.-M. Pun, and etc. Explicit visual prompting for low-    [58] J. Zhu, X. Zhang, S. Zhang, and J. Liu. Inferring camouﬂaged objects
+     level structure segmentations. In CVPR, pages 19434–19445, 2023.                by texture-aware interactive guidance network. In AAAI, pages 3599–
+[31] Y. Liu, C. Li, X. Dong, L. Li, D. Zhang, S. Xu, and J. Han. Seamless            3607, 2021.
+

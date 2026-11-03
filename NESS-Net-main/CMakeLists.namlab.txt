@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.15)
+project(ness_namlab_edges CXX)
+
+find_package(OpenCV REQUIRED)
+set(CMAKE_CXX_STANDARD 14)
+file(GLOB NAMLAB_SOURCES "Sources/*.cpp")
+add_executable(run_dataset_linux run_dataset_linux.cpp ${NAMLAB_SOURCES})
+target_include_directories(run_dataset_linux PRIVATE Sources ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(run_dataset_linux PRIVATE ${OpenCV_LIBS})

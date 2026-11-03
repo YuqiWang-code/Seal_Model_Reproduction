@@ -1,0 +1,224 @@
+{
+  "Ours": {
+    "metrics": {
+      "IoU": 0.44835069134621564,
+      "F1": 0.619118966180051,
+      "Pd": 0.8273059731816335,
+      "Fa": 2.099783900739855e-06
+    },
+    "counts": {
+      "n_images": 1983,
+      "tp": 62809,
+      "fp": 34377,
+      "fn": 42903,
+      "n_gt": 7383,
+      "n_pred": 6156,
+      "n_detected": 6108,
+      "false_alarm_pixels": 1080,
+      "total_pixels": 514338642
+    },
+    "protocol": {
+      "name": "AS1000Metrics",
+      "threshold": 0.5,
+      "threshold_operator": ">",
+      "gt_threshold_uint8": 128,
+      "match_distance": 3,
+      "distance_operator": "<",
+      "connectivity": 8,
+      "matching": "raster-order greedy one-to-one centroid matching",
+      "aggregation": "whole-dataset counts",
+      "Fa_definition": "unmatched prediction component area / total image pixels",
+      "units": "raw ratios [0,1]"
+    },
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/Ours/test_maps",
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "method": "Ours",
+    "experiment_protocol": "已有测试预测；RGB-T/Box",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/Ours/unified_metrics.json"
+  },
+  "FCT-SAM-WSCOD": {
+    "metrics": {
+      "IoU": 0.0006718656148406237,
+      "F1": 0.0013428290290300323,
+      "Pd": 0.0025734796153325207,
+      "Fa": 0.03467404457625799
+    },
+    "counts": {
+      "n_images": 1983,
+      "tp": 12057,
+      "fp": 17839841,
+      "fn": 93655,
+      "n_gt": 7383,
+      "n_pred": 5001,
+      "n_detected": 19,
+      "false_alarm_pixels": 17834201,
+      "total_pixels": 514338642
+    },
+    "protocol": {
+      "name": "AS1000Metrics",
+      "threshold": 0.5,
+      "threshold_operator": ">",
+      "gt_threshold_uint8": 128,
+      "match_distance": 3,
+      "distance_operator": "<",
+      "connectivity": 8,
+      "matching": "raster-order greedy one-to-one centroid matching",
+      "aggregation": "whole-dataset counts",
+      "Fa_definition": "unmatched prediction component area / total image pixels",
+      "units": "raw ratios [0,1]"
+    },
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/Seal/test_maps",
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "method": "FCT-SAM-WSCOD",
+    "experiment_protocol": "公开检查点跨域测试；RGB/Scribble",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/original_functions_20261103/cross_domain_metrics_full.json"
+  },
+  "LRDNet": {
+    "metrics": {
+      "IoU": 0.0006419484416273083,
+      "F1": 0.0012830732164028531,
+      "Pd": 0.0006772314777190844,
+      "Fa": 0.010790560045068518
+    },
+    "counts": {
+      "n_images": 1983,
+      "tp": 3633,
+      "fp": 5553621,
+      "fn": 102079,
+      "n_gt": 7383,
+      "n_pred": 1042,
+      "n_detected": 5,
+      "false_alarm_pixels": 5550002,
+      "total_pixels": 514338642
+    },
+    "protocol": {
+      "name": "AS1000Metrics",
+      "threshold": 0.5,
+      "threshold_operator": ">",
+      "gt_threshold_uint8": 128,
+      "match_distance": 3,
+      "distance_operator": "<",
+      "connectivity": 8,
+      "matching": "raster-order greedy one-to-one centroid matching",
+      "aggregation": "whole-dataset counts",
+      "Fa_definition": "unmatched prediction component area / total image pixels",
+      "units": "raw ratios [0,1]"
+    },
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/LRDNet-master/experiments/SCOD/test_maps",
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "method": "LRDNet",
+    "experiment_protocol": "S-COD原始涂鸦训练；stage2 epoch100；Seal跨域测试",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/LRDNet-master/experiments/SCOD/Seal_original_evaluate.log"
+  },
+  "MIR-Net": {
+    "metrics": {
+      "IoU": 0.0008027237596431974,
+      "F1": 0.0016041598220829438,
+      "Pd": 0.002438033319788704,
+      "Fa": 0.018226748360859107
+    },
+    "counts": {
+      "n_images": 1983,
+      "tp": 7617,
+      "fp": 9383231,
+      "fn": 98095,
+      "n_gt": 7383,
+      "n_pred": 2416,
+      "n_detected": 18,
+      "false_alarm_pixels": 9374721,
+      "total_pixels": 514338642
+    },
+    "protocol": {
+      "name": "AS1000Metrics",
+      "threshold": 0.5,
+      "threshold_operator": ">",
+      "gt_threshold_uint8": 128,
+      "match_distance": 3,
+      "distance_operator": "<",
+      "connectivity": 8,
+      "matching": "raster-order greedy one-to-one centroid matching",
+      "aggregation": "whole-dataset counts",
+      "Fa_definition": "unmatched prediction component area / total image pixels",
+      "units": "raw ratios [0,1]"
+    },
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/MIR-Net/Seal/published_test_maps",
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "method": "MIR-Net",
+    "experiment_protocol": "作者公开完整权重跨域测试；RGB/Scribble",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/docs/MIR-Net_原函数评估_20261103/legacy_reassessment.json"
+  },
+  "SSFam": {
+    "metrics": {
+      "IoU": 0.0009943835468274888,
+      "F1": 0.0019867914609152664,
+      "Pd": 0.2874170391439794,
+      "Fa": 0.04022741305134138
+    },
+    "counts": {
+      "n_images": 1983,
+      "tp": 20695,
+      "fp": 20706177,
+      "fn": 85017,
+      "n_gt": 7383,
+      "n_pred": 231140,
+      "n_detected": 2122,
+      "false_alarm_pixels": 20690513,
+      "total_pixels": 514338642
+    },
+    "protocol": {
+      "name": "AS1000Metrics",
+      "threshold": 0.5,
+      "threshold_operator": ">",
+      "gt_threshold_uint8": 128,
+      "match_distance": 3,
+      "distance_operator": "<",
+      "connectivity": 8,
+      "matching": "raster-order greedy one-to-one centroid matching",
+      "aggregation": "whole-dataset counts",
+      "Fa_definition": "unmatched prediction component area / total image pixels",
+      "units": "raw ratios [0,1]"
+    },
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/SSFam/Seal/RGBT_published",
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "method": "SSFam",
+    "experiment_protocol": "作者公开RGBT完整权重跨域测试",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/SSFam-main/experiments/Published_fixed_eval/metrics.json"
+  },
+  "NESS-Net": {
+    "metrics": {
+      "IoU": 0.2515188538720313,
+      "F1": 0.4019417735399922,
+      "Pd": 0.567384532033049,
+      "Fa": 7.798169673590265e-05
+    },
+    "counts": {
+      "n_images": 1983,
+      "tp": 45084,
+      "fp": 73535,
+      "fn": 60628,
+      "n_gt": 7383,
+      "n_pred": 6019,
+      "n_detected": 4189,
+      "false_alarm_pixels": 40109,
+      "total_pixels": 514338642
+    },
+    "protocol": {
+      "name": "AS1000Metrics",
+      "threshold": 0.5,
+      "threshold_operator": ">",
+      "gt_threshold_uint8": 128,
+      "match_distance": 3,
+      "distance_operator": "<",
+      "connectivity": 8,
+      "matching": "raster-order greedy one-to-one centroid matching",
+      "aggregation": "whole-dataset counts",
+      "Fa_definition": "unmatched prediction component area / total image pixels",
+      "units": "raw ratios [0,1]"
+    },
+    "prediction_dir": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_maps",
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "method": "NESS-Net",
+    "experiment_protocol": "Seal框监督适配；Canny/general；原Fw验证选择epoch5；T替代深度",
+    "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_metrics.json"
+  }
+}

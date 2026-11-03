@@ -1,0 +1,37 @@
+{
+  "metrics": {
+    "IoU": 0.0009943835468274888,
+    "F1": 0.0019867914609152664,
+    "Pd": 0.2874170391439794,
+    "Fa": 0.04022741305134138
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 20695,
+    "fp": 20706177,
+    "fn": 85017,
+    "n_gt": 7383,
+    "n_pred": 231140,
+    "n_detected": 2122,
+    "false_alarm_pixels": 20690513,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/SSFam/Seal/RGBT_published",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "method": "SSFam",
+  "experiment_protocol": "作者公开RGBT完整权重跨域测试",
+  "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/SSFam-main/experiments/Published_fixed_eval/metrics.json"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "RSML_3 Server",
+  "host": "<server-host>",
+  "protocol": "sftp",
+  "port": 22,
+  "username": "<username>",
+  "password": "<password>",
+  "remotePath": "/share_datasets/Seal_Model_Reproduction/",
+  "uploadOnSave": false,
+  "syncMode": "update",
+  "ignore": [
+    ".git",
+    ".git/**"
+  ],
+  "watcher": {
+    "files": "**/*",
+    "autoUpload": false,
+    "autoDelete": false
+  }
+}

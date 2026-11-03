@@ -1,0 +1,21 @@
+{
+  "protocol": "published refinement + NAMLab; RGB-D model with Seal thermal replacing depth",
+  "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/NESS_refinement.pth",
+  "stage": "refinement",
+  "supervision": "source-domain scribble",
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/refinement_namlab_test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "count": 1983,
+  "original_metrics_source": "published_metrics.json:refinement_namlab",
+  "small_target_metrics_source": "refinement_namlab_small_target_metrics.json",
+  "metrics": {
+    "S": 0.4666185279426068,
+    "Fw": 0.001733883532895621,
+    "E": 0.263767112039326,
+    "MAE": 0.042296525090932846,
+    "IoU": 0.0007333271181027003,
+    "F1": 0.001465579487023831,
+    "Pd": 0.005146959230665041,
+    "Fa": 0.032954249624511
+  }
+}

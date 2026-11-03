@@ -1,0 +1,50 @@
+{
+  "original_function_source": "/share_datasets/Seal_Model_Reproduction/Ours/evaluate.py",
+  "original_functions_unchanged": true,
+  "small_target_sources": [
+    "/share_datasets/Seal_Model_Reproduction/metrics.py",
+    "/share_datasets/Seal_Model_Reproduction/evaluate_small_targets.py"
+  ],
+  "reinferred_seal": false,
+  "retrained": false,
+  "experiments": [
+    {
+      "name": "cross_domain",
+      "checkpoint": "/share_datasets/Seal_Model_Reproduction/FCT-SAM-WSCOD-main/pretrain/Pvtv2_TE_new_dataset_batch4_epoch60.pth",
+      "checkpoint_epoch": 33,
+      "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/Seal/test_maps",
+      "n_images": 1983,
+      "four_metric_json": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/original_functions_20261103/cross_domain_metrics_full.json",
+      "small_metric_json": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/diagnosis_20261103/cross_domain_small_targets.json",
+      "metrics": {
+        "S": 0.46631462899629555,
+        "Fw": 0.0036306755394814177,
+        "E": 0.2730704390694872,
+        "MAE": 0.04035531356930733,
+        "IoU": 0.0006718656148406237,
+        "F1": 0.0013428290290300323,
+        "Pd": 0.0025734796153325207,
+        "Fa": 0.03467404457625799
+      }
+    },
+    {
+      "name": "seal_adaptation",
+      "checkpoint": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/Seal_retrain_768_1fg5bg/best.pth",
+      "checkpoint_epoch": 45,
+      "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/Seal_retrain_768_1fg5bg/test_maps",
+      "n_images": 1983,
+      "four_metric_json": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/original_functions_20261103/seal_adaptation_metrics_full.json",
+      "small_metric_json": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/diagnosis_20261103/adaptation_small_targets.json",
+      "metrics": {
+        "S": 0.3458864877101867,
+        "Fw": 0.0004841359551976094,
+        "E": 0.2503835976512788,
+        "MAE": 0.3836592435836792,
+        "IoU": 0.00028098183869905094,
+        "F1": 0.0005618058201657599,
+        "Pd": 0.02261953135581742,
+        "Fa": 0.32932903182491197
+      }
+    }
+  ]
+}

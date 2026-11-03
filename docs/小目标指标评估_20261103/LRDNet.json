@@ -1,0 +1,37 @@
+{
+  "metrics": {
+    "IoU": 0.0006419484416273083,
+    "F1": 0.0012830732164028531,
+    "Pd": 0.0006772314777190844,
+    "Fa": 0.010790560045068518
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 3633,
+    "fp": 5553621,
+    "fn": 102079,
+    "n_gt": 7383,
+    "n_pred": 1042,
+    "n_detected": 5,
+    "false_alarm_pixels": 5550002,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/LRDNet-master/experiments/SCOD/test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "method": "LRDNet",
+  "experiment_protocol": "S-COD原始涂鸦训练；stage2 epoch100；Seal跨域测试",
+  "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/LRDNet-master/experiments/SCOD/Seal_original_evaluate.log"
+}

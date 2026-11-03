@@ -1,0 +1,16 @@
+{
+  "data": "/share_datasets/Seal_Model_Reproduction/Seal_data",
+  "pseudo": "/share_datasets/Seal_Model_Reproduction/Seal_data/train/SAM_1fg5bg",
+  "init": "pretrain/Pvtv2_TE_new_dataset_batch4_epoch60.pth",
+  "run": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/Seal_retrain_768_1fg5bg",
+  "epochs": 60,
+  "size": 768,
+  "resume": null,
+  "batch_size": 2,
+  "accumulation": 2,
+  "encoder_lr": 1e-05,
+  "decoder_lr": 0.0001,
+  "seed": 42,
+  "foreground_points": 1,
+  "background_points": 5
+}

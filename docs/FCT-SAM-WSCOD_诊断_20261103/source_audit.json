@@ -1,0 +1,33 @@
+{
+  "checkpoint": "/share_datasets/Seal_Model_Reproduction/FCT-SAM-WSCOD-main/pretrain/Pvtv2_TE_new_dataset_batch4_epoch60.pth",
+  "source": "CAMO test (existing author test dataset)",
+  "source_count": 250,
+  "author_metrics": {
+    "S": 0.8487063597525675,
+    "adpF": 0.82776560799942,
+    "meanE": 0.9093109562665825,
+    "MAE": 0.055580980650149284
+  },
+  "comparison_to_saved_seal": [
+    {
+      "name": "2644.png",
+      "reassociated_max_abs": 8.124113082885742e-05,
+      "saved_vs_author_png_mae_uint8": 0.0,
+      "saved_vs_author_png_different_fraction": 0.0
+    },
+    {
+      "name": "3754.png",
+      "reassociated_max_abs": 0.00012481212615966797,
+      "saved_vs_author_png_mae_uint8": 0.0,
+      "saved_vs_author_png_different_fraction": 0.0
+    },
+    {
+      "name": "3279.png",
+      "reassociated_max_abs": 0.00015294551849365234,
+      "saved_vs_author_png_mae_uint8": 0.0,
+      "saved_vs_author_png_different_fraction": 0.0
+    }
+  ],
+  "source_metrics_role": "source-domain diagnostic only; author metric definitions, not Seal summary table",
+  "source_prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/diagnosis_20261103/CAMO_author_predictions"
+}

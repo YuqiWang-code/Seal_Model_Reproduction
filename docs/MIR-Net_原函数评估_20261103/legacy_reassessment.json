@@ -1,0 +1,42 @@
+{
+  "published_test_maps": {
+    "prediction_count": 1983,
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "metrics": {
+      "S": 0.47531869685734734,
+      "Fw": 0.004411915533815387,
+      "E": 0.290259331507183,
+      "MAE": 0.01843193545937538
+    }
+  },
+  "finetuned_test_maps": {
+    "prediction_count": 1983,
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "metrics": {
+      "S": 0.4849761017480838,
+      "Fw": 0.03627164289642031,
+      "E": 0.2963940739498749,
+      "MAE": 0.00517856003716588
+    }
+  },
+  "box_sam_test_maps": {
+    "prediction_count": 1983,
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "metrics": {
+      "S": 0.4822121108917775,
+      "Fw": 0.026295069452916712,
+      "E": 0.27956362368654236,
+      "MAE": 0.007874496281147003
+    }
+  },
+  "box_sam_150_test_maps": {
+    "prediction_count": 1983,
+    "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+    "metrics": {
+      "S": 0.4886600189586528,
+      "Fw": 0.04484895850186052,
+      "E": 0.3164511664103713,
+      "MAE": 0.00382471876218915
+    }
+  }
+}

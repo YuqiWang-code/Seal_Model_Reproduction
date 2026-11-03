@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-11-03T16:39:18.610964+08:00",
+  "protocol": "public full COD checkpoint -> Seal test; no Seal training or model selection",
+  "checkpoint": "/share_datasets/Seal_Model_Reproduction/FCT-SAM-WSCOD-main/pretrain/Pvtv2_TE_new_dataset_batch4_epoch60.pth",
+  "checkpoint_epoch": 33,
+  "author_explicitly_designated_final_checkpoint": "not confirmed by available release materials",
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/Seal/test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "n_images": 1983,
+  "missing": [],
+  "extra": [],
+  "original_four_functions_match": true,
+  "evaluation_snapshot_matches": true,
+  "metrics": {
+    "S": 0.46631462899629555,
+    "Fw": 0.0036306755394814177,
+    "E": 0.2730704390694872,
+    "MAE": 0.04035531356930733,
+    "IoU": 0.0006718656148406237,
+    "F1": 0.0013428290290300323,
+    "Pd": 0.0025734796153325207,
+    "Fa": 0.03467404457625799
+  },
+  "four_metric_json": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/original_functions_20261103/cross_domain_metrics_full.json",
+  "small_metric_json": "/share_datasets/Seal_Model_Reproduction/results/FCT-SAM-WSCOD/diagnosis_20261103/cross_domain_small_targets.json",
+  "reinferred": false,
+  "retrained": false,
+  "historical_box_adaptation": {
+    "labels_retained": 1500,
+    "training_started": false,
+    "status": "cancelled; no restart"
+  }
+}

@@ -1,0 +1,26 @@
+# 数据归档：本地 data/ 为约 9.6 GB 的源域数据 zip（S-COD/NESS-Net/SSFam），
+# 超过 GitHub 单文件与仓库容量限制，仅保留本地/服务器副本。
+data/
+
+# 训练权重不进仓库（清单见 docs/大文件服务器归档清单.md，权重保留在服务器）
+*.pth
+*.pth.tar
+*.ckpt
+
+# 凭据：SFTP 明文密码不进入公开仓库，模板见 .vscode/sftp.example.json
+.vscode/sftp.json
+
+# 依赖与构建产物
+node_modules/
+package-lock.json
+
+# Python / 编辑器 / Excel 临时文件
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+~$*
+*.swp
+.DS_Store
+Thumbs.db

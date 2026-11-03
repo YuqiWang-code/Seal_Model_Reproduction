@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "IoU": 0.0007333271181027003,
+    "F1": 0.001465579487023831,
+    "Pd": 0.005146959230665041,
+    "Fa": 0.032954249624511
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 12554,
+    "fp": 17013524,
+    "fn": 93158,
+    "n_gt": 7383,
+    "n_pred": 8410,
+    "n_detected": 38,
+    "false_alarm_pixels": 16949644,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/refinement_namlab_test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT"
+}

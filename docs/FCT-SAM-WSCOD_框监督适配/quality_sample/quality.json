@@ -1,0 +1,146 @@
+{
+  "supervision": "Box",
+  "n_images": 16,
+  "invalid": [],
+  "all_boxes_nonempty": true,
+  "outside_box_pixels": 0,
+  "generation_uses_gt_masks": false,
+  "dense_gt_role": "post-generation quality diagnosis only; no candidate or parameter selection",
+  "mean_mask_area": 0.00033735069821955936,
+  "mean_gt_area_diagnostic": 0.00024915758711358893,
+  "mean_box_area": 0.0005407249762890652,
+  "mean_iou_diagnostic": 0.6296524684876963,
+  "global_iou_diagnostic": 0.6097883597883598,
+  "precision_diagnostic": 0.6585714285714286,
+  "recall_diagnostic": 0.8916827852998066,
+  "images": [
+    {
+      "name": "1",
+      "mask_area": 0.00011180765998133969,
+      "gt_area_diagnostic": 0.00010024135032809764,
+      "box_area": 0.00024289250271808277,
+      "iou_diagnostic": 0.5714285714285714,
+      "box_fill": 0.4603174603174603
+    },
+    {
+      "name": "1088",
+      "mask_area": 0.0001657837716964692,
+      "gt_area_diagnostic": 0.00010795222343025901,
+      "box_area": 0.00020819357375835665,
+      "iou_diagnostic": 0.6136363636363636,
+      "box_fill": 0.7962962962962963
+    },
+    {
+      "name": "1178",
+      "mask_area": 0.001596150732147401,
+      "gt_area_diagnostic": 0.0011296429094666389,
+      "box_area": 0.002590853362326216,
+      "iou_diagnostic": 0.6215596330275229,
+      "box_fill": 0.6160714285714286
+    },
+    {
+      "name": "1268",
+      "mask_area": 4.240980206188747e-05,
+      "gt_area_diagnostic": 2.6988055857564752e-05,
+      "box_area": 5.7831548266210185e-05,
+      "iou_diagnostic": 0.5,
+      "box_fill": 0.7333333333333333
+    },
+    {
+      "name": "1358",
+      "mask_area": 0.0003624110358015838,
+      "gt_area_diagnostic": 0.00024289250271808277,
+      "box_area": 0.0005243393709469723,
+      "iou_diagnostic": 0.5544554455445545,
+      "box_fill": 0.6911764705882353
+    },
+    {
+      "name": "1448",
+      "mask_area": 0.0001426511523899851,
+      "gt_area_diagnostic": 0.00011951853308350105,
+      "box_area": 0.00025445881237132483,
+      "iou_diagnostic": 0.5813953488372093,
+      "box_fill": 0.5606060606060606
+    },
+    {
+      "name": "188",
+      "mask_area": 0.00017735008134971123,
+      "gt_area_diagnostic": 0.00011180765998133969,
+      "box_area": 0.0002390370661670021,
+      "iou_diagnostic": 0.6304347826086957,
+      "box_fill": 0.7419354838709677
+    },
+    {
+      "name": "278",
+      "mask_area": 0.0002390370661670021,
+      "gt_area_diagnostic": 0.0001465065889410658,
+      "box_area": 0.0003161457971886157,
+      "iou_diagnostic": 0.6129032258064516,
+      "box_fill": 0.7560975609756098
+    },
+    {
+      "name": "368",
+      "mask_area": 6.939785791945222e-05,
+      "gt_area_diagnostic": 4.626523861296815e-05,
+      "box_area": 9.638591377701698e-05,
+      "iou_diagnostic": 0.6666666666666666,
+      "box_fill": 0.72
+    },
+    {
+      "name": "458",
+      "mask_area": 0.001260727752203382,
+      "gt_area_diagnostic": 0.0009792808839744925,
+      "box_area": 0.0020703694279303247,
+      "iou_diagnostic": 0.6552706552706553,
+      "box_fill": 0.6089385474860335
+    },
+    {
+      "name": "548",
+      "mask_area": 9.25304772259363e-05,
+      "gt_area_diagnostic": 8.096416757269425e-05,
+      "box_area": 0.00015421746204322714,
+      "iou_diagnostic": 0.875,
+      "box_fill": 0.6
+    },
+    {
+      "name": "638",
+      "mask_area": 6.554242136837154e-05,
+      "gt_area_diagnostic": 7.32532944705329e-05,
+      "box_area": 0.00013879571583890444,
+      "iou_diagnostic": 0.8,
+      "box_fill": 0.4722222222222222
+    },
+    {
+      "name": "728",
+      "mask_area": 9.638591377701698e-05,
+      "gt_area_diagnostic": 6.168698481729086e-05,
+      "box_area": 0.00013879571583890444,
+      "iou_diagnostic": 0.64,
+      "box_fill": 0.6944444444444444
+    },
+    {
+      "name": "818",
+      "mask_area": 0.0005860263557642632,
+      "gt_area_diagnostic": 0.0003701219089037452,
+      "box_area": 0.0008674732239931527,
+      "iou_diagnostic": 0.42528735632183906,
+      "box_fill": 0.6755555555555556
+    },
+    {
+      "name": "908",
+      "mask_area": 0.00025831424892240547,
+      "gt_area_diagnostic": 0.00025445881237132483,
+      "box_area": 0.0004896404419872462,
+      "iou_diagnostic": 0.6835443037974683,
+      "box_fill": 0.5275590551181102
+    },
+    {
+      "name": "999",
+      "mask_area": 0.00013108484273674308,
+      "gt_area_diagnostic": 0.00013494027928782375,
+      "box_area": 0.00026216968547348616,
+      "iou_diagnostic": 0.6428571428571429,
+      "box_fill": 0.5
+    }
+  ]
+}

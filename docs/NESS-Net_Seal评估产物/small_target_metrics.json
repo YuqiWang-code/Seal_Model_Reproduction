@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "IoU": 0.2515188538720313,
+    "F1": 0.4019417735399922,
+    "Pd": 0.567384532033049,
+    "Fa": 7.798169673590265e-05
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 45084,
+    "fp": 73535,
+    "fn": 60628,
+    "n_gt": 7383,
+    "n_pred": 6019,
+    "n_detected": 4189,
+    "false_alarm_pixels": 40109,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected_original_eval/test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT"
+}

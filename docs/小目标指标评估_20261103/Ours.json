@@ -1,0 +1,37 @@
+{
+  "metrics": {
+    "IoU": 0.44835069134621564,
+    "F1": 0.619118966180051,
+    "Pd": 0.8273059731816335,
+    "Fa": 2.099783900739855e-06
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 62809,
+    "fp": 34377,
+    "fn": 42903,
+    "n_gt": 7383,
+    "n_pred": 6156,
+    "n_detected": 6108,
+    "false_alarm_pixels": 1080,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/Ours/test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "method": "Ours",
+  "experiment_protocol": "已有测试预测；RGB-T/Box",
+  "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/Ours/unified_metrics.json"
+}

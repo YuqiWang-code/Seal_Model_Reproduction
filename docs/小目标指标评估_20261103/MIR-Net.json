@@ -1,0 +1,37 @@
+{
+  "metrics": {
+    "IoU": 0.0008027237596431974,
+    "F1": 0.0016041598220829438,
+    "Pd": 0.002438033319788704,
+    "Fa": 0.018226748360859107
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 7617,
+    "fp": 9383231,
+    "fn": 98095,
+    "n_gt": 7383,
+    "n_pred": 2416,
+    "n_detected": 18,
+    "false_alarm_pixels": 9374721,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/MIR-Net/Seal/published_test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "method": "MIR-Net",
+  "experiment_protocol": "作者公开完整权重跨域测试；RGB/Scribble",
+  "original_four_metric_record": "/share_datasets/Seal_Model_Reproduction/docs/MIR-Net_原函数评估_20261103/legacy_reassessment.json"
+}

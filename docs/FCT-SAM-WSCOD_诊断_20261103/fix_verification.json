@@ -1,0 +1,92 @@
+{
+  "fixed_candidate_replay_images": 16,
+  "all_final_prompts_satisfied": true,
+  "coordinate_roundtrip_max_pixels": 5.684341886080802e-14,
+  "mean_fixed_area": 0.14550875376868921,
+  "existing_label_invalid_count": 897,
+  "total_existing": 1500,
+  "training_started": false,
+  "quality_status": "prompt consistency passed on sample; large-area false foreground remains; not cleared for long training",
+  "images": [
+    {
+      "name": "1",
+      "accepted_views": 10,
+      "area": 0.0007286775081542483
+    },
+    {
+      "name": "1088",
+      "accepted_views": 10,
+      "area": 0.014099331467302042
+    },
+    {
+      "name": "1178",
+      "accepted_views": 10,
+      "area": 0.0038477256779785177
+    },
+    {
+      "name": "1268",
+      "accepted_views": 10,
+      "area": 0.13517546091743968
+    },
+    {
+      "name": "1358",
+      "accepted_views": 10,
+      "area": 0.0005320502440491337
+    },
+    {
+      "name": "1448",
+      "accepted_views": 10,
+      "area": 0.0035701342463007085
+    },
+    {
+      "name": "188",
+      "accepted_views": 10,
+      "area": 0.24275756243879495
+    },
+    {
+      "name": "278",
+      "accepted_views": 9,
+      "area": 0.38347328568013755
+    },
+    {
+      "name": "368",
+      "accepted_views": 9,
+      "area": 0.005305080694287014
+    },
+    {
+      "name": "458",
+      "accepted_views": 10,
+      "area": 0.012938845065426759
+    },
+    {
+      "name": "548",
+      "accepted_views": 10,
+      "area": 0.0007787981833182971
+    },
+    {
+      "name": "638",
+      "accepted_views": 10,
+      "area": 0.0004703632592318428
+    },
+    {
+      "name": "728",
+      "accepted_views": 10,
+      "area": 0.7610593197467749
+    },
+    {
+      "name": "818",
+      "accepted_views": 10,
+      "area": 0.0002390370661670021
+    },
+    {
+      "name": "908",
+      "accepted_views": 10,
+      "area": 0.7627749890120058
+    },
+    {
+      "name": "999",
+      "accepted_views": 10,
+      "area": 0.00038939909165914855
+    }
+  ]
+}

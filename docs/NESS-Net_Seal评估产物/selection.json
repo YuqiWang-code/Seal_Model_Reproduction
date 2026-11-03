@@ -1,0 +1,10 @@
+{
+  "criterion": "val Fw descending, MAE ascending",
+  "selected": {
+    "epoch": 5,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_5.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_5_maps",
+    "F": 0.4679960478397352,
+    "MAE": 0.0001338961737928912
+  }
+}

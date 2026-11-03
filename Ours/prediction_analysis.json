@@ -1,0 +1,18 @@
+{
+  "count": 1983,
+  "shape_counts": {
+    "(417, 622)": 1983
+  },
+  "shape_mismatches": 0,
+  "empty_gt": 0,
+  "empty_prediction_at_128": 19,
+  "mean_gt_area_fraction": 0.0002055299589953811,
+  "mean_pred_area_fraction_at_128": 0.00018883473274014672,
+  "mean_image_precision_at_128": 0.6553174082860929,
+  "mean_image_recall_at_128": 0.6062317486266569,
+  "pooled_precision_at_128": 0.6464144144144144,
+  "pooled_recall_at_128": 0.5939060844558801,
+  "zero_pixel_fraction": 0.9997576713281442,
+  "full_pixel_fraction": 4.626329436861561e-05,
+  "intermediate_pixel_fraction": 0.00019606537748723146
+}

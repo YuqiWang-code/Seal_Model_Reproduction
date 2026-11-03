@@ -1,0 +1,51 @@
+[
+  {
+    "epoch": 5,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_5.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_5_maps",
+    "F": 0.4679960478397352,
+    "MAE": 0.0001338961737928912
+  },
+  {
+    "epoch": 10,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_10.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_10_maps",
+    "F": 0.46260779510662814,
+    "MAE": 0.00012762972619384527
+  },
+  {
+    "epoch": 15,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_15.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_15_maps",
+    "F": 0.4665612005065633,
+    "MAE": 0.00012583214265760034
+  },
+  {
+    "epoch": 20,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_20.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_20_maps",
+    "F": 0.44048777714703113,
+    "MAE": 0.0001264964375877753
+  },
+  {
+    "epoch": 25,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_25.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_25_maps",
+    "F": 0.4517579676489577,
+    "MAE": 0.0001234448136528954
+  },
+  {
+    "epoch": 30,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_30.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_30_maps",
+    "F": 0.4529817784246953,
+    "MAE": 0.00012254987086635083
+  },
+  {
+    "epoch": 35,
+    "checkpoint": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_checkpoints/NESS_general_35.pth",
+    "predictions": "/share_datasets/Seal_Model_Reproduction/NESS-Net-main/experiments/Seal_box/canny_selected/val_epoch_35_maps",
+    "F": 0.41842630702379013,
+    "MAE": 0.0001234451192431152
+  }
+]

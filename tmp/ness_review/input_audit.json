@@ -1,0 +1,61 @@
+{
+  "train_errors": [],
+  "train_count": 1500,
+  "validation": {
+    "5": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    },
+    "10": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    },
+    "15": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    },
+    "20": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    },
+    "25": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    },
+    "30": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    },
+    "35": {
+      "count": 500,
+      "missing": [],
+      "extra": [],
+      "bad_size": [],
+      "log": "rn _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\ngeneral: 100/500\ngeneral: 200/500\ngeneral: 300/500\ngeneral: 400/500\ngeneral: 500/500\n"
+    }
+  },
+  "blank_thermal": [
+    "3250_Hier_1_Mark.png",
+    "3000_Hier_0_Mark.png",
+    "3228_Hier_0_Mark.png",
+    "3290_Hier_1_Mark.png"
+  ]
+}

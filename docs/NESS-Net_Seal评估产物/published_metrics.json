@@ -1,0 +1,34 @@
+{
+  "refinement_namlab": {
+    "predictions": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/refinement_namlab_test_maps",
+    "count": 1983,
+    "S": 0.4666185279426068,
+    "F": 0.001733883532895621,
+    "E": 0.263767112039326,
+    "MAE": 0.042296525090932846
+  },
+  "general_namlab": {
+    "predictions": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/general_namlab_test_maps",
+    "count": 1983,
+    "S": 0.44908160151319726,
+    "F": 0.0007677612531300062,
+    "E": 0.25489362049182385,
+    "MAE": 0.08516204357147217
+  },
+  "general_canny": {
+    "predictions": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/general_canny_test_maps",
+    "count": 1983,
+    "S": 0.45462905480605387,
+    "F": 0.0007744775927501009,
+    "E": 0.255930778199213,
+    "MAE": 0.0741572231054306
+  },
+  "refinement_canny": {
+    "predictions": "/share_datasets/Seal_Model_Reproduction/results/NESS-Net/Seal/refinement_canny_test_maps",
+    "count": 1983,
+    "S": 0.47015078908791397,
+    "F": 0.00176020220992589,
+    "E": 0.2682934965715624,
+    "MAE": 0.03664671629667282
+  }
+}
