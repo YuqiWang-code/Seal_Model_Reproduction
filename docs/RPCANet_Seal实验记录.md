@@ -30,7 +30,7 @@
 ```bash
 cd /share_datasets/Seal_Model_Reproduction/RPCANet-main
 PY=/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python
-$PY train_seal.py --device cuda:1 --net-name rpcanet --epochs 50 --val-interval 5 --out experiments/Seal_fullsup_rpcanet
+$PY train_seal.py --device cuda:1 --net-name rpcanet --epochs 60 --val-interval 5 --out experiments/Seal_fullsup_rpcanet
 ```
 
 ## 结果

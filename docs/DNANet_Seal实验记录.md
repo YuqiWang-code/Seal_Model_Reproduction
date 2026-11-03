@@ -38,7 +38,7 @@ DNA-Net 是 IRSTD 领域最常用的全监督基线之一，在 awesome-infrared
 cd /share_datasets/Seal_Model_Reproduction/DNANet-main
 PY=/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python
 
-$PY train_seal.py --device cuda:1 --epochs 400 --val-interval 20 --out experiments/Seal_fullsup
+$PY train_seal.py --device cuda:1 --epochs 250 --val-interval 20 --out experiments/Seal_fullsup
 
 cd /share_datasets/Seal_Model_Reproduction
 $PY evaluate.py --pred_root results/DNANet/Seal/fullsup_test_maps \
@@ -69,5 +69,5 @@ $PY evaluate_small_targets.py --pred_root results/DNANet/Seal/fullsup_test_maps 
 
 - 权重：`DNANet-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/dnanet_train.log`，逐 epoch 记录 `validation.jsonl`。
 - 预测：`results/DNANet/Seal/fullsup_test_maps/`；指标 JSON 同目录。
-- 与官方配置的差异：epoch 1,500→400、batch 4→8、验证集改为 Seal val、输入为 Seal 热红外单模态。网络结构、损失、优化器、学习率日程与官方一致。
+- 与官方配置的差异：epoch 1,500→250、batch 4→8、验证集改为 Seal val、输入为 Seal 热红外单模态。网络结构、损失、优化器、学习率日程与官方一致。
 - 仓库自带的 `pretrain_DNANet_model.tar` 是在 NUDT-SIRST 上训练好的权重，本实验**没有**使用它：按本项目协议，无 Seal 参与的全监督基线必须在 Seal train 上训练，从零初始化（`weights_init_xavier`）。

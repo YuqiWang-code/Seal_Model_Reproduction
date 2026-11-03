@@ -20,7 +20,7 @@
 | 网络 | `HDNet(3)`，多尺度深监督 + 高频增强 |
 | 损失 | 官方 `SLSIoULoss`（含形状项），warm-up 5 epoch 后启用，多尺度输出取平均 |
 | 优化器 | Adagrad，lr 0.05，CosineAnnealingLR（官方默认） |
-| epoch / batch | 300 / 8（官方 800 / 4；按项目预算缩减） |
+| epoch / batch | 90 / 8（120 epoch 日程，按预算在第 90 epoch 停止；官方 800 / 4） |
 | 裁剪 | 256×256，官方随机缩放/翻转/裁剪增强 |
 | 模型选择 | Seal val 500 张滑窗像素 IoU@0.5 最优；test 不参与 |
 | 测试推理 | 原生分辨率 256 滑窗、步长 128，logits 平均后 sigmoid |
@@ -30,7 +30,7 @@
 ```bash
 cd /share_datasets/Seal_Model_Reproduction/HDNet-main
 PY=/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python
-$PY train_seal.py --device cuda:1 --epochs 300 --val-interval 20 --out experiments/Seal_fullsup
+$PY train_seal.py --device cuda:1 --epochs 120 --val-interval 20 --out experiments/Seal_fullsup
 ```
 
 ## 结果
@@ -52,4 +52,4 @@ $PY train_seal.py --device cuda:1 --epochs 300 --val-interval 20 --out experimen
 - 权重：`HDNet-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/hdnet_train.log`。
 - 预测：`results/HDNet/Seal/fullsup_test_maps/`。
 - 官方 `model/HDNet.py` 顶部硬编码 `os.environ['CUDA_VISIBLE_DEVICES']="0"`，会让进程只看到 0 号卡；本实验删掉该行并注释说明，改为用 `--device` 选卡。其余网络结构未改。
-- 与官方配置的差异：epoch 800→300、batch 4→8、验证改用 Seal val（官方脚本以 test 选模型）。
+- 与官方配置的差异：epoch 800→120（第 90 epoch 按预算停止）、batch 4→8、验证改用 Seal val（官方脚本以 test 选模型）。

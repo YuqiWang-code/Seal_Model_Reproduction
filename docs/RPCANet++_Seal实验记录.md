@@ -30,7 +30,7 @@ RPCANet++ 是 RPCANet 的后续工作（2026，TPAMI），把 RPCA 展开网络�
 ```bash
 cd /share_datasets/Seal_Model_Reproduction/RPCANet-main
 PY=/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python
-$PY train_seal.py --device cuda:1 --net-name rpcanet_pp --epochs 50 --val-interval 5 --out experiments/Seal_fullsup_rpcanetpp
+$PY train_seal.py --device cuda:1 --net-name rpcanet_pp --epochs 60 --val-interval 5 --out experiments/Seal_fullsup_rpcanetpp
 ```
 
 ## 结果
