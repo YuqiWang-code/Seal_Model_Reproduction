@@ -55,6 +55,7 @@
 - 表中位置：第 21～28 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。第 21～23 行为第一批（2022–2024），第 24～28 行为第二批（2024/2025/2026）。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
 - 平凡基线（决定读表方式，不新增表行）：全背景预测（1,983 张全零）在同一 test GT 上为 S 0.49990、Fw 0、E 0.25、MAE 0.00020553，IoU/F1/Pd/Fa 均为 0。八个基线与 Ours 的 S（0.49799–0.49915）全部低于该值，八个基线的 MAE（0.000229–0.000375）全部高于该值，只有 Ours 的 MAE（0.00015090）低于它。因此 S/MAE 在 Seal 上不区分方法，比较以 Fw/IoU/F1/Pd/Fa 为主，S/MAE 须与平凡基线并列阅读；复算见 [汇总](docs/Seal全监督基线评估汇总.md#平凡基线全背景预测)。
 - 第三批（进行中，未入表）：BGM（TGRS25）、DRPCA-Net（TGRS25）、DURD（TGRS26）、L2SKNet（TGRS25）已克隆作者代码并写好 `train_seal.py`、`infer_seal.py` 与记录骨架，记录中 `<!--RESULTS-->` 待测试后填写；结果落定后按第 29 行起追加并同步本节与 README。`AGPCNet-main/`、`NS-FPN-main/` 为空目录，NS-FPN 仍缺 nvcc 编译自定义算子。
+- IoU 的边界敏感性：Seal 目标平均 14.3 像素，把 GT 膨胀/腐蚀 1 像素当预测只能得到 IoU 0.3910 / 0.0826；表中 IoU 0.19–0.31 对应约 1–2 像素边界误差，不能读作分割质量百分比，须与 Fw/F1/Pd/Fa 合看，详见 [定义对照](docs/小目标评价指标_定义与代码对照.md#iou-的边界敏感性seal-gt-实测)。
 - 实验记录：[ACM](docs/ACM_Seal实验记录.md)、[DNA-Net](docs/DNANet_Seal实验记录.md)、[MSHNet](docs/MSHNet_Seal实验记录.md)、[UIU-Net](docs/UIU-Net_Seal实验记录.md)、[SCTransNet](docs/SCTransNet_Seal实验记录.md)、[RPCANet](docs/RPCANet_Seal实验记录.md)、[HDNet](docs/HDNet_Seal实验记录.md)、[ILNet](docs/ILNet_Seal实验记录.md)、[RPCANet++](docs/RPCANet++_Seal实验记录.md)、[DHiF](docs/DHiF_Seal实验记录.md)，汇总见 [Seal全监督基线评估汇总](docs/Seal全监督基线评估汇总.md)。
 
 ## FCT-SAM-WSCOD
