@@ -11,7 +11,7 @@
 - 本项目五个对比方法的 Seal 框监督、点监督及 SAM 伪标签适配任务停止执行，历史产物仅在实验文档中存档，不进入跨域主表；相关自动跟进不得重启这些适配任务。
 - 本地 `data/TrainDataset.zip`、`data/TestDataset.zip` 为 S-COD 相关训练与测试归档，`data/Scribble-COD.zip` 提供独立涂鸦标注；须按实际内容区分完整 GT 与 0/1/2 稀疏标签。`data/NESS-Net/`、`data/SSFam/` 另有各自数据归档。优先复用服务器已解压源数据，缺失时再上传对应归档。
 
-最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21 行之后只放全监督 IRSTD 基线（见下一节），每个基线一行，不增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
+最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21～28 行为全监督 IRSTD 基线（见下一节），每个基线一行，不增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
 
 该表来自腾讯文档，可能新增列或更新协议。合并下载版本时按方法及列标题对应，采用新版本的布局和明确更新；新版本空白处保留现有有效评估结果，同协议的五位小数保留完整精度。新增 IoU、F1、Pd、Fa 四列后，每个方法仍只保留一行；填写时按标题定位列，不依赖旧列号。
 
@@ -31,23 +31,29 @@
 
 ## 全监督 IRSTD 基线（Seal 训练 → Seal 测试）
 
-- 定位：与上面的弱监督跨域表并列的全监督对照。方法为 DNA-Net（TIP22）、MSHNet（CVPR24）、UIU-Net（TIP23），均取自 [awesome-infrared-small-targets](https://github.com/Tianfang-Zhang/awesome-infrared-small-targets) 的 Single-Frame 全监督条目（对照 GrokCV 出版物页），代码为作者官方实现，根目录各一个文件夹：`DNANet-main/`、`MSHNet-main/`、`UIU-Net-main/`。ACM（WACV21）也已完成代码与训练入口（`ACM-main/`），但官方 SoftIoU 在 Seal 的 0.02% 前景上不收敛（val IoU 恒 0，两个随机种子、官方 warm-up 均复现），作为负结果存档，不进入主表，见 [ACM 记录](docs/ACM_Seal实验记录.md)。
+- 定位：与上面的弱监督跨域表并列的全监督对照，分两批。第一批 DNA-Net（TIP22）、MSHNet（CVPR24）、UIU-Net（TIP23）；第二批按年份补充 SCTransNet（TGRS24）、RPCANet（WACV24）、HDNet（TGRS25）、ILNet（TAES25）、RPCANet++（TPAMI26），保证 2024/2025/2026 都有、2025 至少两个。方法取自 [awesome-infrared-small-targets](https://github.com/Tianfang-Zhang/awesome-infrared-small-targets) 的 Single-Frame 全监督条目（对照 GrokCV 出版物页），代码为作者官方实现，根目录各一个文件夹：`DNANet-main/`、`MSHNet-main/`、`UIU-Net-main/`、`SCTransNet-main/`、`RPCANet-main/`、`HDNet-main/`、`ILNet-main/`、`DHiF-main/`。ACM（WACV21）、RPCANet 官方设置、DHiF（TCSVT26）与 NS-FPN（CVPR26，需 nvcc 编译自定义算子）作为失败/负结果存档，不进入主表，见 [ACM 记录](docs/ACM_Seal实验记录.md)、[DHiF 记录](docs/DHiF_Seal实验记录.md) 与 [汇总](docs/Seal全监督基线评估汇总.md#训练不稳定与失败记录)。
 - 数据：服务器 `Seal_IRSTD/`。`Seal_data/{split}/T/*.tif`（16 位热红外）逐图 **min-max** 拉伸到 8 位并复制为 3 通道 PNG，`GT` 二值化；`trainval.txt` 1,500 / `val.txt` 500 / `test.txt` 1,983，沿用 Seal 原划分。生成脚本 [tools/prepare_seal_irstd.py](tools/prepare_seal_irstd.py)，指标合并脚本 [tools/merge_seal_metrics.py](tools/merge_seal_metrics.py)，单方法评估脚本 [tools/eval_fullsup_method.sh](tools/eval_fullsup_method.sh)。
-- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8。epoch 与优化器沿用官方默认：DNA-Net 250（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE（实际在第 114 epoch 提前停止）。不使用 Seal 的 `box`、点提示或伪标签。
+- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8，各方法 epoch 按官方日程并注明裁剪。第一批：DNA-Net 250（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE（第 114 epoch 提前停止）。第二批：SCTransNet 300/Adam 1e-3/六输出 BCE；RPCANet 60/Adam **1e-4**/dataset 级 SoftIoU + 0.01 MSE；HDNet 90（120 日程）/Adagrad 0.05/SLSIoU；ILNet 300/Adan 1e-3/侧输出 BCE；RPCANet++ 60/Adam **1e-4**/dataset 级 SoftIoU + 0.01 MSE。不使用 Seal 的 `box`、点提示或伪标签。
+- 第二批的两处统一改动只出现在 RPCANet 系列：官方逐样本 SoftIoU 在 0.02% 前景上梯度被稀释（val IoU 恒 0），改 dataset 级 SoftIoU；官方 Adam 5e-4 会在第 4 epoch 冲到 0.30 后发散，降到 1e-4。网络、数据、epoch 与增强不变，详见各自实验记录。
 - 选择与推理：模型选择只用 Seal **val**（500 张，滑窗像素 IoU@0.5），test 不参与选择、不据此换检查点；测试为原生分辨率 256×256 滑窗、步长 128、重叠区 logits 平均后 sigmoid，输出与 test GT 同名的 8 位 PNG。
 - 指标：同行八项仍由根目录 `evaluate.py` 的四个原函数与 `evaluate_small_targets.py` 计算，同一检查点、同一批 1,983 张预测，口径与第 3～20 行完全一致。
 - 结果（全部为 test 1,983 张、val 最优检查点）：
 
-  | 方法 | val 最优 epoch | S | Fw | E | MAE | IoU | F1 | Pd | Fa |
-  |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-  | DNA-Net | 120 | 0.49803 | 0.50562 | 0.67979 | 0.00028725 | 0.30000 | 0.46154 | 0.79046 | 8.7299e-05 |
-  | MSHNet | 140 | 0.49818 | 0.54104 | 0.68601 | 0.00024695 | 0.29226 | 0.45232 | 0.80943 | 6.7277e-05 |
-  | UIU-Net | 20 | 0.49876 | 0.27240 | 0.68115 | 0.00037482 | 0.21485 | 0.35371 | 0.68739 | 2.9648e-05 |
+  | 方法 | 会议 | val 最优 epoch | S | Fw | E | MAE | IoU | F1 | Pd | Fa |
+  |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+  | DNA-Net | TIP22 | 120 | 0.49803 | 0.50562 | 0.67979 | 0.00028725 | 0.30000 | 0.46154 | 0.79046 | 8.7299e-05 |
+  | MSHNet | CVPR24 | 140 | 0.49818 | 0.54104 | 0.68601 | 0.00024695 | 0.29226 | 0.45232 | 0.80943 | 6.7277e-05 |
+  | UIU-Net | TIP23 | 20 | 0.49876 | 0.27240 | 0.68115 | 0.00037482 | 0.21485 | 0.35371 | 0.68739 | 2.9648e-05 |
+  | SCTransNet | TGRS24 | 280 | 0.49902 | 0.32255 | 0.67917 | 0.00030830 | 0.20290 | 0.33735 | 0.62210 | 2.5279e-05 |
+  | RPCANet | WACV24 | 47 | 0.49807 | 0.51966 | 0.67944 | 0.00027539 | 0.30638 | 0.46906 | 0.80618 | 7.7573e-05 |
+  | HDNet | TGRS25 | 89 | 0.49829 | 0.53953 | 0.66410 | 0.00022919 | 0.27259 | 0.42840 | 0.82135 | 5.4505e-05 |
+  | ILNet | TAES25 | 260 | 0.49894 | 0.31966 | 0.68460 | 0.00030902 | 0.19172 | 0.32176 | 0.58946 | 1.9302e-05 |
+  | RPCANet++ | TPAMI26 | 57 | 0.49800 | 0.51436 | 0.67932 | 0.00028853 | 0.30095 | 0.46266 | 0.76920 | 8.8164e-05 |
 
-  UIU-Net 只监督 BCE，第 20 epoch 后滑向"全背景"不动点（val IoU 0），按 val 连续 5 次无改善停止，表中为其 val 最优检查点。
+  UIU-Net 只监督 BCE，第 20 epoch 后滑向"全背景"不动点（val IoU 0），按 val 连续 5 次无改善停止，表中为其 val 最优检查点。HDNet 在第 89 epoch 达到 val 最优后按预算停止（120 epoch 日程未跑完）。
 - 热红外 8 位转换结论：用 1–99 百分位裁剪再拉伸会放大约 10 倍背景噪声（目标 SNR 降到 1.5），纯区域损失退化为常数输出（val IoU 恒为 0）；改为逐图 min-max 后目标与背景差值是背景 std 的 2.2–29.7 倍，训练正常。后续不得再用百分位裁剪生成输入。
-- 表中位置：第 21～23 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
-- 实验记录：[ACM](docs/ACM_Seal实验记录.md)、[DNA-Net](docs/DNANet_Seal实验记录.md)、[MSHNet](docs/MSHNet_Seal实验记录.md)、[UIU-Net](docs/UIU-Net_Seal实验记录.md)。
+- 表中位置：第 21～28 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。第 21～23 行为第一批（2022–2024），第 24～28 行为第二批（2024/2025/2026）。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
+- 实验记录：[ACM](docs/ACM_Seal实验记录.md)、[DNA-Net](docs/DNANet_Seal实验记录.md)、[MSHNet](docs/MSHNet_Seal实验记录.md)、[UIU-Net](docs/UIU-Net_Seal实验记录.md)、[SCTransNet](docs/SCTransNet_Seal实验记录.md)、[RPCANet](docs/RPCANet_Seal实验记录.md)、[HDNet](docs/HDNet_Seal实验记录.md)、[ILNet](docs/ILNet_Seal实验记录.md)、[RPCANet++](docs/RPCANet++_Seal实验记录.md)、[DHiF](docs/DHiF_Seal实验记录.md)，汇总见 [Seal全监督基线评估汇总](docs/Seal全监督基线评估汇总.md)。
 
 ## FCT-SAM-WSCOD
 

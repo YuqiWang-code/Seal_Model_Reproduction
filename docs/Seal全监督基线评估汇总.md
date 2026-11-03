@@ -1,19 +1,31 @@
 # Seal 全监督 IRSTD 基线评估汇总
 
-四个全监督红外小目标检测方法在 Seal 上从零训练（Seal train 1,500 张全像素 GT）、在 Seal test（1,983 张）测试的统一结果。三个方法正常收敛并进入 `docs/Seal量化SOTA表.xlsx` 第 21～23 行；ACM 因官方损失不收敛，只作负结果存档。
+全监督红外小目标检测方法在 Seal 上从零训练（Seal train 1,500 张全像素 GT）、在 Seal test（1,983 张）测试的统一结果。第一批（2022–2024 老方法）见下一节，第二批按年份要求补充 2024 / 2025 / 2026 方法。
 
 ## 协议要点
 
 | 项目 | 说明 |
 |---|---|
-| 输入 | Seal 热红外 `T`：16 位 TIFF 逐图 min-max → 8 位 → 3 通道（`Seal_IRSTD/`） |
-| 训练 | Seal train，crop 256×256，batch 8，官方优化器/损失/学习率日程（DNA-Net 250 epoch，MSHNet 400，UIU-Net 500） |
+| 输入 | Seal 热红外 `T`：16 位 TIFF 逐图 min-max → 8 位 → 单通道或 3 通道（`Seal_IRSTD/`） |
+| 训练 | Seal train，crop 256×256，官方优化器/损失/学习率日程（各方法 epoch 见记录） |
 | 选择 | Seal val 500 张滑窗像素 IoU@0.5 最优；test 不参与任何选择 |
 | 推理 | 原生分辨率 256×256 滑窗、步长 128，重叠 logits 平均后 sigmoid → 8 位 PNG |
 | 四项指标 | 根目录 `evaluate.py` 四个原函数（S / Fw / E / MAE），同一批 1,983 张预测 |
 | 小目标四项 | 根目录 `metrics.py` 的 `AS1000Metrics` + `evaluate_small_targets.py`（IoU / F1 / Pd / Fa，原始比例） |
 
 ## 八项指标
+
+### 第二批：2024 / 2025 / 2026
+
+| 方法 | 会议 | 年份 | S↑ | Fw↑ | E↑ | MAE↓ | IoU↑ | F1↑ | Pd↑ | Fa↓ |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| SCTransNet | TGRS | 2024 | 0.49902 | 0.32255 | 0.67917 | 0.00030830 | 0.20290 | 0.33735 | 0.62210 | 2.53e-05 |
+| RPCANet | WACV | 2024 | 0.49807 | 0.51966 | 0.67944 | 0.00027539 | 0.30638 | 0.46906 | 0.80618 | 7.76e-05 |
+| HDNet | TGRS | 2025 | 0.49829 | 0.53953 | 0.66410 | 0.00022919 | 0.27259 | 0.42840 | 0.82135 | 5.45e-05 |
+| ILNet | TAES | 2025 | 0.49894 | 0.31966 | 0.68460 | 0.00030902 | 0.19172 | 0.32176 | 0.58946 | 1.93e-05 |
+| RPCANet++ | TPAMI | 2026 | 0.49800 | 0.51436 | 0.67932 | 0.00028853 | 0.30095 | 0.46266 | 0.76920 | 8.82e-05 |
+
+### 第一批：2022–2024
 
 | 方法 | 会议 | S↑ | Fw↑ | E↑ | MAE↓ | IoU↑ | F1↑ | Pd↑ | Fa↓ |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -22,16 +34,21 @@
 | UIU-Net | TIP23 | 0.49876 | 0.27240 | 0.68115 | 0.00037482 | 0.21485 | 0.35371 | 0.68739 | 2.96e-05 |
 | ACM（未收敛，不入表） | WACV21 | — | — | — | — | — | — | — | — |
 
+## 训练不稳定与失败记录
+
+| 方法 | 现象 | 处理 |
+|---|---|---|
+| DHiF（TCSVT26） | MTU 主干 + SoftIoU/全局 SoftIoU 均退化到全背景，100 epoch val IoU 0.00013 | 记入实验记录，不进入主表 |
+| RPCANet（官方设置） | 逐样本 SoftIoU + Adam 5e-4：val IoU 恒 0；5e-4 + 全局 SoftIoU 第 4 epoch 到 0.298 后发散 | 改 dataset 级 SoftIoU + lr 1e-4 后稳定在 0.33，表内为该设置 |
+| RPCANet++（官方设置） | 同上 | 同上 |
+| UIU-Net | BCE 在第 20 epoch 后退化为全背景 | 取 val 最优（第 20 epoch） |
+| ACM | 官方 SoftIoU 不收敛，两个种子均复现 | 负结果存档，不入表 |
+| NS-FPN（CVPR26） | 需要编译自定义 MSDeformAttn CUDA 算子，服务器无 nvcc | 未训练 |
+
 ## 与弱监督主表的关系
 
-第 3～20 行是跨域泛化（源域训练或公开权重 → Seal test），本节是**同域全监督**（Seal train → Seal test）。两者监督形式、训练数据与难度都不同，只能并列说明"全监督上界/参考"，不能与跨域行直接比大小。
+`docs/Seal量化SOTA表.xlsx` 第 3～20 行是跨域泛化（源域训练或公开权重 → Seal test），第 21～28 行是同域全监督（Seal train → Seal test）。两者监督形式、训练数据与难度不同，只能并列说明"全监督参考"，不能与跨域行直接比大小。
 
 ## 产物
 
-| 方法 | 权重 | 预测 | 指标 |
-|---|---|---|---|
-| DNA-Net | `DNANet-main/experiments/Seal_fullsup/best.pth` | `results/DNANet/Seal/fullsup_test_maps/` | `eight_metrics.json`、`fullsup_metrics.json`、`fullsup_small_metrics.json` |
-| MSHNet | `MSHNet-main/experiments/Seal_fullsup/best.pth` | `results/MSHNet/Seal/fullsup_test_maps/` | 同上 |
-| UIU-Net | `UIU-Net-main/experiments/Seal_fullsup/best.pth` | `results/UIU-Net/Seal/fullsup_test_maps/` | 同上 |
-
-逐方法的配置、命令与已知问题见 [ACM](ACM_Seal实验记录.md)、[DNA-Net](DNANet_Seal实验记录.md)、[MSHNet](MSHNet_Seal实验记录.md)、[UIU-Net](UIU-Net_Seal实验记录.md)。
+各方法的权重、预测目录与指标 JSON 见对应实验记录：[SCTransNet](SCTransNet_Seal实验记录.md)、[RPCANet](RPCANet_Seal实验记录.md)、[HDNet](HDNet_Seal实验记录.md)、[ILNet](ILNet_Seal实验记录.md)、[RPCANet++](RPCANet++_Seal实验记录.md)、[DNA-Net](DNANet_Seal实验记录.md)、[MSHNet](MSHNet_Seal实验记录.md)、[UIU-Net](UIU-Net_Seal实验记录.md)、[DHiF](DHiF_Seal实验记录.md)、[ACM](ACM_Seal实验记录.md)。

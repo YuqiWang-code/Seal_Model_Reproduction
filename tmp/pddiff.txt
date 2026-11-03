@@ -1,0 +1,2129 @@
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+1
+Generating Through the Noise: Progressive Denoising Diffusion for
+Infrared Small Target Detection
+First Author, Member, IEEE, and Second Author, Member, IEEE
+Abstract—Infrared small target detection (IRSTD) aims to
+accurately identify dim and tiny targets in complex infrared
+scenes. However, weak target responses, low signal-to-noise ratios,
+and severe background interference make reliable target local-
+ization challenging, often resulting in missed detections and false
+alarms. Existing methods typically rely on deterministic feature
+learning to directly predict target masks, limiting the ability
+to progressively refine ambiguous target representations. To
+address these issues, we propose Progressive Denoising Diffusion
+(PDDiff), a conditional diffusion framework that reformulates
+IRSTD as a progressive generative denoising process. Specifically,
+a feature extractor is employed to capture discriminative infrared
+representations, followed by a conditional generator that con-
+structs target guidance for subsequent denoising. Furthermore,
+Memory-guided Spectral Alignmen (MSA) are introduced to
+selectively refine conditional representations through frequency-
+domain memory selection, enabling adaptive guidance through-
+out the denoising process. By injecting the refined conditional
+information into the denoising network, PDDiff iteratively re-
+constructs accurate target masks from noisy representations.
+In addition, customized training and sampling strategies are
+developed to improve sparse target structure reconstruction
+and exploit intermediate predictions throughout the diffusion
+process, thereby mitigating structural errors and localization
+instability. Extensive experiments on two benchmark IRSTD
+datasets demonstrate the effectiveness of the proposed PDDiff
+in terms of detection accuracy and computational efficiency. The
+code will be published at https://github.com/jzw0707/PDDiff.
+Index Terms—Infrared small targte detection, conditional dif-
+fusion model, frequency selective modulation, diffusion training
+and sampling strategy
+I. INTRODUCTION
+I
+NFRARED small target detection (IRSTD) [1], [2] aims
+to accurately identify and localize dim and tiny targets
+in infrared imagery, serving as a fundamental technique in
+maritime surveillance, remote sensing, and environmental
+monitoring [3]–[6]. Unlike generic object detection, infrared
+small targets typically occupy only a few pixels (usually less
+than 16 × 16) and exhibit weak radiation responses, limited
+structural information and indistinct boundaries. These char-
+acteristics make them particularly susceptible to interference
+from complex backgrounds, such as clouds, ocean waves, and
+urban structures. Moreover, infrared imaging is inevitably af-
+fected by sensor noise, atmospheric disturbances, and imaging
+artifacts, which introduce additional clutter and noise into the
+observed images. Such interference may obscure weak target
+responses or produce target-like patterns, further increasing the
+difficulty of distinguishing genuine targets from background
+distractions. Consequently, accurately recovering subtle target
+First Author and Second Author are with the Department of XXX, Univer-
+sity of XXX, City, Country (e-mail: author@example.com).
+Manuscript received Month Day, Year; revised Month Day, Year.
+Images
+IPI
+PSTNN
+TopHat
+MSHNet
+ALCNet
+GSFANet
+IRPNet
+SCTransNet
+HDNet
+Ours
+Mask
+Fig. 1: Visual comparison of different IRSTD methods. Tra-
+ditional methods suffer from severe background interference
+and false alarms (green circles), while deep learning methods
+still exhibit missed detections (blue circles). In contrast, the
+proposed PDDiff effectively suppresses false alarms and re-
+covers genuine targets (red circles).
+information while suppressing complex background clutter and
+imaging noise remains a fundamental challenge for reliable
+IRSTD.
+In general, traditional IRSTD methods primarily rely on
+handcrafted priors, such as local contrast enhancement [7],
+[8] and low-rank representation [9], [10], which are sensi-
+tive to complex background clutter and imaging noise. In
+contrast, deep learning methods have significantly advanced
+detection performance through hierarchical feature extraction
+and contextual representation learning. Specifically, CNN-
+based methods [11], [12] exploit multiscale feature interactions
+to enhance subtle target representations, while ViT-based ap-
+proaches [13], [14] capture long-range dependencies through
+self-attention mechanisms. More recently, Mamba-based meth-
+ods [15], [16] leverage state-space scaning for efficient global
+context aggregation, whereas SAM-based approaches [17],
+[18] explore pretrained segmentation priors for improved target
+discrimination.
+Despite the significant progress achieved by deep learning-
+based methods, most existing approaches directly predict tar-
+get masks from encoded features, where repeated downsam-
+pling and single-pass decoding may weaken subtle target re-
+sponses. In principle, infrared small targets occupy only a few
+pixels and are easily overwhelmed by complex background
+clutter and sensor noise, making it difficult to distinguish
+genuine targets from target-like interference. Consequently,
+direct mask prediction may propagate ambiguous responses
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+2
+into the final segmentation results, leading to missed detections
+and false alarms. This raises a fundamental question: Can
+weak target representations be progressively refined rather
+than determined through a single prediction? Diffusion
+models offer a promising alternative by reformulating target
+segmentation as a conditional generative denoising process.
+Through iterative refinement of noisy mask representations,
+diffusion models enable the progressive correction of uncertain
+predictions, potentially enhancing weak target responses while
+suppressing spurious background interference.
+To enhance conditional guidance for progressive denoising,
+we introduce a Dynamic Multiscale Spatial Projector (DMSP)
+and a Memory-guided Spectral Alignment (MSA) module.
+Since weak infrared targets are easily obscured by background
+clutter and imaging noise, DMSP enhances target-sensitive
+spatial representations through dynamic multiscale projection,
+while MSA selectively retrieves relevant memory features
+based on frequency-domain similarity and performs phase
+alignment. Furthermore, MSA incorporates timestep informa-
+tion to adaptively modulate conditional features across de-
+noising steps. Together, these modules provide complementary
+spatial-frequency guidance, facilitating accurate target mask
+generation while suppressing background interference.
+Overall, our proposed Progressive Denoising Diffusion
+(PDDiff)
+establishes
+a
+progressive
+generative
+denoising
+paradigm for IRSTD. Specifically, PDDiff progressively re-
+constructs target masks from noisy representations under
+frequency-guided conditional information, enabling iterative
+refinement of weak target responses. As shown in Fig. 1,
+existing methods suffer from false alarms and missed detec-
+tions under complex noise interference. In contrast, PDDiff
+progressively refines target predictions, effectively suppressing
+spurious responses and achieving more accurate segmentation
+results. The main contributions of this work are summarized
+as follows:
+• We propose a conditional diffusion framework, termed
+PDDiff, that reformulates IRSTD as a progressive gen-
+erative denoising process. Unlike conventional discrimi-
+native methods that directly predict target masks, PDDiff
+iteratively refines uncertain target representations, facili-
+tating accurate target localization.
+• We design a DMSP and a MSA to enhance conditional
+representations. DMSP adaptively aggregates multiscale
+spatial features, while MSA selectively retrieves rele-
+vant memory representations through frequency-domain
+similarity and performs phase alignment for progressive
+denoising.
+• We develop customized training and sampling strate-
+gies, termed Sparse Mask Structure Perturbation (SMSP)
+and Timestep Prediction Aggregation (TPA), to improve
+diffusion-based IRSTD. Specifically, SMSP introduces
+structure-aware perturbations to enhance sparse target
+mask reconstruction during training, while TPA adap-
+tively aggregates intermediate predictions across denois-
+ing steps to suppress false alarms during sampling.
+Reverse Denoising
+Forward Diffusion
+PDDiff
+Conditional Information
+Infrared
+Mask
+Backbone
+Conditional
+Generator
+Denoising
+Network
+Sample
+Iteration
+Switch
+Train/Inference
+Inference only
+Train only
+t
+X
+T
+X
+t
+X
+0
+X
+ˆ
+t
+X
+1
+t
+X 
+0
+(
+|
+)
+t
+q M
+M
+0
+ˆ
+(
+,
+)
+t
+Latent X
+X
+(
+, ,
+)
+t
+ir
+f X t I
+Time Step
+Fig. 2: Diffusion principle of our DiffIRSTD, which consists
+of forward diffusion and reverse denoising processes. During
+forward diffusion, random noise is progressively added to the
+mask X0 to obtain a noisy mask Xt. Then, our DiffIRSTD,
+i.e., f(Xt, t, I), is trained to predict the denoised mask ˆXt
+conditioned on the infrared image and diffusion timestep.
+During reverse denoising, DiffIRSTD iteratively refines the
+initial Gaussian noise XT to generate the final masks.
+II. RELATED WORK
+A. Infrared small target detection methods
+Existing IRSTD methods can be broadly divided into tradi-
+tional and deep learning-based approaches. Traditional meth-
+ods, including Tophat [19], MPCN [20], PSTNN [21], and IPI
+[22], mainly rely on handcrafted priors, sparse representations,
+and low-rank tensor decomposition. However, their perfor-
+mance is often limited by complex background clutter and
+weak target responses. Deep learning methods have achieved
+significant progress through various architectures. CNN-based
+methods, such as ACM [23] and DNANet [11], employ contex-
+tual modeling and attention mechanisms to enhance target rep-
+resentations. Transformer-based methods, such as RKformer
+[24] and BMPTransNet [25], explore hybrid architectures for
+long-range dependency modeling. Frequency-aware methods,
+including Dim2Clear [26] and GSFANet [27], exploit spatial-
+frequency interactions to improve feature discrimination. More
+recently, mamba-based methods, such as MiMISTD [28] and
+SAMamba [29], leverage Mamba architectures for efficient
+feature modeling, while FAMENet [30] investigate expert-
+based modeling and multimodal guidance, respectively.
+However, these IRSTD methods adopt a single-step predic-
+tion paradigm, directly mapping ambiguous target responses
+to segmentation masks without explicit error correction, often
+leading to missed detections and false alarms. In contrast,
+diffusion models offer a progressive denoising mechanism
+that enables iterative refinement of uncertain predictions under
+complex background clutter. Nevertheless, directly applying
+conventional diffusion models to IRSTD remains challenging.
+During training, conventional Gaussian perturbations overlook
+the sparse structure of target masks, while during sampling,
+relying solely on the final prediction fails to exploit useful
+information from intermediate denoising steps. To address
+these limitations, we introduce SMSP and TPA for training
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+3
+and sampling, respectively. SMSP enhances structure-aware
+denoising of sparse targets, while TPA aggregates intermediate
+predictions to improve detection accuracy.
+B. Diffusion Models
+Diffusion models have attracted increasing attention due to
+their remarkable generative capabilities and ability to model
+complex data distributions through iterative denoising. Early
+studies, such as DDPM [31] and latent diffusion models [32],
+demonstrated their effectiveness in high-quality image gen-
+eration. Subsequently, diffusion models have been extended
+to low-level vision tasks, including image super-resolution
+and restoration. Representative methods, such as SR3 [33]
+and DiffIR [34], progressively reconstruct images from noisy
+representations through conditional denoising. More recently,
+diffusion models have shown considerable potential in high-
+level vision tasks. For example, DiffusionDet [35] formulates
+object detection as a denoising process over bounding boxes,
+while DiMSOD [36] employs diffusion to generate accurate
+saliency masks for multimodal salient object detection. Despite
+the growing success of diffusion models in various vision
+tasks, recent studies have explored their application to IRSTD.
+Du et al. [37] proposed ISTD-diff, which formulates IRSTD
+as a conditional mask generation process through iterative
+denoising. Li et al. [38] introduced posterior distribution
+modeling with wavelet-domain isolation to suppress infrared
+noise interference. Zhang et al. [39] further proposed DEDM-
+Net, which employs dual-path diffusion modeling for mask
+generation.
+Given the progressive denoising nature of diffusion models,
+we argue that preserving sparse target structures during train-
+ing and exploiting intermediate predictions during sampling
+are essential for IRSTD. However, conventional diffusion
+models [40], [41] primarily rely on Gaussian perturbations,
+which fail to explicitly account for the sparse structures
+of target masks, limiting their ability to correct structural
+errors during mask generation. Moreover, relying solely on
+the final denoising output overlooks valuable information from
+intermediate predictions, potentially leading to inaccurate seg-
+mentation. To address these limitations, we introduce SMSP
+to simulate structural deviations in sparse target masks and
+enhance structure reconstruction during training, while TPA
+adaptively aggregates intermediate predictions to improve the
+robustness of generated masks during sampling.
+III. METHODOLOGY
+A. Diffusion Principle
+Diffusion models formulate data generation as a probabilis-
+tic process that progressively transforms random noise into
+structured representations through a sequence of denoising
+steps. As illustrated in Fig. 2, the diffusion process consists
+of two stages: forward diffusion and reverse denoising. In
+the forward diffusion process, the ground-truth mask x0 is
+progressively corrupted by Gaussian noise over T time steps,
+producing a sequence of noisy masks x1, . . . , xT . This Markov
+process [42] is formulated as:
+q(xt|xt−1) = N (xt; √αtxt−1, (1 −αt)I) ,
+(1)
+where αt = 1 −βt, βt ∈(0, 1) denotes the variance schedule,
+and I is the identity matrix. Based on the Markov property,
+the noisy mask xt can be directly sampled from x0 as:
+q(xt|x0) = N
+ xt; √¯αtx0, (1 −¯αt)I
+
+,
+(2)
+where ¯αt = Qt
+s=1 αs. In the reverse denoising process, a
+neural network fθ progressively reconstructs the target mask
+from Gaussian noise xT by estimating the clean mask at each
+time step. The reverse transition is defined as:
+pθ(xt−1|xt) = N
+
+xt−1; µθ(xt, t), ˜βtI
+
+,
+(3)
+where the variance ˜βt is given by:
+˜βt = 1 −¯αt−1
+1 −¯αt
+(1 −αt),
+(4)
+and the mean µθ(xt, t) is calculated as:
+µθ(xt, t) =
+√αt(1 −¯αt−1)
+1 −¯αt
+xt
++
+√¯αt−1(1 −αt)
+1 −¯αt
+ˆx(t)
+0 ,
+(5)
+where ˆx(t)
+0
+denotes the clean mask estimated by the denoising
+network at time step t.
+Specifically, in our PDDiff, the reverse process is con-
+ditioned on the input infrared image IIR. The conditional
+representations C are extracted and refined by the feature
+extractor, DMSP, and MSA, respectively. The conditional
+denoising process is formulated as:
+pθ(xt−1|xt, C) = N
+
+xt−1; µθ(xt, t, C), ˜βtIir
+
+,
+(6)
+where C represents the conditional information derived from
+Iir, and the predicted clean mask is obtained as ˆx(t)
+0
+=
+fθ(xt, t, C). Guided by these conditional representations,
+PDDiff progressively refines noisy masks to recover accurate
+target predictions.
+B. Overall network
+As illustrated in Fig. 2, our PDDiff consists of four key
+components: a backbone, a conditional generator, a diffusion
+timestep modulation stage, and a denoising network. Given
+an infrared image Iir, we adopt the SAM2 [43] encoder
+as the backbone to extract hierarchical features. Specifically,
+the pretrained Hiera blocks are frozen, while the trainable
+adapters, each consisting of two linear layers, are inserted
+into each stage for domain adaptation. The extracted four-level
+features are denoted as Si(i ∈0, 1, 2, 3).
+In the conditional generator, we introduce a Dynamic Mul-
+tiscale Spatial Projector (DMSP) to refine the extracted fea-
+tures through adaptive multiscale spatial projection, generating
+conditional representations S′
+i. To adapt conditional features
+to varying noise levels across diffusion steps, we introduce
+timestep into the Multi-head Cross Attention (MCA), where
+the timestep embedding t serves as the query and S′
+i as the
+keys and values, generating timestep representations St
+i. Mean-
+while, these features are progressively aggregated through
+Fusion blocks and concatenated into a unified representation,
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+4
+Image
+Adapter
+Hiera
+Block1
+DMSP
+MCA
+Adapter
+Hiera
+Block2
+DMSP
+MCA
+Adapter
+Hiera
+Block3
+DMSP
+MCA
+Adapter
+Hiera
+Block4
+DMSP
+MCA
+t
+Conditional
+Generator
+Spatial
+Diffusion 
+Timestep
+Fusion
+Fusion
+C
+Fusion
+C
+MSA
+t
+Frequency
+Sample
+Encoder1
+Enhance
+Encoder2
+Encoder3
+Encoder4
+t
+Decoder
+GT
+Denoising Network
+Fusion
+Conv3
+Conv3
+C
+Enhance
+Conv1
+SA
+Conv3
+SA
+Conv5
+SA
+/
+Element-wise Multiplication/Addition
+C
+Concatenation
+SA
+Spatial Attention
+Fusion / Enhance Fusion/Enhancement Block
+Backbone
+Adapter
+Linear
+Linear
+0
+S
+1S
+2
+S
+3
+S
+0
+S
+1S
+2
+S
+3
+S
+ˆ
+t
+X
+iou
+focal
+
+L
+L
+0
+tS
+1
+tS
+2
+tS
+0
+tS
+1
+tS
+ˆ
+t l
+X 
+t
+X
+Forward
+noising
+ct
+M
+t
+X
+Enhance
+Enhance
+tS
+0
+t
+X
+1
+t
+X
+2
+t
+X
+n
+t
+X
+1
+n
+t
+X
+
+tF
+t
+E
+Fig. 3: The architecture of our PDDiff. The feature extractor captures hierarchical infrared features, which are refined by DMSP
+and MSA to generate effective conditional information. The denoising network progressively reconstructs target masks under
+conditional guidance. Additionally, SMSP enhances sparse target learning during training, while TPA aggregates intermediate
+predictions during sampling to improve detection accuracy.
+which is further refined by MSA through frequency-domain
+memory selection and phase alignment, generating refined
+conditional features Mct.
+In the denoising network, the noisy mask Xt is processed
+through a hierarchical encoder, where the corresponding St
+i are
+injected via Enhancement blocks. Meanwhile, Mct is incorpo-
+rated into the decoder to provide complementary frequency-
+guided information. The decoder then predicts the target mask
+ˆXt, which guides subsequent sampling steps for progressive
+target reconstruction.
+C. Conditional Generator and Diffusion Timestep
+1) Dynamic Multiscale Spatial Projector (DMSP): To im-
+prove the quality of conditional information, we introduce
+a DMSP into the conditional generator, which adaptively
+integrates multiscale spatial features to preserve edge struc-
+tures, thereby providing discriminative guidance for progres-
+sive denoising. As shown in Fig. 4, given an input fea-
+ture Si ∈RC×H×W , DMSP first applies three depthwise
+convolution with kernel sizes k of 3, 5, and 7 to capture
+spatial responses at different scales. A channel-wise attention
+Pixel
+Unshuffle
+Softmax
+DWConv3
+DWConv5
+DWConv7
+Add
+GroupConv3
+GroupConv3
+AvgPool
++
+
+Dynamic Multiscale 
+Spatial Projector
+Y
+
+Y
+Y
+iS
+i
+S
+Fig. 4: The architecture of the proposed Dynamic Multiscale
+Spatial Projector (DMSP).
+mechanism then predicts adaptive fusion weights αk through
+softmax activation, yielding:
+Y =
+X
+k∈{3,5,7}
+αk ⊙DWConvk(Si),
+(7)
+where ⊙denotes element-wise multiplication. The adaptive
+filtering balances fine-grained target preservation across dif-
+ferent spatial scales. Subsequently, a pixel-unshuffle operation
+reorganizes local spatial information Y′ into the channel
+dimension, which preserves local sub-pixel information during
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+5
+Conv1
+Conv1
+Linear
+Reshape
+Multi-head cross attention
+n
+S
+v
+k
+t
++
+tq
+Fig. 5: The architecture of the proposed Multi-head Cross
+Attention (MCA).
+spatial resolution reduction. This process is described as
+follows:
+Y′ = PixelUnshuffle(Y) ∈R4C× H
+2 × W
+2 ,
+(8)
+The resulting features are further processed by two grouped
+convolutions to restore the channel dimension and refine local
+representations eY. Meanwhile, a residual branch employs
+average pooling to retain low-frequency structural information.
+The final projected feature S′
+i is obtained as:
+S′
+i = ReLU
+
+eY + AvgPool(Si)
+
+.
+(9)
+Through adaptive spatial filtering, DMSP suppresses irrel-
+evant background responses while preserving subtle target
+structures, providing reliable conditional representations for
+subsequent timestep modulation.
+2) Multi-head Cross Attention (MCA): To adapt conditional
+information to varying noise levels across diffusion steps,
+we introduce a MCA module for timestep feature modu-
+lation. Given the conditional feature S′
+n ∈RC×H×W and
+diffusion timestep t, MCA first projects S′
+n into keys k and
+values v through two 1 × 1 convolutions. Meanwhile, the
+timestep embedding is transformed through a linear layer and
+reshaped into the query qt. The resulting representations are
+fed into multi-head cross-attention to adaptively modulate the
+conditional features according to the current diffusion step.
+Since the timestep embedding contains no explicit spatial
+information, MCA performs timestep-dependent channel mod-
+ulation without introducing unnecessary spatial attention. A
+residual connection is then employed to preserve the original
+conditional information, yielding:
+St
+n = S′
+n + (MCA(qt, k, v)) ,
+(10)
+where MCA(·) denotes multi-head cross-attention. The re-
+sulting timestep-dependent features St
+n are subsequently ag-
+gregated through multiscale Fusion blocks and concatenation
+to provide comprehensive conditional information for the
+following MSA module.
+3) Memory-guided Spectral Alignment (MSA): Direct ag-
+gregation of multiscale features may weaken target discrim-
+ination across feature levels [44]. To address this issue, we
+introduce an MSA module, which selectively retrieves rele-
+vant memory representations through frequency similarity and
+performs phase alignment to enhance conditional guidance. As
+illustrated in Fig. 6, MSA takes the fused conditional feature
+Memory
+Frequency Domain
+Similarity
+Index
+Topk Memories
+t
+Conv3
+Unfold
++
+Layer
+Norm
+FFT
+FFT
+iFFT
+iFFT
+Topk
+Conv1
+Alignment
+Shift
++
++
+×
+Memory-guided 
+Spectral Alignment
+t
+M
+f
+S
+f
+Q
+
+f
+Q
+t
+M
+ij
+Δ
+t
+G
+ct
+M
+t
+Q
+Fig. 6: The architecture of the proposed Memory-guided
+Spectral Alignment (MSA).
+Sf and the deep feature Et from the final encoder stage as
+inputs. Specifically, Sf is projected through a 3×3 convolution
+and unfolded into query tokens Qf
+∈RN×D, while Et
+provides memory tokens Mt ∈RL×D, where N and L denote
+the numbers of query and memory tokens, respectively. The
+memory bank contains [256, 128, 64, 32] patches across four
+levels, with the corresponding TopK retrieval numbers set to
+[8, 8, 8, 4]. Both representations are then transformed into the
+frequency domain:
+ˆQf = F(Qf),
+ˆMt = F (LN(Mt)) ,
+(11)
+where F(·) denotes the fast Fourier transform (FFT), and
+LN(·) represents layer normalization. To retrieve relevant
+memory patterns, we calculate the cosine similarity between
+their frequency magnitude representations:
+simij =
+⟨|ˆqi|, | ˆmj|⟩
+∥|ˆqi|∥2 ∥| ˆmj|∥2
+,
+(12)
+where ˆqi and ˆmj denote the frequency representations of
+the i-th query and j-th memory token of
+ˆQf and
+ˆMt,
+respectively. Based on the similarity matrix, the topK memory
+tokens are selected to provide relevant structural information
+while suppressing unrelated background responses. Since the
+retrieved memory features may exhibit spatial offsets relative
+to the current query, we further perform phase correlation to
+estimate their relative displacement:
+∆ij = arg max
+δ
+F−1
+ 
+ˆqi ⊙ˆm∗
+j
+|ˆqi ⊙ˆm∗
+j| + ϵ
+!
+,
+(13)
+where (·)∗denotes complex conjugation, ϵ ensures numerical
+stability, and ∆ij represents the estimated spatial displace-
+ment. The selected memory features are then transformed back
+into the spatial domain and shifted accordingly. The aligned
+representations are aggregated as:
+gi =
+X
+j∈Ki
+wij Shift
+ F−1( ˆmj), ∆ij
+
+,
+(14)
+where Ki denotes the selected topK memory indices and wij
+represents the normalized similarity weight. Finally, the query
+features reconstructed via iFFT are combined with the aligned
+memory features through element-wise addition, followed by
+a 1 × 1 convolution and timestep modulation to generate the
+refined conditional representation Mct. The fused features are
+further projected and modulated by the timestep embedding:
+Mct = Conv1×1 (Qt + Gt) ⊙t,
+(15)
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+6
+where t denotes the timestep embedding and ⊙represents
+element-wise multiplication. Through frequency-guided mem-
+ory selection and phase alignment, MSA integrates multiscale
+conditional features with deep encoder representations and in-
+corporates timestep information to provide adaptive guidance
+across diffusion steps.
+D. Denoising Network
+As illustrated in Fig. 3, the denoising network adopts a four-
+level encoder-decoder architecture to progressively reconstruct
+target masks from noisy representations. The encoder con-
+sists of four convolutional stages, where timestep embeddings
+are incorporated to adapt feature extraction across different
+noise levels. To provide target-sensitive guidance, Enhance-
+ment blocks are inserted after the first three encoder stages
+to refine intermediate features using conditional representa-
+tions St
+i modulated by the diffusion timestep. Specifically,
+each Enhancement block employs three parallel convolutional
+branches with kernel sizes of 1, 3, and 5, followed by spatial
+attention (SA) to capture complementary spatial responses.
+The resulting attention maps are aggregated to modulate the
+encoder features through residual enhancement. The deepest
+encoder features are further utilized by MSA to generate
+frequency-guided conditional information Mct. The decoder
+then integrates Mct to reconstruct the predicted target mask
+ˆxt, which is used for subsequent denoising steps.
+As for loss function, we employ a hybrid loss function
+combining Focal loss and IoU loss. The overall loss function
+is formulated as:
+L = λ1Lfocal + λ2Liou,
+(16)
+where λ1 and λ2 are the weighting coefficients for Focal
+loss and IoU loss, empirically set to 2 and 5, respectively.
+The combined objective enhances the discrimination of sparse
+targets while improving the spatial consistency of predicted
+masks.
+E. Training Strategy
+Sparse Mask Structure Perturbation (SMSP). Conven-
+tional diffusion models typically corrupt ground-truth masks
+through Gaussian noise injection, which primarily introduces
+pixel-level disturbances without explicitly modeling structural
+errors in target predictions. Consequently, the denoising net-
+work may rely excessively on noisy mask structures, limiting
+its ability to correct inaccurate predictions during sampling,
+particularly for sparse infrared targets. To address this issue,
+we introduce SMSP to improve the robustness of target mask
+reconstruction. Specifically, given a ground-truth mask x0,
+SMSP randomly perturbs its target structures through local
+contour deformation, erosion, dilation, and spatial shifting,
+generating a structurally corrupted mask ex0. This process is
+formulated as:
+ex0 = Pξ(x0),
+(17)
+where Pξ(·) denotes the stochastic structure perturbation oper-
+ation controlled by random parameters ξ. Subsequently, a dif-
+fusion timestep t is uniformly sampled from {1, . . . , T}, and
+Algorithm 1 Training of PDDiff
+Require: Dataset D, diffusion steps T, parameters θ
+Ensure: Optimized parameters θ
+1: repeat
+2:
+(IIR, x0) ∼D
+3:
+t ∼Uniform({1, . . . , T})
+4:
+ex0 ←SMSP(x0)
+5:
+ϵ ∼N(0, I)
+6:
+xt ←√¯αtex0 + √1 −¯αtϵ
+7:
+ˆx(t)
+0
+←fθ(xt, t, Iir)
+8:
+L ←2Lfocal(ˆx(t)
+0 , x0) + 5Liou(ˆx(t)
+0 , x0)
+9:
+Update θ using Adam with ∇θL
+10: until maximum training epochs are reached
+Algorithm 2 Sampling of PDDiff
+Require: Infrared image Iir, sampling steps T, trained pa-
+rameters θ
+Ensure: Aggregated confidence map P
+1: xT ∼N(0, I)
+2: Initialize P ←[ ]
+3: for t = T, T −1, . . . , 1 do
+4:
+ˆx(t)
+0
+←fθ(xt, t, Iir)
+5:
+Append ˆx(t)
+0
+to P
+6:
+if t > 1 then
+7:
+µt ←µθ(xt, ˆx(t)
+0 , t)
+8:
+ϵ ∼N(0, I)
+9:
+xt−1 ←µt +
+q
+˜βtϵ
+10:
+end if
+11: end for
+12: P ←TPA(P)
+13: return P
+Gaussian noise is injected into the perturbed mask according
+to the predefined noise schedule:
+xt = √¯αtex0 +
+√
+1 −¯αtϵ,
+ϵ ∼N(0, I),
+(18)
+where ¯αt denotes the cumulative noise schedule. As illus-
+trated in Alg. 1, conditioned on the infrared image Iir,
+the denoising network fθ predicts the clean target mask as
+ˆx(t)
+0
+= fθ(xt, t, Iir). The original ground-truth mask x0 is
+used for supervision, encouraging the network to reconstruct
+accurate target structures from noisy and spatially perturbed
+inputs rather than reproducing corrupted representations. In
+addition, random cropping, flipping, and intensity jittering are
+employed to enhance training diversity. By integrating struc-
+tural perturbations into the Gaussian diffusion process, SMSP
+improves the robustness of mask reconstruction and facilitates
+the recovery of sparse target structures during progressive
+denoising.
+F. Sampling Strategy
+Timestep Prediction Aggregation (TPA). During sam-
+pling, PDDiff progressively reconstructs target masks from
+Gaussian noise through iterative denoising. Although the
+final prediction generally provides refined target structures,
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+7
+TABLE I: Performance comparison of model-driven and data-driven methods on SIRST-UAVB and SIRST4 in terms of IoU
+(%), F1 (%), Pd (%), and Fa (10−6), along with the number of parameters (M), computational complexity (GFLOPs), and
+inference speed (FPS). Red indicates the best performance, blue indicates the second-best.
+Method
+SIRST-UAVB
+SIRST4
+Params↓
+GFLOPs↓
+FPS↑
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+Model-driven Methods
+TopHat [19]
+10.28
+73.11
+58.40
+1281
+5.53
+62.73
+51.65
+1873
+-
+-
+-
+WSLCM [45]
+7.65
+66.49
+53.91
+2763
+6.39
+81.36
+77.05
+1874
+-
+-
+-
+TLLCM [46]
+6.38
+59.76
+50.92
+4478
+4.75
+76.38
+69.51
+3281
+-
+-
+-
+IPI [22]
+27.84
+80.45
+76.80
+27.49
+17.74
+73.86
+64.47
+44.68
+-
+-
+-
+NRAM [47]
+9.55
+72.63
+65.19
+127.84
+12.30
+67.49
+62.09
+93.45
+-
+-
+-
+RIPT [47]
+13.85
+74.55
+62.47
+110.78
+14.79
+68.76
+61.39
+99.81
+-
+-
+-
+PSTNN [21]
+22.71
+79.32
+74.56
+83.38
+18.79
+73.26
+69.11
+106.40
+-
+-
+-
+Data-driven Methods
+ACM [23]
+58.16
+80.33
+71.29
+8.69
+69.77
+92.13
+79.60
+21.32
+0.39
+0.40
+109.8
+AGPCNet [48]
+56.89
+77.02
+63.83
+11.94
+68.48
+88.72
+75.15
+28.62
+12.36
+43.18
+19.30
+ALCNet [49]
+38.31
+78.08
+55.40
+10.63
+58.83
+92.26
+74.08
+28.68
+0.43
+0.38
+202.69
+DNANet [11]
+64.85
+82.12
+78.68
+1.87
+77.24
+95.41
+87.16
+6.04
+4.70
+14.26
+9.36
+GSFANet [27]
+62.30
+89.38
+76.77
+3.61
+71.87
+96.02
+83.63
+12.82
+2.99
+5.25
+9.56
+HDNet [50]
+64.89
+83.64
+78.71
+2.36
+77.43
+95.19
+87.28
+9.69
+3.68
+11.20
+16.70
+IRPNet [51]
+70.47
+96.48
+83.11
+3.84
+77.56
+96.81
+87.53
+17.39
+32.34
+26.63
+50.14
+ISNet [52]
+56.19
+86.17
+71.95
+6.21
+68.57
+93.76
+81.35
+28.67
+0.97
+30.62
+37.02
+ISTDU-Net [53]
+61.72
+88.70
+73.63
+8.82
+70.51
+92.18
+79.64
+22.43
+2.75
+7.94
+37.00
+MSHNet [54]
+60.96
+80.44
+75.74
+3.54
+74.57
+94.14
+85.44
+8.47
+4.07
+19.27
+12.63
+RDANet [44]
+68.19
+96.37
+81.89
+5.34
+75.34
+94.03
+85.28
+11.49
+4.17
+25.24
+15.00
+RDIAN [55]
+59.38
+87.44
+71.98
+7.22
+69.08
+93.61
+80.94
+22.57
+0.22
+3.72
+56.00
+SCTransNet [13]
+63.56
+88.20
+77.72
+4.25
+77.13
+96.69
+87.09
+18.70
+11.33
+20.24
+14.95
+SPKAN [56]
+70.39
+96.31
+82.76
+4.48
+75.80
+96.17
+86.24
+19.85
+9.52
+8.18
+70.15
+IRSTD-Diff [38]
+62.47
+88.07
+77.32
+6.71
+74.68
+93.36
+84.49
+18.26
+53.48
+104.64
+22.17
+UIUNet [12]
+62.37
+79.43
+78.74
+6.15
+65.98
+96.84
+79.50
+42.88
+50.54
+54.43
+31.45
+Ours
+71.96
+96.80
+83.70
+2.53
+79.45
+97.14
+88.55
+6.34
+43.71
+123.98
+25.74
+intermediate predictions also contain valuable information for
+identifying infrared small targets. However, these predictions
+may exhibit different levels of uncertainty across sampling
+steps [57]. Inspired by prediction aggregation in segmentation
+[58], we employ TPA to exploit intermediate predictions.
+Specifically, given the predicted probability maps {Pj}K
+j=1
+from K sampling steps, TPA first generates binary masks Bj
+through adaptive thresholding. These masks are then combined
+through weighted voting to identify reliable target regions. To
+account for differences in prediction stability, the aggregation
+weights are determined by the discrepancy between consecu-
+tive predictions:
+wj =
+1
+∥Pj −Pj−1∥2
+2 + ϵ
+,
+(19)
+where j = 2, . . . , K, ϵ ensures numerical stability, and w1 =
+w2 for K ≥2. Smaller discrepancies indicate more consistent
+predictions, which are assigned larger weights. Finally, the
+weighted binary masks determine the candidate target regions,
+while the corresponding probability maps provide refined
+confidence scores:
+P = Round
+ PK
+j=1 wjBj
+PK
+j=1 wj
+!
+⊙
+PK
+j=1 wjPj
+PK
+j=1 wj
+,
+(20)
+where ⊙denotes element-wise multiplication. As illustrated
+in Alg. 2, the denoising network fθ iteratively predicts clean
+target masks from noisy representations conditioned on the
+infrared image Iir. The predictions generated at different
+sampling steps are collected and aggregated by TPA to obtain
+the final confidence map P. By exploiting prediction consis-
+tency across denoising steps, TPA suppresses unstable target
+responses and improves the reliability of mask generation
+without introducing additional denoising iterations.
+IV. EXPERIMENTS AND RESULTS
+A. Experimental Setup
+Experiments are conducted on two public benchmarks,
+SIRST-UAVB [59] and SIRST4 [60], containing 3,000 and
+3,352 infrared images, respectively. SIRST4 integrates several
+widely used datasets, including SIRSTv2, NUDT-SIRST, and
+IRSTD-1K, covering diverse backgrounds and target scales.
+SIRST-UAVB mainly contains UAV-based urban scenes char-
+acterized by complex clutter. The dataset split follows the
+default setting. For evaluation, we adopt standard metrics
+widely used in IRSTD, including intersection over union
+(IoU), F1 measure, probability of detection (Pd), and false
+alarm rate (Fa).
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+8
+Image
+Mask
+DNANet
+ISNet
+UIUNet
+RDANet
+Ours
+Fig. 7: Qualitative results of different methods on the SIRST4 and SIRST-UAVB dataset. Red circles denote correct detections,
+blue circles denote false alarms, and orange circles denote miss detections.
+We implement our PDDiff using PyTorch on two NVIDIA
+5880 GPUs. The pretrained SAM2-Tiny encoder with trainable
+adapters is adopted as the backbone, while the encoder param-
+eters remain frozen. All infrared images and corresponding
+masks are resized to 512 × 512. We employ the Adam
+optimizer with an initial learning rate of 1 × 10−4, which
+is gradually reduced to 1 × 10−7 using a CosineAnnealingLR
+scheduler. The model is trained for 300 epochs with a batch
+size of 8. During training, SMSP introduces random con-
+tour perturbations into target masks before Gaussian noise
+injection to enhance structure denoising. Random cropping,
+intensity jittering, and flipping are further applied for data
+augmentation. The network is optimized using a combination
+of Focal loss and IoU loss, with weighting coefficients λ1 = 2
+and λ2 = 5, respectively. During sampling, TPA aggregates
+intermediate predictions across denoising steps to improve
+detection robustness.
+B. Compared with SOTA methods
+1) Quantitative Results: As reported in Table I, PDDiff
+achieves the best IoU, Pd, and F1 on SIRST-UAVB, reaching
+71.96%, 96.80%, and 83.70%, respectively. Compared with
+the second-best IRPNet, PDDiff improves IoU, Pd, and F1 by
+1.49%, 0.32%, and 0.59%, respectively. Notably, PDDiff also
+surpasses the diffusion-based method IRSTD-Diff by 9.49%
+IoU and 8.73% Pd, demonstrating its effectiveness in accu-
+rately identifying infrared small targets. Although DNANet
+achieves the lowest Fa of 1.87, PDDiff maintains a relatively
+low Fa of 2.53 while delivering superior detection accuracy.
+On SIRST4, PDDiff consistently achieves the best IoU, Pd,
+and F1 of 79.45%, 97.14%, and 88.55%, respectively. Com-
+pared with IRPNet, the second-best method in IoU, PDDiff
+improves IoU by 1.89%. It also exceeds UIUNet by 0.30%
+in Pd and HDNet by 1.27% in F1. Furthermore, compared
+with IRSTD-Diff, PDDiff improves IoU and Pd by 4.77% and
+3.78%, respectively. Overall, the results on the two datasets
+further demonstrate the effectiveness of diffusion progressive
+denoising for IRSTD, which is well suited to the noise-
+sensitive characteristics of infrared imaging, enabling gradual
+suppression of background clutter and imaging noise while
+improving the discrimination of weak targets from target-like
+interference.
+2) Tradeoff Analysis: To further evaluate the computational
+efficiency of PDDiff, we analyze the tradeoff between detec-
+tion accuracy and inference speed. As reported in Table I,
+PDDiff achieves the highest detection accuracy with 43.71M
+parameters and an inference speed of 25.74 FPS. Compared
+with the IRSTD-Diff, PDDiff achieves higher accuracy with
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+9
+Image
+Mask
+SCTrans
+IRSTD-Diff
+SPKAN
+HDNet
+Ours
+Fig. 8: Qualitative results of different methods on the SIRST4
+dataset.
+Image
+Mask
+SCTrans
+IRSTD-Diff
+SPKAN
+HDNet
+Ours
+Fig. 9: Qualitative results of different methods on the SIRST-
+UAVB dataset.
+fewer parameters and faster inference. Although iterative
+denoising introduces additional computational overhead, the
+number of sampling steps can be flexibly adjusted to balance
+detection performance and inference efficiency. This flexibility
+makes PDDiff a competitive candidate for real-time IRSTD
+applications while retaining the advantages of progressive
+target refinement.
+3) Visual Results: Figs. 7-9 present qualitative comparisons
+of different IRSTD methods under complex infrared scenes. In
+Fig. 7, weak and densely distributed targets are easily confused
+with background interference, where DNANet, ISNet, and
+UIUNet exhibit missed detections and false alarms. In contrast,
+PDDiff better preserves subtle target structures while suppress-
+ing spurious background responses. Fig. 8 further compares
+detection results in maritime and complex sky backgrounds.
+Although methods such as SCTransNet and IRSTD-Diff can
+identify certain targets, they still suffer from incomplete tar-
+get responses or background interference. PDDiff produces
+more complete target masks with fewer irrelevant activations.
+Meanwhil, the corresponding 3D response maps also show
+that PDDiff generates more concentrated target peaks with
+suppressed background responses.
+4) ROC Curve: Fig. 10 presents the ROC curves of dif-
+ferent methods on SIRST4 and SIRST-UAVB. PDDiff con-
+sistently achieves superior detection performance on both
+datasets, maintaining higher true positive rates (TPR) under
+low false positive ratios (FPR). The improvements are partic-
+ularly evident on SIRST-UAVB, demonstrating the effective-
+ness of progressive denoising in distinguishing weak infrared
+targets from background interference.
+C. Ablation Study
+1) Integrated Framework.: Table II reports the ablation
+results of the proposed components on SIRST-UAVB and
+SIRST4. Compared with the baseline, introducing the de-
+noising network improves IoU by 4.84% and 3.12%, and
+Pd by 5.22% and 2.09% on SIRST-UAVB and SIRST4,
+respectively. These improvements demonstrate that diffusion-
+based progressive denoising facilitates iterative refinement of
+weak target predictions compared with direct mask prediction.
+Incorporating DMSP further increases IoU to 69.74% and
+77.19%, indicating that dynamic multiscale spatial projection
+enhances generation conditional representations. With MCA,
+IoU improves to 71.23% and 78.81%, while Pd reaches
+96.39% and 97.06%, respectively, demonstrating the effec-
+tiveness of timestep conditional modulation. Finally, MSA
+achieves the best overall performance, increasing IoU to
+71.96% and 79.45% while reducing Fa from 4.48 to 2.53
+and from 8.27 to 6.34, respectively. By selectively retrieving
+relevant memory features through Top-K frequency similarity
+and performing alignment, MSA enhances target discrimina-
+tion while suppressing irrelevant background responses.
+The heatmap results in Fig. 11 further demonstrate the ef-
+fectiveness of the proposed components. The baseline exhibits
+widespread background activations, indicating severe interfer-
+ence from imaging scenes. By introducing diffusion denoising
+and DMSP, background responses are gradually suppressed
+while weak target features become more distinguishable. With
+MCA, target activations become more concentrated through
+timestep-aware conditional modulation. MSA further enhances
+target-related responses through frequency-guided memory
+selection and alignment, reducing residual background inter-
+ference. These results demonstrate that the proposed modules
+provide discriminative conditional guidance for progressive
+denoising, enabling iterative refinement of uncertain target
+predictions and more reliable target localization.
+2) Impact of backbone.: Table III reports the ablation
+results of different SAM2 Hiera backbone scales and adapters.
+Compared with the model without adapters, introducing
+adapters improves IoU by 3.23% and 1.96%, and Pd by
+2.68% and 2.93% on SIRST-UAVB and SIRST4, respectively,
+demonstrating the effectiveness of infrared-domain adaptation.
+Increasing the backbone scale further enhances detection per-
+formance. Specifically, SAM2-small improves IoU to 72.34%
+and 80.42%, while SAM2-base achieves the highest IoU.
+These improvements indicate that larger SAM2 backbones
+provide stronger semantic representations and structural priors,
+offering more discriminative conditional guidance for recov-
+ering target details during progressive denoising. However,
+larger backbones introduce substantially more parameters.
+Therefore, SAM2-tiny is adopted as the default backbone to
+achieve a favorable balance between detection accuracy and
+computational efficiency.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+10
+(a) SIRST4
+(b) SIRST-UAVB
+Fig. 10: ROC curves of different methods on SIRST4 and SIRST-UAVB.
+TABLE II: Ablation study of the proposed PDDiff on the SIRST-UAVB and SIRST4 datasets.
+Settings
+Denoising
+Network
+DMSP
+MCA
+MSA
+SIRST-UAVB
+SIRST4
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+Baseline
+–
+–
+–
+–
+62.35
+88.28
+78.05
+4.56
+73.41
+92.26
+81.72
+19.91
+w Denoising
+✓
+–
+–
+–
+67.19
+93.50
+79.76
+5.13
+76.53
+94.35
+84.60
+11.49
+w DMSP
+✓
+✓
+–
+–
+69.74
+95.06
+80.88
+5.65
+77.19
+94.77
+86.17
+9.79
+w MCA
+✓
+✓
+✓
+–
+71.23
+96.39
+82.91
+4.48
+78.81
+97.06
+87.75
+8.27
+w MSA
+✓
+✓
+✓
+✓
+71.96
+96.80
+83.70
+2.53
+79.45
+97.14
+88.55
+6.34
+Image
+baseline
+w DMSP
+w MCA
+w MSA
+Mask
+Fig. 11: Impact of different variants of PDDiff on modeling
+feature representation from SIRST4.
+TABLE III: Ablation study of different Hiera backbone scales
+and adapters.
+Settings
+SIRST-UAVB
+SIRST4
+Params
+(M)
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+w/o Adapter
+68.73 94.12 79.66
+8.93
+77.49 94.21 86.20
+9.73
+42.96
+SAM2-tiny
+71.96 96.80 83.70
+2.53
+79.45 97.14 88.55
+6.34
+43.71
+SAM2-small 72.34 96.89 83.86
+2.29
+80.42 97.93 88.81
+6.12
+52.16
+SAM2-base
+72.95 96.74 84.25
+5.11
+83.07 98.12 89.02
+9.55
+238.71
+3) Impact of training and sampling strategy.: Table IV re-
+ports the ablation results of the proposed training and sampling
+strategies. Introducing SMSP improves IoU by 1.74% and
+2.33%, and Pd by 2.95% and 2.28% on SIRST-UAVB and
+SIRST4, respectively. By introducing structural perturbations
+TABLE IV: Ablation study of different training and sampling
+strategies.
+Settings
+SIRST-UAVB
+SIRST4
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+Baseline
+69.20 93.82 79.95
+8.74
+76.56 94.84 86.19
+7.91
+w SMSP
+70.94 96.77 82.60
+5.59
+78.89 97.12 87.82
+7.33
+w TPA
+70.11 95.62 82.14
+3.76
+78.24 95.79 88.16
+6.54
+w SMSP + TPA
+71.96 96.80 83.70
+2.53
+79.45 97.14 88.55
+6.34
+TABLE V: Ablation study of different sampling steps and
+inference speed.
+Time steps
+SIRST-UAVB
+SIRST4
+FPS↑
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+T = 5
+69.27
+94.42
+81.55
+14.78
+78.06
+95.71
+86.13
+17.93
+35.19
+T = 10
+70.55
+96.14
+83.38
+7.94
+78.86
+96.78
+87.31
+10.19
+28.33
+T = 12∗
+71.96
+96.80
+83.70
+2.53
+79.45
+97.14
+88.55
+6.34
+25.74
+T = 15
+72.25
+96.91
+83.74
+2.51
+79.72
+97.45
+88.61
+6.10
+19.72
+into sparse target masks, SMSP encourages the denoising net-
+work to correct inaccurate target structures, thereby enhancing
+structure-aware denoising. As illustrated in Fig. 12, SMSP
+simulates structural deviations in sparse target masks through
+contour modification, erosion, dilation, and spatial shifting.
+These perturbations expose the model to diverse target distor-
+tions, improving its ability to recover accurate target structures
+during progressive denoising. Meanwhile, TPA improves IoU
+by 0.91% and 1.68%, while reducing Fa by 4.98 and 1.37 on
+the two datasets, respectively. This demonstrates that aggre-
+gating intermediate predictions effectively suppresses unstable
+responses and reduces false alarms. Combining SMSP and
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+11
+Mask
+Contour
+Erosion
+Dilation
+Shift
+Structura perturbed 
+Fig. 12: Illustration of the SMSP strategy. Different structural
+perturbations, including contour modification, erosion, dila-
+tion, and spatial shifting, are applied to the original target mask
+to simulate structural distortions during diffusion training.
+Image
+Mask
+Step 5
+Step 10
+Step 12
+Step15
+Fig. 13: Visualization of target mask refinement under different
+diffusion sampling steps. PDDiff progressively suppresses
+spurious responses and recovers accurate target structures as
+the number of sampling steps increases from 5 to 15.
+TPA achieves the best overall performance on both datasets,
+demonstrating the complementary benefits of training and
+prediction aggregation.
+4) Effectiveness of Different Time Steps: To investigate the
+impact of sampling steps on segmentation performance, we
+evaluate PDDiff with T = 5, 10, 12, and 15. As reported in
+Table V, increasing the sampling steps consistently improves
+detection accuracy on both datasets. Compared with T = 5,
+T = 12 improves IoU by 2.69% and 1.39%, while reduc-
+ing Fa by 12.25 and 11.59 on SIRST-UAVB and SIRST4,
+respectively. These improvements demonstrate that iterative
+sampling facilitates progressive correction of uncertain mask
+predictions. However, further increasing T to 15 yields only
+marginal IoU gains of 0.29% and 0.27%, respectively, indicat-
+ing diminishing benefits from additional denoising iterations.
+Meanwhile, as illustrated in Fig. 13, increasing the sampling
+steps gradually refines target structures and produces more
+Image
+Results
+Image
+Results
+�= 0.01
+�= 0.03
+�= 0.05
+�= 0.01
+�= 0.03
+�= 0.05
+Fig. 14: Visual comparison of PDDiff under different Gaussian
+noise levels. Detection results are presented under increasing
+noise intensities (σ
+= 0.01, 0.03, and 0.05). Red boxes
+highlight target regions, while green circles indicate false
+alarms. The results illustrate the robustness of PDDiff in
+preserving weak target responses and suppressing background
+interference under varying noise conditions.
+TABLE VI: Impact of different noise levels on SIRST4.
+Methods
+σ = 0.01
+σ = 0.03
+σ = 0.05
+IoU↑
+Pd ↑
+Fa ↓
+IoU↑
+Pd ↑
+Fa ↓
+IoU↑
+Pd ↑
+Fa ↓
+DNANet
+74.82 94.78 20.16 70.60 90.24 28.41
+52.85 84.50 47.04
+MSHNet
+73.33 94.19 22.12 71.19 90.52 26.35
+56.06 85.48 44.76
+SCTransNet 72.89 94.83 19.65 69.95 91.61 27.29
+57.67 86.13 40.59
+IRPNet
+76.25 96.08 18.27 72.90 91.94 25.83
+54.81 84.79 51.14
+Ours
+77.83 96.63 14.75 75.54 93.19 23.52
+61.26 87.41 37.91
+accurate masks. Therefore, we adopt T = 12 as the default
+sampling setting to achieve a favorable balance between de-
+tection accuracy and inference efficiency.
+5) Impact of different noise level: To evaluate the robust-
+ness of PDDiff against imaging noise, we conduct experiments
+on SIRST4 under three Gaussian noise levels (σ = 0.01,
+0.03, and 0.05), as reported in Table VI. As the noise level
+increases, all methods exhibit performance degradation due to
+increasingly severe noise interference. Nevertheless, PDDiff
+consistently achieves the best performance, outperforming the
+second-best methods by 1.58%, 1.64%, and 2.49% in IoU
+across the three noise levels, respectively. At σ = 0.05, PDDiff
+further improves IoU by 6.45% compared with IRPNet,
+demonstrating its robustness under stronger noise interference.
+As illustrated in Fig. 14, PDDiff can still accurately identify
+weak targets as the noise level increases, maintaining relatively
+stable target predictions. However, occasional false alarms
+emerge under severe noise interference, indicating that distin-
+guishing weak targets from noise-induced responses remains
+challenging. These results suggest that iterative diffusion sam-
+pling facilitates progressive refinement of uncertain target
+predictions, reducing confusion caused by imaging noise.
+6) TopK in MSA: We further investigate the influence
+of TopK retrieval in MSA. With the memory bank sizes
+fixed to [256, 128, 64, 32] across the four feature levels, we
+evaluate different retrieval settings, as reported in Table VII.
+Specifically, [8, 8, 8, 4] achieves the best overall performance.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+12
+TABLE VII: Ablation study of different TopK retrieval set-
+tings in MSA.
+Settings
+Top-K retrieval
+SIRST-UAVB
+SIRST4
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+IoU↑
+Pd ↑
+F1 ↑
+Fa ↓
+(1)
+[4, 4, 4, 2]
+71.76 96.41 83.29
+3.74
+79.17 97.02 88.48
+6.83
+(2)
+[8, 8, 8, 4]
+71.96 96.80 83.70
+2.53
+79.45 97.14 88.55
+6.34
+(3)
+[16, 16, 8, 4]
+71.84 96.65 83.68
+2.83
+79.23 96.88 88.37
+6.51
+Reducing the retrieval number to [4, 4, 4, 2] slightly degrades
+IoU by 0.28%, indicating that insufficient memory retrieval
+limits the exploitation of representative target patterns. In
+contrast, increasing it to [16, 16, 8, 4] also reduces IoU by
+0.22% in SIRST4 dataset, suggesting that retrieving exces-
+sive memory patches may introduce irrelevant background
+information. These results demonstrate that a moderate TopK
+setting effectively balances relevant feature retrieval, providing
+more discriminative frequency-guided conditional representa-
+tions for progressive denoising.
+7) Limitations: Despite its promising performance, PDDiff
+still has several limitations. First, as a diffusion-based frame-
+work, PDDiff requires iterative sampling to progressively
+refine target predictions, introducing additional computational
+overhead compared with conventional single-step methods.
+As shown in Table V, increasing the sampling steps from
+T = 12 to T = 15 yields accuracy improvements while
+increasing inference cost. This indicates a trade-off between
+detection accuracy and computational efficiency. Future work
+will explore adaptive timestep scheduling and accelerated
+sampling strategies to reduce redundant denoising iterations.
+Second,
+although
+DMSP
+and
+MSA
+enhance
+spatial-
+frequency representations, their effectiveness may be limited
+under extremely weak target responses and severe back-
+ground interference. Specifically, the multiscale filtering in
+DMSP may suppress subtle target details, while the frequency
+memory selection in MSA may retrieve less discriminative
+features when target and background responses exhibit simi-
+lar frequency characteristics. Future research will investigate
+target-preserving spatial filtering and more robust frequency-
+guided memory selection to improve detection reliability in
+challenging infrared scenes.
+V. CONCLUSION
+In this paper, we presented Progressive Denoising Diffusion
+(PDDiff), a conditional diffusion framework for infrared small
+target detection. PDDiff establishes a progressive generative
+denoising paradigm to address ambiguous target responses and
+background interference in conventional single-step prediction
+methods. In the conditional generation stage, DMSP enhances
+target-sensitive spatial representations through dynamic mul-
+tiscale projection, while MSA selectively retrieves relevant
+memory features through frequency-domain similarity and
+phase alignment to provide discriminative conditional guid-
+ance. Furthermore, SMSP and TPA are introduced to improve
+sparse target structure learning during training and interme-
+diate prediction aggregation during sampling, respectively.
+Extensive experiments on benchmark datasets demonstrate the
+effectiveness of PDDiff in terms of detection accuracy, noise
+robustness, and false-alarm suppression. Ablation studies fur-
+ther validate the contributions of the proposed components and
+strategies. These results indicate that progressive generative
+denoising provides an effective approach for reliable infrared
+small target detection. Future work will explore adaptive noise
+modeling and efficient sampling strategies to further improve
+detection robustness and computational efficiency.
+REFERENCES
+[1] R.-K. Kou, C.-P. Wang, Z. Peng, Z. Zhao, Y.-H. Chen, J.-H. Han, F.-Y.
+Huang, Y. Yu, and Q. Fu, “Infrared small target segmentation networks:
+A survey,” Pattern Recognition, vol. 143, p. 109788, 2023.
+[2] S. S. Rawat, S. K. Verma, and Y. Kumar, “Review on recent develop-
+ment in infrared small target detection algorithms,” Procedia Computer
+Science, vol. 167, pp. 2496–2505, 2020.
+[3] H. Deng, X.-P. Sun, and X. Zhou, “A multiscale fuzzy metric for detect-
+ing small infrared targets against chaotic cloudy/sea-sky backgrounds,”
+IEEE Transactions on Cybernetics, vol. 49, pp. 1694–1707, 2019.
+[4] D.-D. Ma, S. H. Chen, L.-L. Dong, T.-K. Chen, and W. Xu, “Spatio-
+semantic enhanced cascade swin detection network for infrared maritime
+targets,” IEEE Transactions on Geoscience and Remote Sensing, vol. 64,
+pp. 1–13, 2026.
+[5] B. Xie, Y. K. Heng, S. Feng, Y. Wang, and X. Zhu, “Sea-land segmen-
+tation of infrared remote sensing image based on complex background,”
+2020 International Conference on Computer Vision, Image and Deep
+Learning (CVIDL), pp. 165–168, 2020.
+[6] M.-J. Zhao, W. Li, L. Li, A. Wang, J. Hu, and R. Tao, “Infrared small uav
+target detection via isolation forest,” IEEE Transactions on Geoscience
+and Remote Sensing, vol. 61, pp. 1–16, 2023.
+[7] X.-Y. Zhang, J.-Y. Ru, and C.-D. Wu, “Infrared small target detection
+based on gradient correlation filtering and contrast measurement,” IEEE
+Transactions on Geoscience and Remote Sensing, vol. 61, pp. 1–12,
+2023.
+[8] J. Wang, G. Zhang, K. Zhang, Y. Zhao, Q. Wang, and X.-L. Li,
+“Detection of small aerial object using random projection feature with
+region clustering,” IEEE Transactions on Cybernetics, vol. 52, pp. 3957–
+3970, 2020.
+[9] G.-Y. Zhang, G. Xu, S.-Y. Chen, H. Wang, and X.-H. Zhang, “It’s not
+the target, it’s the background: Rethinking infrared small-target detection
+via deep patch-free low-rank representations,” IEEE Transactions on
+Geoscience and Remote Sensing, vol. 63, pp. 1–13, 2025.
+[10] D.-J. Zhao, L. Hu, J. Yue, and D.-G. Yang, “Feature-guided discrimi-
+native ring local contrast measure for infrared small target detection,”
+IEEE Geoscience and Remote Sensing Letters, vol. 23, pp. 6 015 305–
+6 015 305, 2026.
+[11] B.-Y. Li, C. Xiao, L.-G. Wang, Y.-Q. Wang, Z.-P. Lin, M. Li, W. An,
+and Y. Guo, “Dense nested attention network for infrared small target
+detection,” IEEE Transactions on Image Processing, vol. 32, pp. 1745–
+1758, 2021.
+[12] X. Wu, D.-F. Hong, and J. Chanussot, “Uiu-net: U-net in u-net for in-
+frared small object detection,” IEEE Transactions on Image Processing,
+vol. 32, pp. 364–376, 2022.
+[13] S. Yuan, H.-L. Qin, X. Yan, N. Akhtar, and A. Mian, “Sctransnet:
+Spatial-channel cross transformer network for infrared small target
+detection,” IEEE Transactions on Geoscience and Remote Sensing,
+vol. 62, pp. 1–15, 2024.
+[14] Z.-W. Jiang, S.-G. Chen, C.-N. Tian, X.-Y. Li, and Y. Yue, “Crpe-
+net: Infrared small target detection transformer with cross-layer relative-
+position embedding,” Pattern Recognit., vol. 172, p. 112640, 2025.
+[15] W. Xu, S. Zheng, C. Wang, Z.-R. Zhang, C. Ren, R. Xu, and S.-B. Xu,
+“Samamba: Adaptive state space modeling with hierarchical vision for
+infrared small target detection,” Information Fusion, vol. 124, p. 103338,
+2025.
+[16] M.-J. Zhang, X. Li, F. Gao, and J.-R. Guo, “Irmamba: Pixel difference
+mamba with layer restoration for infrared small target detection,” in
+AAAI Conference on Artificial Intelligence, 2025.
+[17] Z.-W. Jiang, X.-Y. Li, C.-N. Tian, H. Zhou, J.-C. Shi, Y. Yue, Z.-X.
+Zhang, X.-M. Wang, and S.-G. Chen, “Phyirstd: A dynamic temporal
+aggregation segment anything model for moving infrared small target
+detection,” IEEE Transactions on Circuits and Systems for Video Tech-
+nology, 2026.
+[18] Y. Li, J. Wu, and C. Long, “Pi-sam: Physics-informed segment anything
+for infrared small target detection,” IEEE Transactions on Geoscience
+and Remote Sensing, vol. 64, pp. 1–17, 2026.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+13
+[19] X. Bai and F.-G. Zhou, “Analysis of new top-hat transformation and the
+application for infrared dim small target detection,” Pattern Recognit.,
+vol. 43, pp. 2145–2156, 2010.
+[20] Y.-T. Wei, X.-G. You, and H. Li, “Multiscale patch-based contrast
+measure for small infrared target detection,” Pattern Recognit., vol. 58,
+pp. 216–226, 2016.
+[21] L. Zhang and Z. Peng, “Infrared small target detection based on partial
+sum of the tensor nuclear norm,” Remote. Sens., vol. 11, p. 382, 2019.
+[22] C. Gao, D.-Y. Meng, Y. Yang, Y. Wang, X. Zhou, and A. Hauptmann,
+“Infrared patch-image model for small target detection in a single
+image,” IEEE Transactions on Image Processing, vol. 22, pp. 4996–
+5009, 2013.
+[23] Y. Dai, Y. Wu, F. Zhou, and K. Barnard, “Asymmetric contextual
+modulation for infrared small target detection,” 2021 IEEE Winter
+Conference on Applications of Computer Vision (WACV), pp. 949–958,
+2020.
+[24] M.-J. Zhang, H. Bai, J. Zhang, R. Zhang, C. Wang, J. Guo, and X.-
+B. Gao, “Rkformer: Runge-kutta transformer with random-connection
+attention for infrared small target detection,” Proceedings of the 30th
+ACM International Conference on Multimedia, 2022.
+[25] Z.-W. Jiang, X.-M. Wang, X.-Y. Li, C.-N. Tian, H. Zhou, Z.-X. Zhang,
+and S.-G. Chen, “Bidirectional motion perception transformer network
+for multi-frame infrared small target detection,” IEEE Transactions on
+Circuits and Systems for Video Technology, vol. 36, pp. 12 903–12 916,
+2026.
+[26] M.-J. Zhang, K. Yue, B.-Y. Li, J. Guo, Y.-S. Li, and X.-B. Gao, “Single-
+frame infrared small target detection via gaussian curvature inspired net-
+work,” IEEE Transactions on Geoscience and Remote Sensing, vol. 62,
+pp. 1–13, 2024.
+[27] C.-Y. Deng, Z.-Y. Zhao, X. Xu, Y. Xia, J.-W. Li, and A. J. Plaza,
+“Gsfanet: Global spatial–frequency attention network for infrared small
+target detection,” IEEE Transactions on Geoscience and Remote Sensing,
+vol. 63, pp. 1–17, 2025.
+[28] T.-X. Chen, Z. Ye, Z. Tan, T. Gong, Y. Wu, Q. Chu, B. Liu, N.-H. Yu,
+and J.-P. Ye, “Mim-istd: Mamba-in-mamba for efficient infrared small-
+target detection,” IEEE Transactions on Geoscience and Remote Sensing,
+vol. 62, pp. 1–13, 2024.
+[29] Y. Sui, X.-Y. Zhi, Y.-X. Huang, T.-J. Shi, and S.-K. Jiang, “Samamba:
+Stream alignment mamba for motion infrared small target detection,”
+IEEE Transactions on Circuits and Systems for Video Technology,
+vol. 36, pp. 11 215–11 230, 2026.
+[30] N. Du, S. Wei, Y. Tong, S. Du, and Y. Liu, “Fame-net: Frequency-
+adaptive mixture-of-experts network for robust infrared small target
+detection,” IEEE Transactions on Geoscience and Remote Sensing,
+vol. 64, pp. 5 005 813–5 005 813, 2026.
+[31] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”
+in Advances in neural information processing systems, vol. 33, 2020, pp.
+6840–6851.
+[32] R. Rombach, A. Blattmann, D. Lorenz, P. Esser, and B. Ommer,
+“High-resolution image synthesis with latent diffusion models,” 2022
+IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+pp. 10 674–10 685, 2021.
+[33] C. Saharia, J. Ho, W. Chan, T. Salimans, D. J. Fleet, and M. Norouzi,
+“Image super-resolution via iterative refinement,” IEEE Transactions
+on Pattern Analysis and Machine Intelligence, vol. 45, pp. 4713–4726,
+2021.
+[34] B. Xia, Y. Zhang, S. Wang, Y. Wang, X. Wu, Y.-P. Tian, W.-M. Yang,
+and L. V. Gool, “Diffir: Efficient diffusion model for image restoration,”
+2023 IEEE/CVF International Conference on Computer Vision (ICCV),
+pp. 13 049–13 059, 2023.
+[35] S. Chen, P. Sun, Y.-B. Song, and P. Luo, “Diffusiondet: Diffusion
+model for object detection,” 2023 IEEE/CVF International Conference
+on Computer Vision (ICCV), pp. 19 773–19 786, 2022.
+[36] S. Zhang, J. Huang, W. Tang, Y. Wu, T. Hu, X.-G. Xu, and J. Liu,
+“Dimsod: A diffusion-based framework for multi-modal salient object
+detection,” in AAAI Conference on Artificial Intelligence, 2025.
+[37] N. Du, X. Gong, and Y. Liu, “Istd-diff: Infrared small target detection
+via conditional diffusion models,” IEEE Geoscience and Remote Sensing
+Letters, vol. 21, pp. 1–5, 2024.
+[38] H. Li, J.-F. Yang, Y. Xu, and R. Wang, “Mitigate target-level insensitivity
+of infrared small target detection via posterior distribution modeling,”
+IEEE Journal of Selected Topics in Applied Earth Observations and
+Remote Sensing, vol. 17, pp. 13 188–13 201, 2024.
+[39] P. Zhang, J.-N. Gong, T.-J. Shi, G.-Z. Bao, Z. Wang, S.-K. Jiang, and
+X.-Y. Zhi, “Dedm-net: Diffusion-enhanced dense mamba network for
+infrared small target detection,” Journal of Remote Sensing, 2026.
+[40] W. Wu, Y. Zhao, M. Z. Shou, H. Zhou, and C. Shen, “Diffumask: Syn-
+thesizing images with pixel-level annotations for semantic segmentation
+using diffusion models,” 2023 IEEE/CVF International Conference on
+Computer Vision (ICCV), pp. 1206–1217, 2023.
+[41] Z. Gu, H. Chen, Z.-E. Xu, J. Lan, C. Meng, and W.-Q. Wang, “Diffusion-
+inst: Diffusion model for instance segmentation,” ICASSP 2024 IEEE
+International Conference on Acoustics, Speech and Signal Processing
+(ICASSP), pp. 2730–2734, 2022.
+[42] S. P. Meyn and R. L. Tweedie, “Markov chains and stochastic stability,”
+in Communications and Control Engineering Series, 1993.
+[43] N. Ravi, V. Gabeur, Y.-T. Hu, R. Hu, C. K. Ryali, T. Ma, H. Khedr,
+R. R¨adle, C. Rolland, L. Gustafson, E. Mintun, J. Pan, K. V. Alwala,
+N. Carion, C. Wu, R. B. Girshick, P. Doll´ar, and C. Feichtenhofer, “Sam
+2: Segment anything in images and videos,” International Conference
+on Learning Representation, 2024.
+[44] R. Liu, J. Nie, and Y. Fu, “Rdanet: Relative degradation aware network
+for infrared small target detection,” IEEE Transactions on Geoscience
+and Remote Sensing, 2026.
+[45] J.-H. Han, S. Moradi, I. Faramarzi, H.-H. Zhang, Q. Zhao, X.-J. Zhang,
+and N. Li, “Infrared small target detection based on the weighted
+strengthened local contrast measure,” IEEE Geoscience and Remote
+Sensing Letters, vol. 18, pp. 1670–1674, 2020.
+[46] J.-H. Han, S. Moradi, I. Faramarzi, C. Liu, H.-H. Zhang, and Q. Zhao,
+“A local contrast method for infrared small-target detection utilizing a
+tri-layer window,” IEEE Geoscience and Remote Sensing Letters, vol. 17,
+pp. 1822–1826, 2020.
+[47] Y. Dai and Y. Wu, “Reweighted infrared patch-tensor model with both
+nonlocal and local priors for single-frame small target detection,” IEEE
+Journal of Selected Topics in Applied Earth Observations and Remote
+Sensing, vol. 10, pp. 3752–3767, 2017.
+[48] T. Zhang, L. Li, S.-Y. Cao, T. Pu, and Z. Peng, “Attention-guided
+pyramid context networks for detecting infrared small target under
+complex background,” IEEE Transactions on Aerospace and Electronic
+Systems, vol. 59, pp. 4250–4261, 2023.
+[49] Y. Dai, Y. Wu, F. Zhou, and K. Barnard, “Attentional local contrast
+networks for infrared small target detection,” IEEE Transactions on
+Geoscience and Remote Sensing, vol. 59, pp. 9813–9824, 2020.
+[50] M.-Z. Xu, C. Yu, Z.-X. Li, H. Tang, Y.-P. Hu, and L.-Q. Nie, “Hdnet:
+A hybrid domain network with multiscale high-frequency information
+enhancement for infrared small-target detection,” IEEE Transactions on
+Geoscience and Remote Sensing, vol. 63, pp. 1–15, 2025.
+[51] R. Yao, N.-N. Guo, H.-C. Zhu, K.-Y. Sun, F. Hu, X.-X. Li, and J.-Q.
+Zhao, “Irpnet: Infrared small target detection via rgb prior guidance and
+physics feature fusion,” IEEE Transactions on Geoscience and Remote
+Sensing, vol. 64, pp. 1–12, 2026.
+[52] M.-J. Zhang, R. Zhang, Y.-X. Yang, H. Bai, J. Zhang, and J.-R.
+Guo, “Isnet: Shape matters for infrared small target detection,” 2022
+IEEE/CVF Conference on Computer Vision and Pattern Recognition
+(CVPR), pp. 867–876, 2022.
+[53] Q.-Y. Hou, L. Zhang, F. jiao Tan, Y. Xi, H.-L. Zheng, and N. Li, “Istdu-
+net: Infrared small-target detection u-net,” IEEE Geoscience and Remote
+Sensing Letters, vol. 19, pp. 1–5, 2022.
+[54] Q. Liu, R. Liu, B.-L. Zheng, H. Wang, and Y. Fu, “Infrared small
+target detection with scale and location sensitivity,” 2024 IEEE/CVF
+Conference on Computer Vision and Pattern Recognition (CVPR), pp.
+17 490–17 499, 2024.
+[55] H. Sun, J. S. Bai, F. Yang, and X. Bai, “Receptive-field and direction
+induced attention network for infrared dim small target detection with a
+large-scale dataset irdst,” IEEE Transactions on Geoscience and Remote
+Sensing, vol. 61, pp. 1–13, 2023.
+[56] S. Yuan, Y. Liu, X. Zhang, X. Yan, H.-L. Qin, and N. Akhtar, “Sp-
+kan: Sparse-sine perception kolmogorov–arnold networks for infrared
+small target detection,” ISPRS Journal of Photogrammetry and Remote
+Sensing, 2026.
+[57] K. Sun, Z. Chen, X.-M. Lin, X.-S. Sun, H. Liu, and R. Ji, “Conditional
+diffusion models for camouflaged and salient object detection,” IEEE
+Transactions on Pattern Analysis and Machine Intelligence, vol. 47, pp.
+2833–2848, 2025.
+[58] S. Zhang, J.-M. Huang, W.-B. Tang, J. Liu, L. Han, J.-D. Li, H.-
+C. Yuan, and Z. Fan, “Simplediffusion: A lightweight and efficient
+conditional diffusion model for multi-modal salient object detection,”
+in AAAI Conference on Artificial Intelligence, 2026.
+[59] J. Yang, S. Liu, J. Wu, X. Su, N. Hai, and X. Huang, “Pinwheel-
+shaped convolution and scale-based dynamic loss for infrared small
+target detection,” in Proceedings of the AAAI Conference on Artificial
+Intelligence, vol. 39, 2025, pp. 9202–9210.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+14
+[60] R. Ni, B. Li, J. Chen, Y. Li, F. Ren, Y. Wang, H. Yuan, W. He, and
+W. An, “Rethinking irstd: Single-point supervision guided encoder-only
+framework is enough for infrared small target detection,” in European
+Conference on Computer Vision, 2026.
