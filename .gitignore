@@ -8,6 +8,9 @@ data/
 *.ckpt
 *.tar
 *.pkl
+*.pt
+*.downloading
+Ours/weights/
 
 # 凭据：SFTP 明文密码不进入公开仓库，模板见 .vscode/sftp.example.json
 .vscode/sftp.json
@@ -33,3 +36,6 @@ Thumbs.db
 tmp/upload/
 Ours/venv_ours/
 
+
+# 解压出的临时预测副本（原 zip 已入库）
+tmp/1104_test_maps/

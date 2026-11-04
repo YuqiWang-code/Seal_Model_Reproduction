@@ -27,14 +27,34 @@
 | `data.py` | `load_t_image` 原式在 16 位 TIFF 上会 uint8 回绕，改为逐图 min-max |
 | `train.py` | 设备由 `SEAL_CUDA` 控制；数据/权重默认路径指向本项目 |
 
+## 模态 LoRA 由本项目重训（原权重缺失）
+
+原始工程里冻结的 `outputs/RGB+LoRA/best/lora_weights.pt` 与 `outputs/T+LoRA/best/lora_weights.pt`
+未随代码提供，作者侧也已确认没有留存。因此这两套**模态 LoRA 由本项目在 Seal 上重训**，
+全监督版仍按“冻结模态 LoRA + 只训 M1 与 LoRA3”的原设计运行。重训脚本
+`Fully_Supervised_Code_1104/train_lora.py`，协议如下：
+
+| 项目 | 值 |
+|---|---|
+| 结构 | SAM3 图像模型 + 视觉 `qkv`/`proj` 上的 LoRA（rank 16、alpha 32、64 site） |
+| 可训参数 | 仅 LoRA（约 0.6M 张量 / 12.6 MB），SAM3 其余参数全部冻结 |
+| 数据 | 单模态 Seal train（RGB 或 T；T 逐图 min-max → 8 位）1,500 张 |
+| 监督 | Seal `train/box` 作 Decoder 几何提示 + Seal `train/GT` 全像素 mask 的结构损失 + Focal + Dice |
+| 优化器 | AdamW，lr 2e-4，8 epoch，batch 1 |
+| 选点 | 每 2 epoch 在 Seal val 500 张算像素 IoU@0.5，取最优；test 不参与 |
+| 产出 | `Ours/weights/{RGB+LoRA,T+LoRA}/lora_weights.pt`（`{"state_dict": ...}`，唯一后缀可加载） |
+
+冒烟（2 张训练样本、1 epoch）即达到 val IoU 0.775，说明 SAM3 预训练特征与框提示链路正常。
+这是对原方法的**替代实现**，须在论文与表备注中写明“模态 LoRA 由本项目在 Seal train 重训”。
+
 ## 环境与命令
 
 ```bash
 bash /share_datasets/Seal_Model_Reproduction/Ours/run_fullsup.sh 30 1
 ```
 
-权重：`Ours/weights/sam3.pt`、`Ours/weights/RGB+LoRA/lora_weights.pt`、
-`Ours/weights/T+LoRA/lora_weights.pt`。
+权重：`Ours/weights/sam3.pt`（SHA256 `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e`）、
+`Ours/weights/RGB+LoRA/lora_weights.pt`、`Ours/weights/T+LoRA/lora_weights.pt`（后两者由 `train_lora.py` 在 Seal 上重训）。
 
 ## 冒烟与基准
 
