@@ -31,9 +31,11 @@
 | 二值面板 | `pred >= 128`（概率 > 0.5），与定量表、`AS1000Metrics` 完全同口径 |
 | 红框 | 由 **GT 包围框**外扩得到（所有方法共用同一个框，`--roi-min 64 px`、`--roi-margin 24 px`），保证各列可比；Seal 目标只有 3–5 px 宽，64 px 的框约等于目标的 10–20 倍视野 |
 | 放大插图 | 右下角、红框、`ZOOM=10`、最近邻，最大占面板 46%（`full` 版式） |
-| 3D 响应面 | 取目标中心 `--crop3d 192` 的方形块，`elev=26, azim=-64`、Z 按面板各自上限（`--z-mode per-panel`；`shared` 可强制 0–255）。**必须用概率图**：二值图是 0/255 阶跃，画出来只有一根尖刺；`--surf-maps` 指定 `results/<M>/Seal/fullsup_test_maps`。Image 列用 `gray` 配色 + `sigma=3` 平滑（热图纹理在 `jet` 下太花），其余列 `jet` + `sigma=2`，且不显示 Z 刻度（0.85 in 的面板里刻度只会变成噪点） |
+| 3D 响应面 | 取目标中心 `--crop3d 192` 的方形块，`elev=26, azim=-64`、Z 按面板各自上限（`--z-mode per-panel`；`shared` 可强制 0–255）。**必须用概率图**：二值图是 0/255 阶跃，画出来只有一根尖刺；`--surf-maps` 指定 `results/<M>/Seal/fullsup_test_maps`。Image 列用 `gray` + `sigma=5`（热图纹理在 `jet` 下太花），其余列 `jet` + `sigma=2` |
+| 3D 坐标/网格（v2） | 三个坐标面画浅灰网格（`_axinfo['grid']` 0.86 灰 / 0.22 pt），X/Y/Z 带整数刻度（`MaxNLocator(nbins=5, integer=True)` → 0/50/100/150 这种好刻度）与轴名，字号 2.1 pt；轴线压到 0.25 pt、0.45 灰，坐标面边框 0.3 pt、0.85 灰——**没有黑色粗轴线**；3D 盒子 `zoom=0.78`，保证刻度字落在本方格内（否则被右邻面板白底盖掉） |
 | 字体 | 默认 `--font "Microsoft YaHei,Noto Sans CJK JP,DejaVu Sans"`。服务器没有雅黑，matplotlib 认领 `NotoSansCJK-*.ttc`（`fontconfig` 装好的 `.ttc` matplotlib 默认看不到，脚本里显式 `addfont`）；在装过雅黑的 Windows/macOS 上重跑即自动用雅黑 |
-| 块间距 | 每个样例块之间插 0.12 in 白条（`gap_h`），否则相邻样例的 3D 行和下一块的 2D 行会粘在一起 |
+| 面板间距（v2） | `wspace=0.004`、`hspace=0.015`，2D 面板之间只剩 1–2 px 白缝（PDDiff 就是贴着的）；2D 行高度按图像真实比例（`img_h = cell_w×417/622`，ROI 版为正方形），不再有上下白边 |
+| 块间距 | 每个样例块之间插 0.10 in 白条（`gap_h`），否则相邻样例的 3D 行和下一块的 2D 行会粘在一起 |
 | 输出 | `<tag>_qualitative.png`（600 dpi）+ `<tag>_qualitative.pdf`（矢量）+ `<tag>_meta.json`（列名、样例、阈值、参数） |
 
 两种 2D 行版式（其余部分完全相同）：
@@ -110,18 +112,27 @@ python tools/build_paper_qualitative.py \
 
 （`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
 
-构建：`bash tools/make_paper_qualitative_pick.sh all`（`full`/`roi` 二选一也行），产物在服务器 `qualitative_paper/user_pick/`：
+构建：`bash tools/make_paper_qualitative_pick.sh all`（`full`/`roi` 二选一也行）。
+
+### 版本
+
+| 版本 | 服务器目录 | 本地目录 | 说明 |
+|---|---|---|---|
+| v1 | `qualitative_paper/user_pick/` | 已删除 | 首版：3D 无刻度、有黑色粗轴线、列间距 0.02、Image 列 `gray+sigma3` |
+| v2（当前） | `qualitative_paper/v2_20261105/` | `Ours/qualitative/v2_20261105/` | 按审阅意见改：列间距压到 0.004、2D 行按真实比例、3D 加网格+整数刻度+轴名、去掉黑粗轴线、3D 盒子 `zoom=0.78` |
+
+服务器保留全部历史版本；本地只留最新一版，且 PNG/PDF 不进 git（`Ours/qualitative/*/*.png|pdf` 已在 `.gitignore`，单版约 80 MB），每版目录里的 `README.md` 仍然跟踪。
+
+v2 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 | 文件 | 内容 | 尺寸 |
 |---|---|---|
-| `seal_pick11_qualitative.png/pdf` | 11 样例 × 11 列，`full` 版式（整幅 + 红框 + 插图） | 5760×10618 px / 9.6×17.7 in |
-| `seal_pick6_qualitative.*` / `seal_pick5_qualitative.*` | 同样例拆成 6 + 5 两张 | 5760×5860 / 5760×4908 px |
-| `seal_pick11_roi_qualitative.*` | 11 样例，`roi` 版式（面板 = 6 倍放大 ROI） | 5760×11425 px / 9.6×19.0 in |
-| `seal_pick6_roi_*` / `seal_pick5_roi_*` | 同上拆两张 | 5760×6300 / 5760×5275 px |
+| `seal_pick11_qualitative.png/pdf` | 11 样例 × 11 列，`full` 版式（整幅 + 红框 + 插图） | 5760×10086 px / 9.6×16.8 in |
+| `seal_pick6_qualitative.*` / `seal_pick5_qualitative.*` | 同样例拆成 6 + 5 两张 | 5760×5569 / 5760×4666 px |
+| `seal_pick11_roi_qualitative.*` | 11 样例，`roi` 版式（面板 = 6 倍放大 ROI） | 5760×11408 px / 9.6×19.0 in |
+| `seal_pick6_roi_*` / `seal_pick5_roi_*` | 同上拆两张 | 5760×6290 / 5760×5267 px |
 
-仓库内预览（1800 px 宽，仅用于查看版式）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
-
-全分辨率成品（600 dpi PNG + 矢量 PDF + meta）已下载归档到本仓库 `Ours/qualitative/v1_20261104_11col/`（18 个文件，86 MB），含 `README.md` 记录列名、样例 ID、GT 面积与参数。**每一版图单独建 `v*` 子文件夹**，新一版另建 `v2_<日期>_<说明>/`，不覆盖旧版。
+仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v2）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
 从图上直接能读到的事实（对照表 21～32 行）：
 

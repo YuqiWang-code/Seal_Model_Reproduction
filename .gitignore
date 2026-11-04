@@ -40,3 +40,8 @@ Ours/venv_ours/
 
 # 解压出的临时预测副本（原 zip 已入库）
 tmp/1104_test_maps/
+
+# 定性图成品（600 dpi PNG + 矢量 PDF，单版约 80 MB）：本地只保留最新一版，
+# 历史版本留在服务器 qualitative_paper/，因此不进仓库；每版目录内 README.md 仍然跟踪。
+Ours/qualitative/*/*.png
+Ours/qualitative/*/*.pdf
