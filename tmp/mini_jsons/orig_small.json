@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "IoU": 0.00033206792223871174,
+    "F1": 0.0006639153794768183,
+    "Pd": 0.6521739130434783,
+    "Fa": 0.3131475526973919
+  },
+  "counts": {
+    "n_images": 6,
+    "tp": 162,
+    "fp": 487314,
+    "fn": 376,
+    "n_gt": 23,
+    "n_pred": 32257,
+    "n_detected": 15,
+    "false_alarm_pixels": 487334,
+    "total_pixels": 1556244
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/tmp/ours_mini_orig/infer/best3/test",
+  "gt_dir": "/tmp/seal_mini/test/GT"
+}
