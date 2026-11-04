@@ -35,7 +35,7 @@ $PY train_seal.py --device cuda:0 --epochs 150 --val-interval 10 --batch-size 8 
 
 ## 结果
 
-选中的是 Seal val 上像素 IoU 最高的第 90 epoch 检查点（val IoU 0.34709；训练跑满 150 epoch）。
+选中的是 Seal val 上像素 IoU 最高的第 50 epoch 检查点（val IoU 0.34709；训练跑满 150 epoch）。
 
 | 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
 |---|---:|---:|---:|---:|

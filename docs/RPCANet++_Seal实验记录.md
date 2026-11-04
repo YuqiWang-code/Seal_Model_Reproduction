@@ -35,7 +35,7 @@ $PY train_seal.py --device cuda:1 --net-name rpcanet_pp --epochs 60 --val-interv
 
 ## 结果
 
-选中的是 Seal val 上像素 IoU 最高的第 57 epoch 检查点（val IoU 0.33723；训练 60 epoch）。
+选中的是 Seal val 上像素 IoU 最高的第 42 epoch 检查点（val IoU 0.33723；训练 60 epoch）。
 
 | 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
 |---|---:|---:|---:|---:|

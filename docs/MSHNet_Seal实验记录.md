@@ -51,7 +51,7 @@ $PY evaluate_small_targets.py --pred_root results/MSHNet/Seal/fullsup_test_maps 
 
 ## 结果
 
-选中的是 Seal val 上像素 IoU 最高的第 140 epoch 检查点（val IoU 0.30430；训练跑满 400 epoch，末端 val IoU 0.28487，从第 160 epoch 起开始过拟合）。测试集 1,983 张预测全部生成，文件名与 `Seal_data/test/GT` 一一对应。
+选中的是 Seal val 上像素 IoU 最高的第 100 epoch 检查点（val IoU 0.30430；训练跑满 400 epoch，之后在 0.28–0.30 间波动，末端 val IoU 0.28487）。测试集 1,983 张预测全部生成，文件名与 `Seal_data/test/GT` 一一对应。
 
 | 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
 |---|---:|---:|---:|---:|

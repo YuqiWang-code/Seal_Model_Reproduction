@@ -35,7 +35,7 @@ $PY train_seal.py --device cuda:1 --epochs 120 --val-interval 20 --out experimen
 
 ## 结果
 
-选中的是 Seal val 上像素 IoU 最高的第 89 epoch 检查点（val IoU 0.28234）。训练到第 90 epoch 时 val 已连续多次在 0.27–0.28 波动，按预算停止（120 epoch 的 cosine 日程未跑完）。
+选中的是 Seal val 上像素 IoU 最高的第 120 epoch 检查点（val IoU 0.28556；120 epoch 日程跑满，每 10 epoch 评估一次，val 一直在 0.27–0.29 平台）。
 
 | 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
 |---|---:|---:|---:|---:|
