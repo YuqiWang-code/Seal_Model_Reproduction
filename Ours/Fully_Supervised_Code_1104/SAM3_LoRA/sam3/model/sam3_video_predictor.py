@@ -1,7 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved
 
-# pyre-unsafe
-
 import datetime
 import gc
 import multiprocessing as mp
@@ -16,6 +14,7 @@ from typing import List, Optional
 
 import psutil
 import torch
+
 from sam3.logger import get_logger
 
 logger = get_logger(__name__)
@@ -169,7 +168,7 @@ class Sam3VideoPredictor:
     ):
         """Remove an object from tracking."""
         logger.debug(
-            f"remove object {obj_id} in session {session_id}: {is_user_action=}"
+            f"remove object {obj_id} in session {session_id}: " f"{is_user_action=}"
         )
         session = self._get_session(session_id)
         inference_state = session["state"]

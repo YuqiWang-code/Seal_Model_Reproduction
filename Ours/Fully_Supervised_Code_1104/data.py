@@ -70,8 +70,10 @@ def _align(maps: Dict[str, Dict[str, Path]]) -> List[str]:
 def load_t_image(image_path: Path) -> Image.Image:
     """Seal 的 16 位热红外：按单图 min-max 拉伸到 8 位，再转三通道 RGB。
 
-    原实现写成 ``x - min/(max-min)*255``，在 16 位 TIFF 上既不是 min-max 归一化、
-    也会在转 uint8 时回绕；这里改为与全项目一致的逐图 min-max（见 AGENTS.md）。
+    原包的写法是 ``x - min/(max-min)*255``，只适用于 8 位图；Seal 的 ``T`` 是
+    16 位 TIFF（实测 uint16、约 26,400–28,500），该式会得到 2 万多再转 uint8
+    回绕成噪声。这里按全项目统一口径改为逐图 min-max（见 AGENTS.md），
+    输入分布与“先把 T 转 8 位再做实验”的原始流程等价。
     """
     with Image.open(image_path) as t_image:
         t_array = np.asarray(t_image)

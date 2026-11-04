@@ -1,9 +1,8 @@
-"""全监督 RGB-T 训练。
+"""M1 消融：不用 RGB LoRA、T LoRA 和 LoRA3，只训练 M1。
 
-冻结 SAM3 和两套视觉 LoRA。共享 LoRA3 加在两套模型的视觉 qkv/proj 上，默认与 M1 一起训练。
-M1 融合 RGB / T 的图像特征后，配上数据集里的真实框进一次 Decoder。
+两路图像共用一份冻结的原始 SAM3。M1 融合 RGB / T 特征后，配上数据集里的真实框进一次 Decoder。
 预测 mask 用数据集 GT 做结构损失、Sigmoid Focal Loss 和 Dice Loss。
-传入 --no-lora3 时只更新 M1。
+直接运行本脚本就是该消融。若要改回带 LoRA 的训练，需要另外准备 LoRA 权重并传入 --lora。
 """
 
 from __future__ import annotations
@@ -262,16 +261,12 @@ def configure_low_memory_model(model: nn.Module) -> None:
     model.dac = False
 
 
-def build_frozen_lora_model(checkpoint_path: Path, lora_path: Path, device: torch.device) -> nn.Module:
-    """按 demo10 加载一套视觉 LoRA，然后连同 LoRA 一起冻结。"""
+def _load_sam3(checkpoint_path: Path) -> nn.Module:
     bpe_path = SAM3_PKG_ROOT / "assets" / "bpe_simple_vocab_16e6.txt.gz"
     if not bpe_path.is_file():
         raise FileNotFoundError(f"找不到 SAM3 词表: {bpe_path}")
     if not checkpoint_path.is_file():
         raise FileNotFoundError(f"找不到 SAM3 权重: {checkpoint_path}")
-    if not lora_path.is_file():
-        raise FileNotFoundError(f"找不到 LoRA 权重: {lora_path}")
-
     model = build_sam3_image_model(
         bpe_path=str(bpe_path),
         device="cpu",
@@ -283,6 +278,30 @@ def build_frozen_lora_model(checkpoint_path: Path, lora_path: Path, device: torc
         compile=False,
     )
     configure_low_memory_model(model)
+    return model
+
+
+def _freeze_model(model: nn.Module, device: torch.device) -> nn.Module:
+    for name, param in model.backbone.named_parameters():
+        if "lora" not in name:
+            param.data = param.data.to(torch.bfloat16)
+    for param in model.parameters():
+        param.requires_grad = False
+    model.eval()
+    model.to(device)
+    return model
+
+
+def build_frozen_base_model(checkpoint_path: Path, device: torch.device) -> nn.Module:
+    """与 demo7 相同，只加载冻结的原始 SAM3，不注入 LoRA。"""
+    return _freeze_model(_load_sam3(checkpoint_path), device)
+
+
+def build_frozen_lora_model(checkpoint_path: Path, lora_path: Path, device: torch.device) -> nn.Module:
+    """按 demo10 加载一套视觉 LoRA，然后连同 LoRA 一起冻结。"""
+    if not lora_path.is_file():
+        raise FileNotFoundError(f"找不到 LoRA 权重: {lora_path}")
+    model = _load_sam3(checkpoint_path)
     lora_cfg = LoRAConfig(
         rank=16,
         alpha=32.0,
@@ -297,15 +316,7 @@ def build_frozen_lora_model(checkpoint_path: Path, lora_path: Path, device: torc
     )
     model = apply_lora_to_model(model, lora_cfg)
     load_lora_weights(model, str(lora_path))
-
-    for name, param in model.backbone.named_parameters():
-        if "lora" not in name:
-            param.data = param.data.to(torch.bfloat16)
-    for param in model.parameters():
-        param.requires_grad = False
-    model.eval()
-    model.to(device)
-    return model
+    return _freeze_model(model, device)
 
 
 class SharedLoRA(nn.Module):
@@ -466,6 +477,21 @@ def upsample_logits(logit: torch.Tensor, size: tuple) -> torch.Tensor:
     return F.interpolate(logit.float()[None, None], size=size, mode="bilinear", align_corners=False)
 
 
+def add_backbone_out(rgb_out, t_out):
+    """与 demo10 相同，递归对两路 backbone 特征做 (RGB + T) / 2。"""
+    if isinstance(rgb_out, torch.Tensor):
+        return (rgb_out + t_out) / 2
+
+    if isinstance(rgb_out, dict):
+        return {key: add_backbone_out(rgb_out[key], t_out[key]) for key in rgb_out}
+
+    if isinstance(rgb_out, list):
+        return [add_backbone_out(rgb_value, t_value) for rgb_value, t_value in zip(rgb_out, t_out)]
+
+    if rgb_out is None and t_out is None:
+        return None
+
+
 def encode_visual_text(model: nn.Module, device: torch.device) -> dict:
     with torch.no_grad(), torch.amp.autocast("cuda", dtype=torch.bfloat16):
         return model.backbone.forward_text(["visual"], device=device)
@@ -477,7 +503,7 @@ def forward_sample(
     gt_boxes: torch.Tensor,
     rgb_model: nn.Module,
     t_model: nn.Module,
-    m1: M1,
+    m1: M1 | None,
     text_outputs: dict,
     find_stage: FindStage,
     grad_backbone: bool = False,
@@ -490,7 +516,7 @@ def forward_sample(
             with torch.no_grad():
                 rgb_out = rgb_model.backbone.forward_image(rgb)
                 t_out = t_model.backbone.forward_image(thermal)
-        fused = m1(rgb_out, t_out)
+        fused = m1(rgb_out, t_out) if m1 is not None else add_backbone_out(rgb_out, t_out)
         outputs = decode(rgb_model, branch_backbone(fused, text_outputs), gt_boxes, find_stage)
     return merge_topk_logits(outputs, int(gt_boxes.shape[0]))
 
@@ -521,19 +547,20 @@ def dice_loss(logits: torch.Tensor, target: torch.Tensor, eps: float = 1.0) -> t
     return (1.0 - (2.0 * inter + eps) / (denom + eps)).mean()
 
 
-def iou_counts(pred: torch.Tensor, target: torch.Tensor) -> tuple[int, int, int]:
-    """与 evaluate2.AS1000Metrics.update 相同的像素 TP / FP / FN。"""
-    pred = pred.detach().reshape(-1) > 0
-    target = target.detach().reshape(-1).to(device=pred.device) > 0
-    tp = pred & target
-    fp = pred & ~target
-    fn = ~pred & target
+def iou_counts(prob: torch.Tensor, mask: torch.Tensor) -> tuple[int, int, int]:
+    """与 metrics.AS1000Metrics 相同：概率 > 0.5 后统计像素 TP / FP / FN。"""
+    binary = prob.detach().reshape(-1) > 0.5
+    mask = mask.detach().reshape(-1).to(device=binary.device).bool()
+    tp = binary & mask
+    fp = binary & ~mask
+    fn = ~binary & mask
     return int(tp.sum().item()), int(fp.sum().item()), int(fn.sum().item())
 
 
-def dataset_iou(tp: int, fp: int, fn: int, eps: float = 1e-10) -> float:
-    """与 evaluate2.AS1000Metrics.compute 的 IoU 相同，返回 0 到 1 的原始比例。"""
-    return tp / (tp + fp + fn + eps)
+def dataset_iou(tp: int, fp: int, fn: int) -> float:
+    """与 metrics.AS1000Metrics.get 的 IoU 相同。"""
+    union = tp + fp + fn
+    return tp / union if union else 0.0
 
 
 def format_metric(value: float, places: int = 5) -> str:
@@ -564,7 +591,8 @@ def train_one_epoch(
 ) -> float:
     rgb_model.eval()
     t_model.eval()
-    m1.train()
+    if m1 is not None:
+        m1.train()
     if lora3 is not None:
         lora3.train()
         enable_trunk_checkpoint(rgb_model)
@@ -620,7 +648,8 @@ def train_one_epoch(
 def validate(loader, rgb_model, t_model, m1, lora3, text_outputs, find_stage) -> dict:
     rgb_model.eval()
     t_model.eval()
-    m1.eval()
+    if m1 is not None:
+        m1.eval()
     if lora3 is not None:
         lora3.eval()
 
@@ -644,7 +673,7 @@ def validate(loader, rgb_model, t_model, m1, lora3, text_outputs, find_stage) ->
             rgb, thermal, gt_boxes, rgb_model, t_model, m1, text_outputs, find_stage
         )
         probability = prediction_probability(pred_logit, gt_mask)
-        tp, fp, fn = iou_counts(probability > 0.5, gt_mask)
+        tp, fp, fn = iou_counts(probability, gt_mask)
         total_tp += tp
         total_fp += fp
         total_fn += fn
@@ -655,11 +684,11 @@ def validate(loader, rgb_model, t_model, m1, lora3, text_outputs, find_stage) ->
     return {"iou": dataset_iou(total_tp, total_fp, total_fn), "mae": total_mae / scale, "samples": count}
 
 
-def save_checkpoint(path: Path, m1: M1, epoch: int, iou: float, lora3: nn.Module | None = None) -> None:
+def save_checkpoint(path: Path, m1: M1 | None, epoch: int, iou: float, lora3: nn.Module | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
-            "m1": m1.state_dict(),
+            "m1": None if m1 is None else m1.state_dict(),
             "lora3": None if lora3 is None else lora3.state_dict(),
             "epoch": epoch,
             "iou": iou,
@@ -669,7 +698,7 @@ def save_checkpoint(path: Path, m1: M1, epoch: int, iou: float, lora3: nn.Module
 
 
 def get_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="全监督 RGB-T 训练：冻结 SAM3 与双 LoRA，训练 M1 与共享 LoRA3")
+    parser = argparse.ArgumentParser(description="M1 消融：冻结原始 SAM3，只训练 M1，不使用 RGB / T / LoRA3")
     parser.add_argument("--epoch", type=int, default=30)
     parser.add_argument("--lr", type=float, default=5e-5)
     parser.add_argument("--weight_decay", type=float, default=0.01)
@@ -683,19 +712,21 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--log_every", type=int, default=100)
 
-    parser.add_argument("--lora3", default=True, action=argparse.BooleanOptionalAction)
-    parser.add_argument("--seed", type=int, default=None, help="设置随机种子（稳定性对照用；默认不固定）")
+    parser.add_argument("--lora", default=False, action=argparse.BooleanOptionalAction, help="本包默认关闭。打开后才会加载 RGB LoRA、T LoRA，并按 --lora3 决定是否训练 LoRA3")
+    parser.add_argument("--lora3", default=False, action=argparse.BooleanOptionalAction, help="本包默认关闭。仅在 --lora 打开时有效")
+    parser.add_argument("--m1", default=True, action=argparse.BooleanOptionalAction, help="关闭时用 (RGB+T)/2 代替 M1")
+    parser.add_argument("--seed", type=int, default=None, help="固定随机种子（可选，稳定性对照用）")
     parser.add_argument("--checkpoint", type=str, default="/share_datasets/Seal_Model_Reproduction/Ours/weights/sam3.pt")
-    parser.add_argument("--rgb_lora", type=str, default="/share_datasets/Seal_Model_Reproduction/Ours/weights/RGB+LoRA/lora_weights.pt")
-    parser.add_argument("--t_lora", type=str, default="/share_datasets/Seal_Model_Reproduction/Ours/weights/T+LoRA/lora_weights.pt")
+    parser.add_argument("--rgb_lora", type=str, default=str(ROOT / "outputs" / "RGB+LoRA" / "best" / "lora_weights.pt"))
+    parser.add_argument("--t_lora", type=str, default=str(ROOT / "outputs" / "T+LoRA" / "best" / "lora_weights.pt"))
     parser.add_argument("--train_data_dir", type=str, default="/share_datasets/Seal_Model_Reproduction/Seal_data/train")
     parser.add_argument("--val_data_dir", type=str, default="/share_datasets/Seal_Model_Reproduction/Seal_data/val")
-    parser.add_argument("--save_path", type=str, default="train_logs")
+    parser.add_argument("--save_path", type=str, default="/share_datasets/Seal_Model_Reproduction/results/Ours/BISF")
     return parser.parse_args()
 
 
 def set_seed(seed: int) -> None:
-    """固定 python / numpy / torch 的随机种子，用于多随机种子稳定性对照。"""
+    """固定 python / numpy / torch 的随机种子（可选）。"""
     import random
 
     import numpy as np
@@ -711,20 +742,29 @@ def main() -> None:
     args = get_args()
     setup_logger(args.save_path, "train.log")
     logging.info("Args: %s", args)
-    print("Learning Rate:", args.lr)
     if args.seed is not None:
         set_seed(args.seed)
+    if not args.lora and args.m1:
+        print("M1 消融：冻结原始 SAM3，不使用 RGB LoRA / T LoRA / LoRA3，只训练 M1")
+    print("Learning Rate:", args.lr)
 
     if not torch.cuda.is_available():
         raise RuntimeError("需要 CUDA。")
     device = torch.device("cuda")
 
     checkpoint = Path(args.checkpoint)
-    rgb_model = build_frozen_lora_model(checkpoint, Path(args.rgb_lora), device)
-    t_model = build_frozen_lora_model(checkpoint, Path(args.t_lora), device)
-    lora3 = build_shared_lora(rgb_model, t_model).to(device) if args.lora3 else None
-    m1 = M1().cuda()
-    m1_trainable = count_trainable(m1)
+    if args.lora:
+        rgb_model = build_frozen_lora_model(checkpoint, Path(args.rgb_lora), device)
+        t_model = build_frozen_lora_model(checkpoint, Path(args.t_lora), device)
+        lora3 = build_shared_lora(rgb_model, t_model).to(device) if args.lora3 else None
+    else:
+        if args.lora3:
+            logging.info("未加载模态 LoRA，LoRA3 一并关闭。")
+        rgb_model = build_frozen_base_model(checkpoint, device)
+        t_model = rgb_model
+        lora3 = None
+    m1 = M1().cuda() if args.m1 else None
+    m1_trainable = 0 if m1 is None else count_trainable(m1)
     lora3_trainable = 0 if lora3 is None else count_trainable(lora3)
     rgb_trainable = count_trainable(rgb_model)
     t_trainable = count_trainable(t_model)
@@ -737,12 +777,14 @@ def main() -> None:
     )
     if rgb_trainable or t_trainable:
         raise RuntimeError("SAM3 与模态 LoRA 应当全部冻结。")
-    params = require_trainable(m1)
+    params = require_trainable(m1) if m1 is not None else []
     if lora3 is not None:
         lora3_params = [param for param in lora3.parameters() if param.requires_grad]
         if not lora3_params:
             raise RuntimeError("LoRA3 没有可训练参数。")
         params.extend(lora3_params)
+    if not params:
+        raise RuntimeError("M1 和 LoRA3 都已关闭，没有可训练参数。")
 
     train_loader = get_loader(
         args.train_data_dir,

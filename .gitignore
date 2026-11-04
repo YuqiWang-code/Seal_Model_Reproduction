@@ -23,7 +23,8 @@ package-lock.json
 tmp/baseline_blank/maps/
 
 # Python / 编辑器 / Excel 临时文件
-__pycache__/*.py[cod]
+__pycache__/
+*.py[cod]
 *.egg-info/
 .pytest_cache/
 .ipynb_checkpoints/

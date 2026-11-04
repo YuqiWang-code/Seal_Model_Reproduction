@@ -1,7 +1,5 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved
 
-# pyre-unsafe
-
 import logging
 import warnings
 
@@ -9,8 +7,11 @@ import torch
 import torch.distributed
 import torch.nn.functional as F
 import torchmetrics
+
 from sam3.model import box_ops
+
 from sam3.model.data_misc import interpolate
+
 from sam3.train.loss.sigmoid_focal_loss import (
     triton_sigmoid_focal_loss,
     triton_sigmoid_focal_loss_reduce,
@@ -324,9 +325,7 @@ class IABCEMdetr(LossWithWeights):
         if num_det_queries is not None:
             logging.warning("note: it's not needed to set num_det_queries anymore")
         if self.use_separate_loss_for_det_and_trk:
-            assert not self.weak_loss, (
-                "Do not use weak_loss in this case -- set separate loss for detection and tracking queries instead"
-            )
+            assert not self.weak_loss, "Do not use weak_loss in this case -- set separate loss for detection and tracking queries instead"
             self.det_exhaustive_loss_scale_pos = det_exhaustive_loss_scale_pos
             self.det_exhaustive_loss_scale_neg = det_exhaustive_loss_scale_neg
             self.det_non_exhaustive_loss_scale_pos = det_non_exhaustive_loss_scale_pos
@@ -341,9 +340,7 @@ class IABCEMdetr(LossWithWeights):
                 and det_non_exhaustive_loss_scale_neg == 1.0
                 and trk_loss_scale_pos == 1.0
                 and trk_loss_scale_neg == 1.0
-            ), (
-                "If not using separate loss for detection and tracking queries, separate detection and tracking loss scales should all be 1.0"
-            )
+            ), "If not using separate loss for detection and tracking queries, separate detection and tracking loss scales should all be 1.0"
 
     def get_loss(self, outputs, targets, indices, num_boxes):
         assert len(outputs["pred_logits"].shape) > 2, "Incorrect predicted logits shape"
@@ -444,9 +441,7 @@ class IABCEMdetr(LossWithWeights):
                 pass
 
         if self.weak_loss:
-            assert not self.use_separate_loss_for_det_and_trk, (
-                "Do not use weak_loss in this case -- set separate loss for detection and tracking queries instead"
-            )
+            assert not self.use_separate_loss_for_det_and_trk, "Do not use weak_loss in this case -- set separate loss for detection and tracking queries instead"
 
             # nullify the negative loss for the non-exhaustive classes
             assert loss_bce.shape[0] == targets["is_exhaustive"].shape[0]
@@ -500,9 +495,9 @@ class IABCEMdetr(LossWithWeights):
                 loss_bce = loss_bce.mean()
             else:
                 assert isinstance(self.pad_n_queries, int)
-                assert loss_bce.size(1) < self.pad_n_queries, (
-                    f"The number of predictions is more than the expected total after padding. Got {loss_bce.size(1)} predictions."
-                )
+                assert (
+                    loss_bce.size(1) < self.pad_n_queries
+                ), f"The number of predictions is more than the expected total after padding. Got {loss_bce.size(1)} predictions."
                 loss_bce = loss_bce.sum() / (self.pad_n_queries * loss_bce.size(0))
 
         bce_f1 = torchmetrics.functional.f1_score(
@@ -581,6 +576,7 @@ class Masks(LossWithWeights):
         oversample_ratio=None,
         importance_sample_ratio=None,
         apply_loss_to_det_queries_in_video_grounding=True,
+        resize_targets_to_predictions=False,
     ):
         super().__init__(weight_dict, compute_aux)
         if compute_aux:
@@ -593,6 +589,7 @@ class Masks(LossWithWeights):
         self.apply_loss_to_det_queries_in_video_grounding = (
             apply_loss_to_det_queries_in_video_grounding
         )
+        self.resize_targets_to_predictions = resize_targets_to_predictions
         self.target_keys.extend(["masks", "is_valid_mask"])
 
     def _sampled_loss(self, src_masks, target_masks, num_boxes):
@@ -686,19 +683,32 @@ class Masks(LossWithWeights):
                 src_masks = src_masks.flatten(1)
                 target_masks = target_masks.reshape(src_masks.shape)
             else:
-                if len(src_masks.shape) == 3:
-                    src_masks = src_masks[:, None]
-                if src_masks.dtype == torch.bfloat16:
-                    # Bilinear interpolation does not support bf16
-                    src_masks = src_masks.to(dtype=torch.float32)
-                src_masks = interpolate(
-                    src_masks,
-                    size=target_masks.shape[-2:],
-                    mode="bilinear",
-                    align_corners=False,
-                )
-                src_masks = src_masks[:, 0].flatten(1)
-                target_masks = target_masks.flatten(1)
+                if self.resize_targets_to_predictions:
+                    prediction_size = src_masks.shape[-2:]
+                    if target_masks.shape[-2:] != prediction_size:
+                        with torch.no_grad():
+                            target_masks = F.interpolate(
+                                target_masks.float().unsqueeze(1),
+                                size=prediction_size,
+                                mode="nearest",
+                            )[:, 0]
+                    target_masks = target_masks.to(src_masks)
+                    src_masks = src_masks.flatten(1)
+                    target_masks = target_masks.flatten(1)
+                else:
+                    if len(src_masks.shape) == 3:
+                        src_masks = src_masks[:, None]
+                    if src_masks.dtype == torch.bfloat16:
+                        # Bilinear interpolation does not support bf16
+                        src_masks = src_masks.to(dtype=torch.float32)
+                    src_masks = interpolate(
+                        src_masks,
+                        size=target_masks.shape[-2:],
+                        mode="bilinear",
+                        align_corners=False,
+                    )
+                    src_masks = src_masks[:, 0].flatten(1)
+                    target_masks = target_masks.flatten(1)
 
             losses = {
                 "loss_mask": sigmoid_focal_loss(
@@ -712,6 +722,119 @@ class Masks(LossWithWeights):
             }
 
         return losses
+
+
+class MergedTopKMaskLoss(LossWithWeights):
+    """Focal + Dice loss on the soft union of the top-k predicted masks.
+
+    Instead of Hungarian-matching each ground-truth box to one of the model's
+    object queries (as the ``Masks`` loss does), we rank all object queries by
+    their presence score (``pred_logits``), keep the top ``k`` queries for each
+    prompt (``k`` = number of GT boxes of that prompt), and merge their masks
+    with an element-wise max of the logits (i.e. a soft union; equivalent to
+    taking the max probability after a sigmoid). The merged prediction is
+    compared against the union of the prompt's GT masks.
+
+    ``indices`` (the Hungarian matching result) is intentionally ignored.
+    """
+
+    def __init__(
+        self,
+        weight_dict=None,
+        compute_aux=False,
+        focal_alpha=0.25,
+        focal_gamma=2,
+    ):
+        super().__init__(weight_dict, compute_aux)
+        self.focal_alpha = focal_alpha
+        self.focal_gamma = focal_gamma
+        self.target_keys.extend(["masks", "is_valid_mask"])
+
+    def get_loss(self, outputs, targets, indices, num_boxes):
+        """Compute the merged-mask loss.
+
+        Args:
+            outputs: dict containing at least "pred_logits" of shape
+                (B, Q, 1) and "pred_masks" of shape (B, Q, H, W).
+            targets: dict containing "num_boxes" (B,) and, if segmentation
+                masks are available, packed "masks" of shape
+                (sum_i N_i, H_gt, W_gt) and "is_valid_mask" of shape
+                (sum_i N_i,).
+            indices: ignored (Hungarian matching result).
+            num_boxes: ignored (used by the loss wrapper for normalization).
+        """
+        pred_logits = outputs["pred_logits"]  # (B, Q, 1)
+        pred_masks = outputs["pred_masks"]  # (B, Q, H, W)
+
+        if targets["masks"] is None:
+            return {
+                "loss_mask": torch.tensor(0.0, device=pred_logits.device),
+                "loss_dice": torch.tensor(0.0, device=pred_logits.device),
+            }
+
+        # Rank queries by the JOINT score (class logit x prompt-level presence),
+        # matching demo5's inference and SAM3's official eval. The image model
+        # does not fold presence into pred_logits (supervise_joint_box_scores
+        # is off for it), so raw logits alone are uncalibrated for top-k.
+        scores = pred_logits.sigmoid().squeeze(-1)  # (B, Q)
+        presence_logit = outputs.get("presence_logit_dec", None)
+        if presence_logit is not None:
+            # presence_logit_dec is (B, 1): one prompt-level score per sample.
+            scores = scores * presence_logit.sigmoid()  # broadcast (B,1) -> (B,Q)
+        num_boxes_per_prompt = targets["num_boxes"]  # (B,)
+        packed_masks = targets["masks"]  # (sum_i N_i, H_gt, W_gt)
+        packed_is_valid = targets.get("is_valid_mask", None)
+
+        merged_logits = []
+        merged_targets = []
+        offset = 0
+        for b in range(scores.shape[0]):
+            n = int(num_boxes_per_prompt[b].item())
+            if n <= 0:
+                continue
+            q = scores.shape[1]
+            k = min(n, q)
+            topk_indices = torch.topk(scores[b], k=k).indices
+            merged_logits.append(pred_masks[b][topk_indices].max(dim=0).values)
+
+            segs = packed_masks[offset : offset + n]  # (n, H_gt, W_gt)
+            if packed_is_valid is not None:
+                valid = packed_is_valid[offset : offset + n]
+                segs = segs & (valid > 0)[:, None, None]
+            merged_targets.append(segs.any(dim=0).float())
+            offset += n
+
+        if not merged_logits:
+            return {
+                "loss_mask": torch.tensor(0.0, device=pred_logits.device),
+                "loss_dice": torch.tensor(0.0, device=pred_logits.device),
+            }
+
+        src = torch.stack(merged_logits)  # (B', H, W)
+        tgt = torch.stack(merged_targets)  # (B', H_gt, W_gt)
+
+        # Resize the merged targets to the prediction resolution.
+        if tgt.shape[-2:] != src.shape[-2:]:
+            tgt = F.interpolate(
+                tgt.unsqueeze(1), size=src.shape[-2:], mode="nearest"
+            )[:, 0]
+        tgt = tgt.to(src)
+
+        # The triton focal loss and dice loss operate on flattened masks.
+        src = src.flatten(1)
+        tgt = tgt.flatten(1)
+        num = src.shape[0]
+
+        return {
+            "loss_mask": sigmoid_focal_loss(
+                src,
+                tgt,
+                num,
+                alpha=self.focal_alpha,
+                gamma=self.focal_gamma,
+            ),
+            "loss_dice": dice_loss(src, tgt, num),
+        }
 
 
 # class MultiStepIteractiveMasks(LossWithWeights):

@@ -1,13 +1,8 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved
 
-# pyre-unsafe
-
 import os
 from typing import Optional
 
-# import pkg_resources
-import importlib.resources as ir
-from pathlib import Path
 import torch
 import torch.nn as nn
 from huggingface_hub import hf_hub_download
@@ -45,46 +40,6 @@ from sam3.model.tokenizer_ve import SimpleTokenizer
 from sam3.model.vitdet import ViT
 from sam3.model.vl_combiner import SAM3VLBackbone
 from sam3.sam.transformer import RoPEAttention
-
-
-def _resource_filename(package: str, resource_relpath: str) -> str:
-    """
-    标准库替代 pkg_resources.resource_filename(package, resource_relpath)
-
-    - Python >= 3.9: 使用 importlib.resources.files 拿到资源的真实路径（若资源在文件系统中）
-    - Python == 3.8: 没有 files()，用 open_binary() 读出资源并写入本地缓存目录，返回缓存文件路径
-    """
-    # 1) Python >= 3.9: Traversable API
-    if hasattr(ir, "files"):
-        try:
-            p = ir.files(package).joinpath(resource_relpath)  # type: ignore[attr-defined]
-            # 有些情况下资源可能在 zip 中，不一定有 filesystem path，但通常包是普通目录安装
-            return str(p)
-        except Exception:
-            pass
-
-    # 2) Python 3.8 fallback: extract to cache
-    cache_root = Path(os.getenv("SAM3_ASSETS_CACHE", "~/.cache/sam3")).expanduser()
-    out_path = cache_root / resource_relpath
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if not out_path.exists():
-        # resource_relpath 可能包含子目录（如 assets/xxx）
-        # open_binary 只接受文件名，因此我们需要逐级定位：package -> 子package
-        parts = resource_relpath.split("/")
-        subpkg = package
-        # 例如 parts=["assets","bpe_simple_vocab...gz"]
-        # 尝试把 "sam3/assets" 当作包导入：sam3.assets
-        if len(parts) > 1:
-            subpkg = package + "." + ".".join(parts[:-1])
-            filename = parts[-1]
-        else:
-            filename = resource_relpath
-
-        with ir.open_binary(subpkg, filename) as f:
-            out_path.write_bytes(f.read())
-
-    return str(out_path)
 
 
 # Setup TensorFloat-32 for Ampere GPUs if available
@@ -625,11 +580,11 @@ def build_sam3_image_model(
         A SAM3 image model
     """
     if bpe_path is None:
-        # bpe_path = pkg_resources.resource_filename(
-        #     "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
-        # )
-        bpe_path = _resource_filename("sam3", "assets/bpe_simple_vocab_16e6.txt.gz")
-
+        # The vocabulary is stored in SAM3_LoRA/sam3/assets, alongside this
+        # module. Using the parent directory incorrectly points to SAM3_LoRA/assets.
+        bpe_path = os.path.join(
+            os.path.dirname(__file__), "assets", "bpe_simple_vocab_16e6.txt.gz"
+        )
     # Create visual components
     compile_mode = "default" if compile else None
     vision_encoder = _create_vision_backbone(
@@ -715,10 +670,9 @@ def build_sam3_video_model(
         Sam3VideoInferenceWithInstanceInteractivity: The instantiated dense tracking model
     """
     if bpe_path is None:
-        # bpe_path = pkg_resources.resource_filename(
-        #     "sam3", "assets/bpe_simple_vocab_16e6.txt.gz"
-        # )
-        bpe_path = _resource_filename("sam3", "assets/bpe_simple_vocab_16e6.txt.gz")
+        bpe_path = os.path.join(
+            os.path.dirname(__file__), "..", "assets", "bpe_simple_vocab_16e6.txt.gz"
+        )
 
     # Build Tracker module
     tracker = build_tracker(apply_temporal_disambiguation=apply_temporal_disambiguation)

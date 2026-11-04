@@ -1,47 +1,54 @@
-# Fully_Supervised_Code_1104：全监督 RGB-T（Seal train 全像素 GT）
+# Fully_Supervised_Code_1104（现为 M1/BISF 消融版）
 
-由原始代码改成全监督的版本：SAM3 与两套视觉模态 LoRA 冻结，训练融合模块 `M1`
-与共享 LoRA3（`--no-lora3` 时只训 M1）。RGB/T 视觉特征经 M1 融合后，配合数据集
-真实框做一次 Decoder，预测 mask 用 GT 做结构损失 + Sigmoid Focal + Dice。
-模型选择用 Seal val 的滑窗像素 IoU@0.5，test 不参与。
+由同门提供的最新消融代码（原 `m1_ablation/`）替换而来，只跑一种设定：
+**不用 RGB LoRA、T LoRA 和 LoRA3，两路图像共用一份冻结的原始 SAM3，只训练 M1**。
+这里的 M1 就是 BISF 模块；对应 `docs/Seal量化SOTA表.xlsx` 的 Ablation 表 `B+BISF` 行。
 
-## 从原目录补齐的东西
+## 目录约定
 
-| 文件 | 说明 |
-|---|---|
-| `SAM3_LoRA/lora_layers.py` | 原仓库缺这个模块，按 `sam3/adapter.py` 的 `LoRALayer`/`DualLoRALinear` 数学重写：模态 LoRA（rank/alpha、kaiming down + zero up）+ 可挂共享 LoRA3 的 `LoRALinear`，并提供 `apply_lora_to_model`、`load_lora_weights` |
-| `SAM3_LoRA/sam3/` | `Original_Code/sam3` 的副本（同一份 SAM3 源码，供 `sys.path` 使用） |
-| `test_seal.py` | 原目录没有推理脚本；这里补上，产出与 GT 同名的 1,983 张 8 位 PNG |
-| `data.py` | `load_t_image` 原式 `x - min/(max-min)*255` 在 16 位 TIFF 上会在转 uint8 时回绕，改为逐图 min-max |
-| `train.py` | 设备由 `SEAL_CUDA` 控制；数据/权重默认路径改到本服务器 |
-
-## 服务器运行
-
-```bash
-ROOT=/share_datasets/Seal_Model_Reproduction
-PY=$ROOT/Ours/venv_ours/bin/python
-cd $ROOT/Ours/Fully_Supervised_Code_1104
-
-SEAL_CUDA=1 $PY train.py --epoch 30 --lr 5e-5 --img_size 1008 \
-  --checkpoint $ROOT/Ours/weights/sam3.pt \
-  --rgb_lora $ROOT/Ours/weights/RGB+LoRA/lora_weights.pt \
-  --t_lora  $ROOT/Ours/weights/T+LoRA/lora_weights.pt \
-  --train_data_dir $ROOT/Seal_data/train --val_data_dir $ROOT/Seal_data/val \
-  --save_path train_logs 2>&1 | tee train_fullsup.log
-
-SEAL_CUDA=1 $PY test_seal.py --weights train_logs/best.pth \
-  --test_data_dir $ROOT/Seal_data/test \
-  --out_dir $ROOT/results/Ours/FullySup/test_maps
-
-cd $ROOT
-$PY evaluate.py --pred_root $ROOT/results/Ours/FullySup/test_maps \
-  --gt_dir $ROOT/Seal_data/test/GT --json_output $ROOT/results/Ours/FullySup/metrics4.json
-$PY evaluate_small_targets.py --pred_root $ROOT/results/Ours/FullySup/test_maps \
-  --gt_dir $ROOT/Seal_data/test/GT --json_output $ROOT/results/Ours/FullySup/metrics_small.json
+```
+<split>/RGB/*.jpg
+<split>/T/*.tif        # Seal 是 16 位 TIFF
+<split>/box/*.txt      # 绝对像素 x1 y1 x2 y2，作为 Decoder 的几何提示
+<split>/GT/*.png       # train/val/test 都要有
 ```
 
-## 需要放在 `Ours/weights/` 的文件
+## 相对同门原始包的改动（只动运行与输入适配）
 
-- `sam3.pt`（SAM3 主干/ tracker 权重，两个方法都要）
-- `resnet50-19c8e357.pth`（仅原始版 T 分支；已放入）
-- `RGB+LoRA/lora_weights.pt`、`T+LoRA/lora_weights.pt`（仅全监督版，冻结的模态 LoRA）
+| 文件 | 改动 |
+|---|---|
+| `data.py` | `load_t_image` 改回逐图 min-max：原式 `x - min/(max-min)*255` 只适用 8 位图，Seal 的 T 是 uint16（实测 26,400–28,500），原式转 uint8 会回绕成噪声 |
+| `train.py` | 设备由 `SEAL_CUDA` 控制（默认 1）；`--checkpoint`、`--train_data_dir`、`--val_data_dir`、`--save_path` 默认值指向本服务器（`Ours/weights/sam3.pt`、`Seal_data/*`、`results/Ours/BISF`）；新增可选 `--seed` |
+| `test.py` | 设备同上；`--checkpoint`、`--sam_checkpoint`、`--test_data_dir`、`--save_dir` 默认值指向本服务器 |
+| `evaluate3.py` | 默认 GT 改到 `Seal_data/test/GT`，新增可选 `--json_output` |
+| `run_train.sh` / `run_test.sh` | 改成用 `Ours/venv_ours`、本服务器路径，直接可跑 |
+
+`SAM3_LoRA/lora_layers.py` 与 `SAM3_LoRA/sam3/` 保持同门版本（本消融不使用 LoRA，`--lora` 时才加载）。
+`evaluate.py`、`metrics.py` 与项目根目录的四个原函数、`AS1000Metrics` 逐字节一致，口径不变。
+旧的全监督 LoRA 变体（对应 Quantity 表 34/35 行）已归档到 `Ours/archive/FullySup_LoRA_1104/`。
+
+## 训练（B+BISF）
+
+```bash
+bash Ours/Fully_Supervised_Code_1104/run_train.sh          # 30 epoch，val IoU 选点
+```
+
+权重只含 M1（`best.pth` 的 `m1` 字段），日志 `train.log`。
+
+## 测试与指标
+
+```bash
+bash Ours/Fully_Supervised_Code_1104/run_test.sh
+```
+
+预测写到 `results/Ours/BISF/test_maps/`（1,983 张，概率×255 的 8 位 PNG，文件名同 GT），
+指标由根目录 `evaluate.py`（四原函数）与 `evaluate_small_targets.py`（IoU/F1/Pd/Fa）计算，
+JSON 存 `metrics4.json` / `metrics_small.json`；包内 `evaluate3.py` 可作独立交叉核对（同一口径）。
+
+## 基线 B（对照，不填表）
+
+同一脚本加 `--no-m1` 即 `(RGB+T)/2` 融合的 B 设定：
+
+```bash
+python train.py --no-m1 --save_path /share_datasets/Seal_Model_Reproduction/results/Ours/B
+```
