@@ -27,7 +27,8 @@ DEFAULT = {
     "fullsup_small": "results/Ours/FullySup/metrics_small.json",
 }
 HEADERS = {"S↑": "S", "Fw↑": "Fw", "E↑": "E", "MAE↓": "MAE",
-           "IoU": "IoU", "F1": "F1", "Pd": "Pd", "Fa": "Fa"}
+           "IoU": "IoU", "F1": "F1", "Pd": "Pd", "Fa": "Fa",
+           "重训/测试": "note", "备注": "note"}
 ROWS = [
     ("Ours（原始版）", "Box", "Seal train 框监督（GT 框作提示）→ Seal test"),
     ("Ours（全监督版）", "Full GT", "Seal train 全像素 GT → Seal test（框仅作 Decoder 提示）"),
@@ -56,9 +57,12 @@ def locate_columns(ws) -> dict:
             value = ws.cell(r, c).value
             if isinstance(value, str) and value.strip() in HEADERS:
                 columns[HEADERS[value.strip()]] = c
-    missing = [k for k in ("S", "Fw", "E", "MAE", "IoU", "F1", "Pd", "Fa") if k not in columns]
+    required = ("S", "Fw", "E", "MAE", "IoU", "F1", "Pd", "Fa")
+    missing = [k for k in required if k not in columns]
     if missing:
         raise RuntimeError(f"表头缺少列: {missing}")
+    if "note" not in columns:
+        raise RuntimeError("表头里找不到『重训/测试』或『备注』列")
     return columns
 
 
@@ -123,7 +127,7 @@ def main() -> None:
         ws.cell(row, 4).value = supervision
         for key, value in values.items():
             ws.cell(row, columns[key]).value = value
-        ws.cell(row, 15).value = note
+        ws.cell(row, columns["note"]).value = note
 
     if args.dry_run:
         print("dry-run：未写入")

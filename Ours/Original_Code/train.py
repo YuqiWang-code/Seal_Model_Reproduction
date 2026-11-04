@@ -35,6 +35,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--train_data_dir", type=str, default="/share_datasets/Seal_Model_Reproduction/Seal_data/train")
     parser.add_argument("--val_data_dir", type=str, default="/share_datasets/Seal_Model_Reproduction/Seal_data/val")
     parser.add_argument("--k_folds", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=None, help="设置随机种子（稳定性对照用；默认不固定）")
     return parser.parse_args()
 
 
@@ -216,6 +217,13 @@ def main() -> None:
 
     print("Learning Rate:", args.lr)
     logging.info(f"Args: {args}")
+    if args.seed is not None:
+        import random
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        logging.info(f"随机种子固定为 {args.seed}")
 
     model = Model(
         ckpt_path=args.checkpoint,

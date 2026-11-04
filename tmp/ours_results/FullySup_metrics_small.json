@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "IoU": 0.43004989835520235,
+    "F1": 0.6014474024295684,
+    "Pd": 0.863199241500745,
+    "Fa": 5.0377315418583697e-05
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 81445,
+    "fp": 83673,
+    "fn": 24267,
+    "n_gt": 7383,
+    "n_pred": 8173,
+    "n_detected": 6373,
+    "false_alarm_pixels": 25911,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/Ours/FullySup/test_maps",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT"
+}

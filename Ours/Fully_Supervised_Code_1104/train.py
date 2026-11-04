@@ -684,6 +684,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--log_every", type=int, default=100)
 
     parser.add_argument("--lora3", default=True, action=argparse.BooleanOptionalAction)
+    parser.add_argument("--seed", type=int, default=None, help="设置随机种子（稳定性对照用；默认不固定）")
     parser.add_argument("--checkpoint", type=str, default="/share_datasets/Seal_Model_Reproduction/Ours/weights/sam3.pt")
     parser.add_argument("--rgb_lora", type=str, default="/share_datasets/Seal_Model_Reproduction/Ours/weights/RGB+LoRA/lora_weights.pt")
     parser.add_argument("--t_lora", type=str, default="/share_datasets/Seal_Model_Reproduction/Ours/weights/T+LoRA/lora_weights.pt")
@@ -693,11 +694,26 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def set_seed(seed: int) -> None:
+    """固定 python / numpy / torch 的随机种子，用于多随机种子稳定性对照。"""
+    import random
+
+    import numpy as np
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    logging.info("随机种子固定为 %d", seed)
+
+
 def main() -> None:
     args = get_args()
     setup_logger(args.save_path, "train.log")
     logging.info("Args: %s", args)
     print("Learning Rate:", args.lr)
+    if args.seed is not None:
+        set_seed(args.seed)
 
     if not torch.cuda.is_available():
         raise RuntimeError("需要 CUDA。")
