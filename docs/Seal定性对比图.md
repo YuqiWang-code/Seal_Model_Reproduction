@@ -52,6 +52,8 @@ python tools/build_qualitative_panels.py --samples docs/Seal定性对比样例.j
   --out /…/qualitative
 ```
 
+论文排版用的 PDDiff 版式（Image/Mask/方法/Ours 七列 + 3D 响应面 + 红框放大插图）见 [Seal 定性图（论文版式）](Seal定性图_论文版式.md)，生成脚本 	ools/build_paper_qualitative.py。
+
 ## 注意事项
 
 - 二值图严格由概率图阈值得到，没有再做归一化、形态学或面积筛选，与定量表的小目标指标同一口径（概率 > 0.5）。
