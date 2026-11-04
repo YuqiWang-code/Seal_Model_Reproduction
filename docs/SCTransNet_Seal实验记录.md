@@ -52,6 +52,14 @@ $PY train_seal.py --device cuda:0 --epochs 300 --val-interval 20 --batch-size 8 
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/SCTransNet_Seal评估产物/eight_metrics.json`。
 
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 11.326 | 10.119 | 109.15 | 9.161 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：LPCNet 表 11.3 M / 10.0 G，与实测一致；PDDiff 表的 20.24 G 正好是 2×MACs（FLOPs=2×MACs 的定义差），不作比对基准。
+
 ## 产物与已知问题
 
 - 权重：`SCTransNet-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/sctransnet_train.log`。

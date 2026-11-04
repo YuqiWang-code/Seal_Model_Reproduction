@@ -19,7 +19,7 @@
 |---|---|
 | 网络 | `DURD(in_channel=1)`，官方默认 |
 | 损失 | 官方 `DURD_Loss` 等价实现：`SoftIoU(final_pred)` + 0.1 × `MSE(L_out, input)` |
-| 优化器 | Adam，lr 1e-3，CosineAnnealingLR 到 1e-5（官方 train.py） |
+| 优化器 | Adam，**lr 1e-4**（官方 1e-3），CosineAnnealingLR 到 1e-5 |
 | epoch / batch | 100 / 8（官方 300 / 8） |
 | 裁剪 | 256×256，随机裁剪 + 翻转 |
 | 模型选择 | Seal val 滑窗像素 IoU@0.5；test 不参与 |
@@ -30,7 +30,7 @@
 ```bash
 cd /share_datasets/Seal_Model_Reproduction/DURD-main
 PY=/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python
-$PY train_seal.py --device cuda:1 --epochs 100 --val-interval 10 --batch-size 8 --out experiments/Seal_fullsup
+$PY train_seal.py --device cuda:1 --epochs 100 --val-interval 10 --batch-size 8 --lr 1e-4 --out experiments/Seal_fullsup
 ```
 
 ## 结果
@@ -46,6 +46,14 @@ $PY train_seal.py --device cuda:1 --epochs 100 --val-interval 10 --batch-size 8 
 | 0.30060852 | 0.46225826 | 0.77583638 | 0.00010284469351614457 |
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/DURD_Seal评估产物/eight_metrics.json`。
+
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 2.466 | 52.847 | 125.34 | 7.978 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：论文（TGRS 2026）与官方仓库均未给出 Params / GFLOPs / FPS，本行为按官方代码的实测值。
 
 ## 产物与已知问题
 

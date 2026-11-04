@@ -47,6 +47,14 @@ $PY train_seal.py --device cuda:0 --epochs 150 --val-interval 10 --batch-size 8 
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/BGM_Seal评估产物/eight_metrics.json`。
 
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 4.076 | 6.773 | 212.14 | 4.714 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：论文与官方仓库均未给出 Params / GFLOPs / FPS，本行为按官方代码（`BasicUNet_plus` 主干）的实测值。
+
 ## 产物与已知问题
 
 - 权重：`BGM-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/bgm_maintrain.log`。

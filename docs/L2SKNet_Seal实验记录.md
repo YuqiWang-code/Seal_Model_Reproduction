@@ -47,6 +47,14 @@ $PY train_seal.py --device cuda:0 --epochs 150 --val-interval 10 --batch-size 8 
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/L2SKNet_Seal评估产物/eight_metrics.json`。
 
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 0.899 | 6.895 | 332.16 | 3.011 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：本仓库 `t_models.py`（thop、256²）打印 0.898913 M / 6.894535 G，与实测逐位一致；DRPCA-Net 对比表亦为 0.899 M。LPCNet 表的 1.07 M / 5.92 G 应来自另一份实现，不作基准。
+
 ## 产物与已知问题
 
 - 权重：`L2SKNet-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/l2sknet_maintrain.log`。

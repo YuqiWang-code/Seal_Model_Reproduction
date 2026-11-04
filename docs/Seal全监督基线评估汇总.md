@@ -13,6 +13,7 @@
 | 四项指标 | 根目录 `evaluate.py` 四个原函数（S / Fw / E / MAE），同一批 1,983 张预测 |
 | 小目标四项 | 根目录 `metrics.py` 的 `AS1000Metrics` + `evaluate_small_targets.py`（IoU / F1 / Pd / Fa，原始比例） |
 | 定性图 | 每方法 `results/<Method>/Seal/test_binary/`（1,983 张 0/255 二值图），拼图脚本 `tools/build_qualitative_panels.py` |
+| 复杂度 | `Params`=全部 `nn.Parameter`；`GFLOPs`=thop MACs @1×256×256（FP32、batch 1）；`FPS`=1/单窗前向中位延迟（RTX 5090，时钟预热）；口径与公开值对照见[复杂度指标说明](Seal复杂度指标_说明.md) |
 
 ## 八项指标
 
@@ -43,6 +44,30 @@
 | MSHNet | CVPR24 | 0.49818 | 0.54104 | 0.68601 | 0.00024695 | 0.29226 | 0.45232 | 0.80943 | 6.73e-05 |
 | UIU-Net | TIP23 | 0.49876 | 0.27240 | 0.68115 | 0.00037482 | 0.21485 | 0.35371 | 0.68739 | 2.96e-05 |
 | ACM（未收敛，不入表） | WACV21 | — | — | — | — | — | — | — | — |
+
+## 复杂度（Params / GFLOPs / FPS）
+
+对应 `docs/Seal量化SOTA表.xlsx` 第 13–15 列。单窗 256×256、FP32、batch 1、RTX 5090 实测；GFLOPs 为 thop MACs（论文里 "FLOPs/GFLOPs" 的实际口径）。完整协议、原论文对照与差异分析见[Seal 复杂度指标说明](Seal复杂度指标_说明.md)。
+
+| 方法 | 会议 | Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---|---|---:|---:|---:|---:|
+| DNA-Net | TIP22 | 4.697 | 14.282 | 64.22 | 15.571 |
+| MSHNet | CVPR24 | 4.066 | 6.112 | 152.32 | 6.565 |
+| UIU-Net | TIP23 | 50.541 | 54.501 | 118.39 | 8.446 |
+| SCTransNet | TGRS24 | 11.326 | 10.119 | 109.15 | 9.161 |
+| RPCANet | WACV24 | 0.680 | 44.569 | 211.29 | 4.733 |
+| HDNet | TGRS25 | 3.676 | 5.697 | 85.54 | 11.691 |
+| ILNet | TAES25 | 4.040 | 21.421 | 108.39 | 9.226 |
+| RPCANet++ | TPAMI26 | 2.962 | 190.669 | 80.42 | 12.434 |
+| L2SKNet | TGRS25 | 0.899 | 6.895 | 332.16 | 3.011 |
+| BGM | TGRS25 | 4.076 | 6.773 | 212.14 | 4.714 |
+| DRPCA-Net | TGRS25 | 1.169 | 73.837 | 11.23 | 89.044 |
+| DURD | TGRS26 | 2.466 | 52.847 | 125.34 | 7.978 |
+
+- 一张 Seal test 图（622×417，窗口 256、步长 128）是 **12 个窗口**，单图成本 ≈ 12×GFLOPs，单图吞吐 ≈ FPS/12。
+- 与公开值对照：有公开 Params 的 9 个与原论文/作者仓库一致（RPCANet++ 的 2.915 vs 2.962 是 thop 不计 `nn.LSTM` 的约定差）；GFLOPs 与第三方 LPCNet 表（RTX 3090）逐项吻合到 0.4 %–2.7 %，据此确认"论文 FLOPs = MACs"，PDDiff 表里的 2×/3.15× 属其自身口径问题；ILNet 论文首页的 0.046 M / 2.19 GFLOPs 指 `ILNet_S`，本表训练的是仓库默认 `ILNet_L`（实测 4.040 M），两者不是同一个网络；BGM、DURD 两文未给出可比数字，只有我们的实测值。
+- ILNet 论文首页的 0.046 M / 2.19 GFLOPs 指 `ILNet_S`；本表训练的是仓库默认 `ILNet_L`（实测 4.040 M），两者不是同一个网络。
+- DRPCA-Net 的 11.23 FPS 来自 `ChannelAttention` 里的 `nn.AdaptiveMaxPool2d(1)`（`torch.profiler`：占单次前向 CUDA 时间 81.8 %，每前向 29 次调用），且延迟对 batch 不敏感，属实现开销而非算力，按官方代码如实记录。
 
 ## 平凡基线：全背景预测
 

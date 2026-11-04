@@ -65,6 +65,14 @@ $PY evaluate_small_targets.py --pred_root results/DNANet/Seal/fullsup_test_maps 
 
 作为对照：Ours（RGB-T、框监督）S 0.49915、Fw 0.67338、E 0.66731、MAE 0.00015、IoU 0.44835、F1 0.61912、Pd 0.82731、Fa 2.10e-06。DNA-Net 全监督在 test 上的 IoU/Pd 接近 Ours，但 Fw 明显更低、Fa 高约 40 倍，说明其预测的连通域更"散"，小目标级惩罚更重。
 
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 4.697 | 14.282 | 64.22 | 15.571 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：作者对比表与技术报告给 4.697 M，LPCNet 表（RTX 3090）给 4.69 M / 13.9 G，PDDiff 表给 4.70 M / 14.26 G，与实测一致。
+
 ## 产物与已知问题
 
 - 权重：`DNANet-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/dnanet_train.log`，逐 epoch 记录 `validation.jsonl`。

@@ -66,6 +66,14 @@ $PY evaluate_small_targets.py --pred_root results/UIU-Net/Seal/fullsup_test_maps
 
 **关于退化的说明**：UIU-Net 官方训练只监督 7 个输出的 BCE，Seal 的前景占 0.02%，BCE 的全局最优就是"全背景"，因此第 20 epoch 之后模型滑向该不动点。这与 ACM 的现象一致（加入 BCE 的对照实验也验证了 BCE 偏好全背景）。表中保留 val 最优检查点的真实数值，不为了好看而换损失重训。
 
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 50.541 | 54.501 | 118.39 | 8.446 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：作者对比表 50.54 M，LPCNet 表 50.5 M / 54.2 G，PDDiff 表 50.54 M / 54.43 G，一致。
+
 ## 产物与已知问题
 
 - 权重：`UIU-Net-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/uiunet_train.log`，逐 epoch 记录 `validation.jsonl`。

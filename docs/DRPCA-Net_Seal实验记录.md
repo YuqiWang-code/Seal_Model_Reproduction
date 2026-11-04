@@ -19,7 +19,7 @@
 |---|---|
 | 网络 | `get_model('Drpcanet')` = `DRPCANet(stage_num=6)`，官方默认 |
 | 损失 | dataset 级 SoftIoU（`out_T`）+ 0.01 × `MSE(out_D, input)`（与 RPCANet 同构，见说明） |
-| 优化器 | Adam，lr 1e-4，poly 衰减 |
+| 优化器 | Adam，**lr 3e-5**（官方 1e-5 在 Seal 上 60 epoch 内 val IoU 上不去，1e-4 曾发散），poly 衰减 |
 | epoch / batch | 60 / 8 |
 | 裁剪 | 256×256，随机翻转 |
 | 模型选择 | Seal val 滑窗像素 IoU@0.5；test 不参与 |
@@ -30,7 +30,7 @@
 ```bash
 cd /share_datasets/Seal_Model_Reproduction/DRPCA-Net-main
 PY=/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python
-$PY train_seal.py --device cuda:1 --epochs 60 --val-interval 5 --batch-size 8 --out experiments/Seal_fullsup
+$PY train_seal.py --device cuda:1 --epochs 60 --val-interval 5 --batch-size 8 --lr 3e-5 --out experiments/Seal_fullsup
 ```
 
 ## 结果
@@ -46,6 +46,14 @@ $PY train_seal.py --device cuda:1 --epochs 60 --val-interval 5 --batch-size 8 --
 | 0.29985473 | 0.46136652 | 0.76852228 | 0.00010403845954860222 |
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/DRPCANet_Seal评估产物/eight_metrics.json`。
+
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 1.169 | 73.837 | 11.23 | 89.044 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：作者对比表给 1.169 M，与实测一致。FPS 偏低是实现开销而非测错：`torch.profiler` 显示单次前向 CUDA 时间的 81.8 % 花在 `ChannelAttention` 的 `nn.AdaptiveMaxPool2d(1)`（每前向 29 次调用），且延迟对 batch size 不敏感，见[复杂度指标说明](Seal复杂度指标_说明.md#drpca-net-的-1123-fps-不是测量噪声)。
 
 ## 产物与已知问题
 

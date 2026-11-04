@@ -63,6 +63,14 @@ $PY evaluate_small_targets.py --pred_root results/MSHNet/Seal/fullsup_test_maps 
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/MSHNet_Seal评估产物/eight_metrics.json`。
 
+## 复杂度
+
+| Params↓ (M) | GFLOPs↓ | FPS↑ | 单次前向 (ms) |
+|---:|---:|---:|---:|
+| 4.066 | 6.112 | 152.32 | 6.565 |
+
+单窗 256×256、FP32、batch 1、RTX 5090 实测（thop MACs；三轮 × 每轮 100 次计时，取最好一轮的中位数）。Seal test 一张 622×417 需 12 个滑窗，单图成本约 ×12、单图吞吐约 FPS÷12。对照：DRPCA-Net 对比表 4.066 M、LPCNet 表 4.06 M / 6.01 G，一致；PDDiff 表的 19.27 G 是它自己的计数口径（约 3.15×MACs），不作比对基准。
+
 ## 产物与已知问题
 
 - 权重：`MSHNet-main/experiments/Seal_fullsup/{best.pth,last.pth}`；日志 `logs/mshnet_train.log`，逐 epoch 记录 `validation.jsonl`。
