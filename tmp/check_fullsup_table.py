@@ -13,8 +13,11 @@ import openpyxl
 ROOT = Path(__file__).resolve().parents[1]
 NUM = re.compile(r'-?\d+\.\d+(?:[eE][-+]?\d+)?')
 KEYS = ['S', 'Fw', 'E', 'MAE', 'IoU', 'F1', 'Pd', 'Fa']
+EXTRA = ['Params', 'GFLOPs', 'FPS']
 HEADERS = {'S↑': 'S', 'Fw↑': 'Fw', 'E↑': 'E', 'MAE↓': 'MAE',
-           'IoU': 'IoU', 'F1': 'F1', 'Pd': 'Pd', 'Fa': 'Fa'}
+           'IoU': 'IoU', 'F1': 'F1', 'Pd': 'Pd', 'Fa': 'Fa',
+           'IoU↑': 'IoU', 'F1↑': 'F1', 'Pd↑': 'Pd',
+           'Params↓': 'Params', 'GFLOPs↓': 'GFLOPs', 'FPS↑': 'FPS'}
 DOCS = {
     'DNA-Net': 'DNANet_Seal实验记录.md',
     'MSHNet': 'MSHNet_Seal实验记录.md',
@@ -53,14 +56,20 @@ def agents_rows():
         if not line.startswith('|'):
             continue
         parts = [p.strip() for p in line.strip('|').split('|')]
-        if len(parts) != 11:
+        if len(parts) not in (11, 14):
             continue
         try:
             values = [float(x) for x in parts[3:11]]
             epoch = int(parts[2])
         except ValueError:
             continue
-        out[parts[0]] = dict(zip(KEYS, values), epoch=epoch, source=parts[1])
+        extra = {}
+        if len(parts) == 14:
+            try:
+                extra = dict(zip(EXTRA, (float(x) for x in parts[11:14])))
+            except ValueError:
+                extra = {}
+        out[parts[0]] = dict(zip(KEYS, values), epoch=epoch, source=parts[1], **extra)
     return out
 
 
@@ -84,6 +93,9 @@ def main():
         for key in KEYS:
             if abs(row[key] - a[key]) > 5.01e-6:
                 problems.append(f'{name}.{key}: table={row[key]:.10g} vs AGENTS={a[key]:.10g}')
+        for key in EXTRA:
+            if key in a and row.get(key) is not None and abs(row[key] - a[key]) > 0.02:
+                problems.append(f'{name}.{key}: table={row[key]} vs AGENTS={a[key]}')
         text, nums = doc_numbers(name)
         for key in KEYS:
             v = row[key]

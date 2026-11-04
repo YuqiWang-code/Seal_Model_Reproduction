@@ -16,7 +16,8 @@ import openpyxl
 ROOT = Path(__file__).resolve().parents[1]
 KEYS = ['S', 'Fw', 'E', 'MAE', 'IoU', 'F1', 'Pd', 'Fa']
 HEADERS = {'S↑': 'S', 'Fw↑': 'Fw', 'E↑': 'E', 'MAE↓': 'MAE',
-           'IoU': 'IoU', 'F1': 'F1', 'Pd': 'Pd', 'Fa': 'Fa'}
+           'IoU': 'IoU', 'F1': 'F1', 'Pd': 'Pd', 'Fa': 'Fa',
+           'IoU↑': 'IoU', 'F1↑': 'F1', 'Pd↑': 'Pd'}
 ART = {
     'DNA-Net': 'DNANet_Seal评估产物',
     'MSHNet': 'MSHNet_Seal评估产物',
