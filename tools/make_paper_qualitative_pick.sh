@@ -10,9 +10,12 @@
 #   full —— PDDiff 原版：整幅二值图 + 红框 + 右下角放大插图
 #   roi  —— 每个面板直接给红框区域（6 倍最近邻放大），小目标更易读
 #
-# 用法（服务器）： bash tools/make_paper_qualitative_pick.sh [full|roi|all]
+# 用法（服务器）： bash tools/make_paper_qualitative_pick.sh [full|roi|all] [输出目录]
+#   输出目录默认 qualitative_paper/latest；建议每次改版都给一个新目录（如
+#   qualitative_paper/v3_20261120），服务器保留历史版本、本地只下载最新一版。
 set -u
 MODE="${1:-all}"
+OUT="${2:-qualitative_paper/latest}"
 cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python}"
 
@@ -39,7 +42,6 @@ SURF=(
 ALL="2656 2735 2185 3899 3896 2712 3398 2688 2120 2894 2888"
 PICK6="2656 2735 2185 3899 3896 2712"
 PICK5="3398 2688 2120 2894 2888"
-OUT=qualitative_paper/user_pick
 
 build () {
   tag=$1; flag=$2; shift 2
