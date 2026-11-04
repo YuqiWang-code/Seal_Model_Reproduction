@@ -121,6 +121,8 @@ python tools/build_paper_qualitative.py \
 
 仓库内预览（1800 px 宽，仅用于查看版式）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
+全分辨率成品（600 dpi PNG + 矢量 PDF + meta）已下载归档到本仓库 `Ours/qualitative/v1_20261104_11col/`（18 个文件，86 MB），含 `README.md` 记录列名、样例 ID、GT 面积与参数。**每一版图单独建 `v*` 子文件夹**，新一版另建 `v2_<日期>_<说明>/`，不覆盖旧版。
+
 从图上直接能读到的事实（对照表 21～32 行）：
 
 - `3899`：8 个基线全部空预测，只有 SAM3 和 Ours 出目标——但 SAM3 的斑块明显大于 GT（GT 10 px，SAM3 一坨），Ours 的斑块与 GT 同量级。
