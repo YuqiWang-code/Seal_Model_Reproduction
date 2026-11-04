@@ -1,0 +1,72 @@
+{
+  "source": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT",
+  "selection": "quantiles of GT foreground area + two multi-target frames",
+  "quantiles": [
+    0.03,
+    0.15,
+    0.35,
+    0.55,
+    0.7,
+    0.82,
+    0.9,
+    0.95,
+    0.98
+  ],
+  "samples": [
+    {
+      "id": "2566",
+      "area": 8,
+      "components": 1
+    },
+    {
+      "id": "3167",
+      "area": 12,
+      "components": 1
+    },
+    {
+      "id": "3485",
+      "area": 18,
+      "components": 1
+    },
+    {
+      "id": "3236",
+      "area": 30,
+      "components": 1
+    },
+    {
+      "id": "3483",
+      "area": 48,
+      "components": 3
+    },
+    {
+      "id": "3327",
+      "area": 77,
+      "components": 6
+    },
+    {
+      "id": "2389",
+      "area": 124,
+      "components": 2
+    },
+    {
+      "id": "2359",
+      "area": 187,
+      "components": 14
+    },
+    {
+      "id": "3738",
+      "area": 299,
+      "components": 20
+    },
+    {
+      "id": "3676",
+      "area": 29,
+      "components": 5
+    },
+    {
+      "id": "3090",
+      "area": 110,
+      "components": 7
+    }
+  ]
+}
