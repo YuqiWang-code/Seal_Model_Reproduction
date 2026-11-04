@@ -14,6 +14,10 @@ METHODS=(
   "HDNet=results/HDNet/Seal"
   "ILNet=results/ILNet/Seal"
   "RPCANet++=results/RPCANetpp/Seal"
+  "L2SKNet=results/L2SKNet/Seal"
+  "BGM=results/BGM/Seal"
+  "DRPCA-Net=results/DRPCANet/Seal"
+  "DURD=results/DURD/Seal"
 )
 # optional extra methods passed as arguments: Name=results/Name/Seal
 for extra in "$@"; do METHODS+=("$extra"); done

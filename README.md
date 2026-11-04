@@ -14,7 +14,7 @@
 - 本项目五个对比方法的 Seal 框监督、点监督及 SAM 伪标签适配任务停止执行，历史产物仅在实验文档中存档，不进入跨域主表；相关自动跟进不得重启这些适配任务。
 - 本地 `data/TrainDataset.zip`、`data/TestDataset.zip` 为 S-COD 相关训练与测试归档，`data/Scribble-COD.zip` 提供独立涂鸦标注；须按实际内容区分完整 GT 与 0/1/2 稀疏标签。`data/NESS-Net/`、`data/SSFam/` 另有各自数据归档。优先复用服务器已解压源数据，缺失时再上传对应归档。
 
-最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21～28 行为全监督 IRSTD 基线（见下一节），每个基线一行，不增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
+最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21～32 行为 12 个全监督 IRSTD 基线（见下一节），每个基线一行，不增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
 
 该表来自腾讯文档，可能新增列或更新协议。合并下载版本时按方法及列标题对应，采用新版本的布局和明确更新；新版本空白处保留现有有效评估结果，同协议的五位小数保留完整精度。新增 IoU、F1、Pd、Fa 四列后，每个方法仍只保留一行；填写时按标题定位列，不依赖旧列号。
 
@@ -34,9 +34,9 @@
 
 ## 全监督 IRSTD 基线（Seal 训练 → Seal 测试）
 
-- 定位：与上面的弱监督跨域表并列的全监督对照，分两批。第一批 DNA-Net（TIP22）、MSHNet（CVPR24）、UIU-Net（TIP23）；第二批按年份补充 SCTransNet（TGRS24）、RPCANet（WACV24）、HDNet（TGRS25）、ILNet（TAES25）、RPCANet++（TPAMI26），保证 2024/2025/2026 都有、2025 至少两个。方法取自 [awesome-infrared-small-targets](https://github.com/Tianfang-Zhang/awesome-infrared-small-targets) 的 Single-Frame 全监督条目（对照 GrokCV 出版物页），代码为作者官方实现，根目录各一个文件夹：`DNANet-main/`、`MSHNet-main/`、`UIU-Net-main/`、`SCTransNet-main/`、`RPCANet-main/`、`HDNet-main/`、`ILNet-main/`、`DHiF-main/`。ACM（WACV21）、RPCANet 官方设置、DHiF（TCSVT26）与 NS-FPN（CVPR26，需 nvcc 编译自定义算子）作为失败/负结果存档，不进入主表，见 [ACM 记录](docs/ACM_Seal实验记录.md)、[DHiF 记录](docs/DHiF_Seal实验记录.md) 与 [汇总](docs/Seal全监督基线评估汇总.md#训练不稳定与失败记录)。
+- 定位：与上面的弱监督跨域表并列的全监督对照，共 12 个方法分三批。第一批 DNA-Net（TIP22）、MSHNet（CVPR24）、UIU-Net（TIP23）；第二批 SCTransNet（TGRS24）、RPCANet（WACV24）、HDNet（TGRS25）、ILNet（TAES25）、RPCANet++（TPAMI26）；第三批 L2SKNet（TGRS25）、BGM（TGRS25）、DRPCA-Net（TGRS25）、DURD（TGRS26）。年份覆盖 2022–2026，2025 年 4 个。方法取自 [awesome-infrared-small-targets](https://github.com/Tianfang-Zhang/awesome-infrared-small-targets) 的 Single-Frame 全监督条目（对照 GrokCV 出版物页），代码为作者官方实现，根目录各一个文件夹：`DNANet-main/`、`MSHNet-main/`、`UIU-Net-main/`、`SCTransNet-main/`、`RPCANet-main/`、`HDNet-main/`、`ILNet-main/`、`DHiF-main/`。ACM（WACV21）、RPCANet 官方设置、DHiF（TCSVT26）与 NS-FPN（CVPR26，需 nvcc 编译自定义算子）作为失败/负结果存档，不进入主表，见 [ACM 记录](docs/ACM_Seal实验记录.md)、[DHiF 记录](docs/DHiF_Seal实验记录.md) 与 [汇总](docs/Seal全监督基线评估汇总.md#训练不稳定与失败记录)。
 - 数据：服务器 `Seal_IRSTD/`。`Seal_data/{split}/T/*.tif`（16 位热红外）逐图 **min-max** 拉伸到 8 位并复制为 3 通道 PNG，`GT` 二值化；`trainval.txt` 1,500 / `val.txt` 500 / `test.txt` 1,983，沿用 Seal 原划分。生成脚本 [tools/prepare_seal_irstd.py](tools/prepare_seal_irstd.py)，指标合并脚本 [tools/merge_seal_metrics.py](tools/merge_seal_metrics.py)，单方法评估脚本 [tools/eval_fullsup_method.sh](tools/eval_fullsup_method.sh)。
-- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8，各方法 epoch 按官方日程并注明裁剪。第一批：DNA-Net 250（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE（第 114 epoch 提前停止）。第二批：SCTransNet 300/Adam 1e-3/六输出 BCE；RPCANet 60/Adam **1e-4**/dataset 级 SoftIoU + 0.01 MSE；HDNet 90（120 日程）/Adagrad 0.05/SLSIoU；ILNet 300/Adan 1e-3/侧输出 BCE；RPCANet++ 60/Adam **1e-4**/dataset 级 SoftIoU + 0.01 MSE。不使用 Seal 的 `box`、点提示或伪标签。
+- 训练：Seal train 全像素 GT，从零初始化，crop 256×256，batch 8，各方法 epoch 按官方日程并注明裁剪。第一批：DNA-Net 250（官方 1,500）/Adagrad 0.05/cosine/深监督 SoftIoU；MSHNet 400/Adagrad 0.05/SLSIoU；UIU-Net 500/Adam 1e-3/七输出 BCE（第 114 epoch 提前停止）。第二批：SCTransNet 300/Adam 1e-3/六输出 BCE；RPCANet 60/Adam **1e-4**/dataset 级 SoftIoU + 0.01 MSE；HDNet 90（120 日程）/Adagrad 0.05/SLSIoU；ILNet 300/Adan 1e-3/侧输出 BCE；RPCANet++ 60/Adam **1e-4**/dataset 级 SoftIoU + 0.01 MSE；第三批 L2SKNet 150/Adam 5e-4、BGM 150/Adam 5e-4（这两者模型输出是概率，用概率空间 dataset 级 IoU）、DRPCA-Net 60/Adam 3e-5、DURD 100/Adam 1e-4。不使用 Seal 的 `box`、点提示或伪标签。
 - 第二批的两处统一改动只出现在 RPCANet 系列：官方逐样本 SoftIoU 在 0.02% 前景上梯度被稀释（val IoU 恒 0），改 dataset 级 SoftIoU；官方 Adam 5e-4 会在第 4 epoch 冲到 0.30 后发散，降到 1e-4。网络、数据、epoch 与增强不变，详见各自实验记录。
 - 选择与推理：模型选择只用 Seal **val**（500 张，滑窗像素 IoU@0.5），test 不参与选择、不据此换检查点；测试为原生分辨率 256×256 滑窗、步长 128、重叠区 logits 平均后 sigmoid，输出与 test GT 同名的 8 位 PNG。
 - 指标：同行八项仍由根目录 `evaluate.py` 的四个原函数与 `evaluate_small_targets.py` 计算，同一检查点、同一批 1,983 张预测，口径与第 3～20 行完全一致。
@@ -52,14 +52,19 @@
   | HDNet | TGRS25 | 89 | 0.49829 | 0.53953 | 0.66410 | 0.00022919 | 0.27259 | 0.42840 | 0.82135 | 5.4505e-05 |
   | ILNet | TAES25 | 260 | 0.49894 | 0.31966 | 0.68460 | 0.00030902 | 0.19172 | 0.32176 | 0.58946 | 1.9302e-05 |
   | RPCANet++ | TPAMI26 | 57 | 0.49800 | 0.51436 | 0.67932 | 0.00028853 | 0.30095 | 0.46266 | 0.76920 | 8.8164e-05 |
+  | L2SKNet | TGRS25 | 130 | 0.49811 | 0.52043 | 0.67773 | 0.00028301 | 0.30092 | 0.46263 | 0.77204 | 8.6241e-05 |
+  | BGM | TGRS25 | 90 | 0.49811 | 0.49902 | 0.66520 | 0.00030535 | 0.30735 | 0.47019 | 0.78681 | 9.6318e-05 |
+  | DRPCA-Net | TGRS25 | 30 | 0.49813 | 0.50534 | 0.66532 | 0.00031065 | 0.29985 | 0.46137 | 0.76852 | 1.0404e-04 |
+  | DURD | TGRS26 | 70 | 0.49808 | 0.50645 | 0.66500 | 0.00030665 | 0.30061 | 0.46226 | 0.77584 | 1.0284e-04 |
 
   UIU-Net 只监督 BCE，第 20 epoch 后滑向"全背景"不动点（val IoU 0），按 val 连续 5 次无改善停止，表中为其 val 最优检查点。HDNet 在第 89 epoch 达到 val 最优后按预算停止（120 epoch 日程未跑完）。
 - 热红外 8 位转换结论：用 1–99 百分位裁剪再拉伸会放大约 10 倍背景噪声（目标 SNR 降到 1.5），纯区域损失退化为常数输出（val IoU 恒为 0）；改为逐图 min-max 后目标与背景差值是背景 std 的 2.2–29.7 倍，训练正常。后续不得再用百分位裁剪生成输入。
-- 表中位置：第 21～28 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。第 21～23 行为第一批（2022–2024），第 24～28 行为第二批（2024/2025/2026）。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
+- 表中位置：第 21～32 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。第 21～23 行为第一批（2022–2024），第 24～28 行为第二批（2024/2025/2026），第 29～32 行为第三批（2025–2026）。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
 - 平凡基线（决定读表方式，不新增表行）：全背景预测（1,983 张全零）在同一 test GT 上为 S 0.49990、Fw 0、E 0.25、MAE 0.00020553，IoU/F1/Pd/Fa 均为 0。八个基线与 Ours 的 S（0.49799–0.49915）全部低于该值，八个基线的 MAE（0.000229–0.000375）全部高于该值，只有 Ours 的 MAE（0.00015090）低于它。因此 S/MAE 在 Seal 上不区分方法，比较以 Fw/IoU/F1/Pd/Fa 为主，S/MAE 须与平凡基线并列阅读；复算见 [汇总](docs/Seal全监督基线评估汇总.md#平凡基线全背景预测)。
-- 第三批（进行中，未入表）：BGM（TGRS25）、DRPCA-Net（TGRS25）、DURD（TGRS26）、L2SKNet（TGRS25）已克隆作者代码并写好 `train_seal.py`、`infer_seal.py` 与记录骨架，记录中 `<!--RESULTS-->` 待测试后填写；结果落定后按第 29 行起追加并同步本节与 README。`AGPCNet-main/`、`NS-FPN-main/` 为空目录，NS-FPN 仍缺 nvcc 编译自定义算子。
+- 第三批（入表，行 29～32）：L2SKNet（TGRS25）、BGM（TGRS25）、DRPCA-Net（TGRS25）、DURD（TGRS26），均为 2025–2026 年、有官方代码的全监督单帧方法，12 个对比方法到此凑满。目录 `L2SKNet-main/`、`BGM-main/`、`DRPCA-Net-main/`、`DURD-main/`；训练设置：L2SKNet 150/Adam 5e-4、BGM 150/Adam 5e-4（两者模型输出已是概率，用概率空间 dataset 级 IoU）、DRPCA-Net 60/Adam 3e-5/dataset 级 SoftIoU + 0.01 MSE、DURD 100/Adam 1e-4/SoftIoU + 0.1 MSE。各处改动逐条写在对应实验记录与 [汇总](docs/Seal全监督基线评估汇总.md#训练不稳定与失败记录)。
+- 定性图（论文拼图用）：12 个方法与 Ours 的二值预测图在 `results/<Method>/Seal/test_binary/`（1,983 张，`pixel >= 128` → 255），由 [tools/make_binary_maps.py](tools/make_binary_maps.py) 与 [tools/make_qualitative.sh](tools/make_qualitative.sh) 生成；样例拼图在服务器 `qualitative/<stem>/panel.png`（RGB/热红外/GT/预测叠加，13 行），样例清单 `docs/Seal定性对比样例.json`，说明见 [docs/Seal定性对比图.md](docs/Seal定性对比图.md)。
 - IoU 的边界敏感性：Seal 目标平均 14.3 像素，把 GT 膨胀/腐蚀 1 像素当预测只能得到 IoU 0.3910 / 0.0826；表中 IoU 0.19–0.31 对应约 1–2 像素边界误差，不能读作分割质量百分比，须与 Fw/F1/Pd/Fa 合看，详见 [定义对照](docs/小目标评价指标_定义与代码对照.md#iou-的边界敏感性seal-gt-实测)。
-- 实验记录：[ACM](docs/ACM_Seal实验记录.md)、[DNA-Net](docs/DNANet_Seal实验记录.md)、[MSHNet](docs/MSHNet_Seal实验记录.md)、[UIU-Net](docs/UIU-Net_Seal实验记录.md)、[SCTransNet](docs/SCTransNet_Seal实验记录.md)、[RPCANet](docs/RPCANet_Seal实验记录.md)、[HDNet](docs/HDNet_Seal实验记录.md)、[ILNet](docs/ILNet_Seal实验记录.md)、[RPCANet++](docs/RPCANet++_Seal实验记录.md)、[DHiF](docs/DHiF_Seal实验记录.md)，汇总见 [Seal全监督基线评估汇总](docs/Seal全监督基线评估汇总.md)。
+- 实验记录：[ACM](docs/ACM_Seal实验记录.md)、[DNA-Net](docs/DNANet_Seal实验记录.md)、[MSHNet](docs/MSHNet_Seal实验记录.md)、[UIU-Net](docs/UIU-Net_Seal实验记录.md)、[SCTransNet](docs/SCTransNet_Seal实验记录.md)、[RPCANet](docs/RPCANet_Seal实验记录.md)、[HDNet](docs/HDNet_Seal实验记录.md)、[ILNet](docs/ILNet_Seal实验记录.md)、[RPCANet++](docs/RPCANet++_Seal实验记录.md)、[L2SKNet](docs/L2SKNet_Seal实验记录.md)、[BGM](docs/BGM_Seal实验记录.md)、[DRPCA-Net](docs/DRPCA-Net_Seal实验记录.md)、[DURD](docs/DURD_Seal实验记录.md)、[DHiF](docs/DHiF_Seal实验记录.md)，汇总见 [Seal全监督基线评估汇总](docs/Seal全监督基线评估汇总.md)，定性图见 [Seal定性对比图](docs/Seal定性对比图.md)。
 
 ## FCT-SAM-WSCOD
 

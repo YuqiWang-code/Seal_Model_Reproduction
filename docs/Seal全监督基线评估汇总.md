@@ -1,6 +1,6 @@
 # Seal 全监督 IRSTD 基线评估汇总
 
-全监督红外小目标检测方法在 Seal 上从零训练（Seal train 1,500 张全像素 GT）、在 Seal test（1,983 张）测试的统一结果。第一批（2022–2024 老方法）见下一节，第二批按年份要求补充 2024 / 2025 / 2026 方法。
+全监督红外小目标检测方法在 Seal 上从零训练（Seal train 1,500 张全像素 GT）、在 Seal test（1,983 张）测试的统一结果。共 12 个方法分三批：第一批 2022–2024 老基线，第二批 2024/2025/2026，第三批 2025–2026；另有 4 个失败/未跑通的方法单独记录。
 
 ## 协议要点
 
@@ -12,8 +12,18 @@
 | 推理 | 原生分辨率 256×256 滑窗、步长 128，重叠 logits 平均后 sigmoid → 8 位 PNG |
 | 四项指标 | 根目录 `evaluate.py` 四个原函数（S / Fw / E / MAE），同一批 1,983 张预测 |
 | 小目标四项 | 根目录 `metrics.py` 的 `AS1000Metrics` + `evaluate_small_targets.py`（IoU / F1 / Pd / Fa，原始比例） |
+| 定性图 | 每方法 `results/<Method>/Seal/test_binary/`（1,983 张 0/255 二值图），拼图脚本 `tools/build_qualitative_panels.py` |
 
 ## 八项指标
+
+### 第三批：2025 / 2026
+
+| 方法 | 会议 | 年份 | S↑ | Fw↑ | E↑ | MAE↓ | IoU↑ | F1↑ | Pd↑ | Fa↓ |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| L2SKNet | TGRS | 2025 | 0.49811 | 0.52043 | 0.67773 | 0.00028301 | 0.30092 | 0.46263 | 0.77204 | 8.62e-05 |
+| BGM | TGRS | 2025 | 0.49811 | 0.49902 | 0.66520 | 0.00030535 | 0.30735 | 0.47019 | 0.78681 | 9.63e-05 |
+| DRPCA-Net | TGRS | 2025 | 0.49813 | 0.50534 | 0.66532 | 0.00031065 | 0.29985 | 0.46137 | 0.76852 | 1.04e-04 |
+| DURD | TGRS | 2026 | 0.49808 | 0.50645 | 0.66500 | 0.00030665 | 0.30061 | 0.46226 | 0.77584 | 1.03e-04 |
 
 ### 第二批：2024 / 2025 / 2026
 
@@ -66,11 +76,19 @@ python tmp/run_eval_no_tqdm.py tmp/baseline_blank/maps Ours/Seal_test_GT tmp/bas
 | UIU-Net | BCE 在第 20 epoch 后退化为全背景 | 取 val 最优（第 20 epoch） |
 | ACM | 官方 SoftIoU 不收敛，两个种子均复现 | 负结果存档，不入表 |
 | NS-FPN（CVPR26） | 需要编译自定义 MSDeformAttn CUDA 算子，服务器无 nvcc | 未训练 |
+| L2SKNet（官方设置） | 模型输出已是概率，官方逐样本 SoftIoU 在 Seal 上 20 epoch val IoU 恒 0.0001 | 改概率空间 dataset 级 IoU，val 升至 0.34 |
+| BGM（官方设置） | 同上（`SoftIoULoss` 直接乘 GT，不套 sigmoid） | 同上，val 0.347 |
+| DRPCA-Net（官方 lr 1e-5） | 官方 lr 太小，60 epoch 内 val IoU 上不去；1e-4 曾发散 | 最终用 3e-5 + dataset 级 SoftIoU，val 0.331 |
+| DURD（官方 lr 1e-3） | Adam 1e-3 前 40 epoch val IoU 约 0 | 降到 1e-4 后收敛到 0.345 |
 
 ## 与弱监督主表的关系
 
-`docs/Seal量化SOTA表.xlsx` 第 3～20 行是跨域泛化（源域训练或公开权重 → Seal test），第 21～28 行是同域全监督（Seal train → Seal test）。两者监督形式、训练数据与难度不同，只能并列说明"全监督参考"，不能与跨域行直接比大小。
+`docs/Seal量化SOTA表.xlsx` 第 3～20 行是跨域泛化（源域训练或公开权重 → Seal test），第 21～32 行是同域全监督（Seal train → Seal test）。两者监督形式、训练数据与难度不同，只能并列说明"全监督参考"，不能与跨域行直接比大小。
+
+## 定性图产物
+
+12 个方法与 Ours 的二值预测图与拼图见 [Seal 定性对比图](Seal定性对比图.md)：每方法 `results/<Method>/Seal/test_binary/`（1,983 张），代表性样例拼图在服务器 `qualitative/<stem>/panel.png`，样例清单在 `docs/Seal定性对比样例.json`。
 
 ## 产物
 
-各方法的权重、预测目录与指标 JSON 见对应实验记录：[SCTransNet](SCTransNet_Seal实验记录.md)、[RPCANet](RPCANet_Seal实验记录.md)、[HDNet](HDNet_Seal实验记录.md)、[ILNet](ILNet_Seal实验记录.md)、[RPCANet++](RPCANet++_Seal实验记录.md)、[DNA-Net](DNANet_Seal实验记录.md)、[MSHNet](MSHNet_Seal实验记录.md)、[UIU-Net](UIU-Net_Seal实验记录.md)、[DHiF](DHiF_Seal实验记录.md)、[ACM](ACM_Seal实验记录.md)。
+各方法的权重、预测目录与指标 JSON 见对应实验记录：[L2SKNet](L2SKNet_Seal实验记录.md)、[BGM](BGM_Seal实验记录.md)、[DRPCA-Net](DRPCA-Net_Seal实验记录.md)、[DURD](DURD_Seal实验记录.md)、[SCTransNet](SCTransNet_Seal实验记录.md)、[RPCANet](RPCANet_Seal实验记录.md)、[HDNet](HDNet_Seal实验记录.md)、[ILNet](ILNet_Seal实验记录.md)、[RPCANet++](RPCANet++_Seal实验记录.md)、[DNA-Net](DNANet_Seal实验记录.md)、[MSHNet](MSHNet_Seal实验记录.md)、[UIU-Net](UIU-Net_Seal实验记录.md)、[DHiF](DHiF_Seal实验记录.md)、[ACM](ACM_Seal实验记录.md)。

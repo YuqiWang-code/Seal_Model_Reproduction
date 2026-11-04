@@ -105,8 +105,12 @@ cd /share_datasets/Seal_Model_Reproduction
 | HDNet（TGRS25，val 第 89 epoch） | 0.27259038 | 0.42840239 | 0.82134634 | 0.0000545049 |
 | ILNet（TAES25，val 第 260 epoch） | 0.19172233 | 0.32175672 | 0.58946228 | 0.0000193025 |
 | RPCANet++（TPAMI26，val 第 57 epoch） | 0.30094974 | 0.46266160 | 0.76919951 | 0.0000881637 |
+| L2SKNet（TGRS25，val 第 130 epoch） | 0.30092370 | 0.46263082 | 0.77204388 | 0.0000862408 |
+| BGM（TGRS25，val 第 90 epoch） | 0.30734902 | 0.47018663 | 0.78680753 | 0.0000963179 |
+| DRPCA-Net（TGRS25，val 第 30 epoch） | 0.29985473 | 0.46136652 | 0.76852228 | 0.0001040385 |
+| DURD（TGRS26，val 第 70 epoch） | 0.30060852 | 0.46225826 | 0.77583638 | 0.0001028447 |
 
-三组预测目录为 `results/{DNANet,MSHNet,UIU-Net,SCTransNet,RPCANet,HDNet,ILNet,RPCANetpp}/Seal/fullsup_test_maps`，GT 计数与上表相同（7,383 个连通域、514,338,642 像素），因为用的是同一批 test GT 与同名原尺寸 PNG。完整计数见 `docs/<Method>_Seal评估产物/fullsup_small_metrics.json`。
+三组预测目录为 `results/{DNANet,MSHNet,UIU-Net,SCTransNet,RPCANet,HDNet,ILNet,RPCANetpp,L2SKNet,BGM,DRPCANet,DURD}/Seal/fullsup_test_maps`，GT 计数与上表相同（7,383 个连通域、514,338,642 像素），因为用的是同一批 test GT 与同名原尺寸 PNG。完整计数见 `docs/<Method>_Seal评估产物/fullsup_small_metrics.json`。
 
 这一组 Fa（约 3e-5～9e-5）比五个弱监督跨域方法低 2～3 个数量级，Pd 却高得多：全监督模型确实学到了目标响应，但预测连通域更"干净"；与 Ours（IoU 0.44835、Fa 2.10e-06）相比仍有明显差距。
 

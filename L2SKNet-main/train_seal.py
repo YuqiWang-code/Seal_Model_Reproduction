@@ -1,19 +1,17 @@
 """Fully-supervised L2SKNet training on the Seal thermal band (TGRS 2025).
 
-The official per-sample SoftIoU collapses to the all-background solution on Seal
-(0.02% foreground): 20 epochs gave val IoU 0.0001 with the training loss still
-decreasing. As already documented for the RPCANet family, the region term is
-aggregated over the whole batch (DNA-Net style) and everything else follows the
-official train_device0.py (Adam 5e-4, MultiStep [100,140], 256 patches).
+L2SKNet's `Net` already ends with a sigmoid (its official loss multiplies the raw
+output by the GT), so the loss and the threshold operate on probabilities. The
+region term is aggregated over the whole batch, because the official per-sample
+version collapses on Seal's 0.02% foreground.
 """
 import argparse
 
 import torch
 
 from net import Net
-from seal_train_common import batch_softiou, run
+from seal_train_common import batch_iou_prob, prob_to_logit_fn, run
 
-# official net.py maps the name below to the L2SKNet U-Net variant
 MODEL = 'L2SKNet_UNet'
 
 
@@ -35,10 +33,18 @@ def parse_args():
 def main():
     args = parse_args()
     net = Net(MODEL)
-    criterion = batch_softiou
+    criterion = batch_iou_prob
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 140], gamma=0.1)
-    run(args, net, criterion, optimizer, scheduler, forward_fn=lambda m, x: m(x))
+    to_logit = prob_to_logit_fn()
+
+    def forward_fn(m, x):
+        return m(x)
+
+    def logits_fn(m, x):
+        return to_logit(m(x))
+
+    run(args, net, criterion, optimizer, scheduler, forward_fn=forward_fn, logits_fn=logits_fn)
 
 
 if __name__ == '__main__':

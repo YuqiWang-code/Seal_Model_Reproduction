@@ -35,7 +35,17 @@ $PY train_seal.py --device cuda:0 --epochs 150 --val-interval 10 --batch-size 8 
 
 ## 结果
 
-<!--RESULTS-->
+选中的是 Seal val 上像素 IoU 最高的第 130 epoch 检查点（val IoU 0.34082；训练跑满 150 epoch）。
+
+| 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
+|---|---:|---:|---:|---:|
+| L2SKNet，val 最优检查点，test 1,983 张 | 0.49811 | 0.52043 | 0.67773 | 0.00028301 |
+
+| IoU↑ | F1↑ | Pd↑ | Fa↓（原始比例） |
+|---:|---:|---:|---:|
+| 0.30092370 | 0.46263082 | 0.77204388 | 8.624084674547941e-05 |
+
+四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/L2SKNet_Seal评估产物/eight_metrics.json`。
 
 ## 产物与已知问题
 

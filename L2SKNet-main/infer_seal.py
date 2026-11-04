@@ -1,4 +1,4 @@
-"""Save L2SKNet predictions for the Seal test split (native resolution, 8-bit PNG)."""
+﻿"""Save L2SKNet predictions for the Seal test split (native resolution, 8-bit PNG)."""
 import argparse
 import os
 import os.path as osp
@@ -40,7 +40,8 @@ def main():
     for index in tqdm(range(len(dataset))):
         name, img, _ = dataset.raw(index)
         tensor = torch.from_numpy(np.ascontiguousarray(dataset.normalize(np.asarray(img, np.float32))))[None]
-        logits = sliding_window_logits(net, tensor, window=args.window, stride=args.stride, device=device)
+        logits = sliding_window_logits(net, tensor, window=args.window, stride=args.stride, device=device,
+                                       output_fn=lambda o: torch.logit(o.clamp(1e-6, 1 - 1e-6)))
         cv2.imwrite(osp.join(args.out_dir, name + '.png'), logits_to_uint8(logits))
     print(f'saved {len(dataset)} maps to {args.out_dir}')
 

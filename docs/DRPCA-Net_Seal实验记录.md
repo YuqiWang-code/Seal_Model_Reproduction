@@ -35,7 +35,17 @@ $PY train_seal.py --device cuda:1 --epochs 60 --val-interval 5 --batch-size 8 --
 
 ## 结果
 
-<!--RESULTS-->
+选中的是 Seal val 上像素 IoU 最高的第 30 epoch 检查点（val IoU 0.33145；训练 60 epoch）。
+
+| 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
+|---|---:|---:|---:|---:|
+| DRPCA-Net，val 最优检查点，test 1,983 张 | 0.49813 | 0.50534 | 0.66532 | 0.00031065 |
+
+| IoU↑ | F1↑ | Pd↑ | Fa↓（原始比例） |
+|---:|---:|---:|---:|
+| 0.29985473 | 0.46136652 | 0.76852228 | 0.00010403845954860222 |
+
+四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/DRPCANet_Seal评估产物/eight_metrics.json`。
 
 ## 产物与已知问题
 

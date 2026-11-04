@@ -35,7 +35,17 @@ $PY train_seal.py --device cuda:1 --epochs 100 --val-interval 10 --batch-size 8 
 
 ## 结果
 
-<!--RESULTS-->
+选中的是 Seal val 上像素 IoU 最高的第 70 epoch 检查点（val IoU 0.34543；训练跑满 100 epoch）。官方 Adam 1e-3 在 Seal 上前 40 epoch 一直在 val IoU 0 附近，降到 1e-4 后正常收敛。
+
+| 来源 | S↑ | Fw↑ | E↑ | MAE↓ |
+|---|---:|---:|---:|---:|
+| DURD，val 最优检查点，test 1,983 张 | 0.49808 | 0.50645 | 0.66500 | 0.00030665 |
+
+| IoU↑ | F1↑ | Pd↑ | Fa↓（原始比例） |
+|---:|---:|---:|---:|
+| 0.30060852 | 0.46225826 | 0.77583638 | 0.00010284469351614457 |
+
+四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/DURD_Seal评估产物/eight_metrics.json`。
 
 ## 产物与已知问题
 

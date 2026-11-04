@@ -1,14 +1,15 @@
 """Fully-supervised BGM training on the Seal thermal band (TGRS 2025).
 
-BGM masks the background during training; its `Net` exposes the official loss via
-`net.loss(pred, gt)`, which is what the loop uses here.
+BGM's `Net.forward` also returns probabilities (its `SoftIoULoss` multiplies the
+raw output by the GT), so the loss and threshold work in probability space; the
+region term is aggregated over the batch as for the other sparse-target baselines.
 """
 import argparse
 
 import torch
 
 from net import Net
-from seal_train_common import run
+from seal_train_common import batch_iou_prob, prob_to_logit_fn, run
 
 MODEL = 'BasicUNet_plus'
 
@@ -31,10 +32,18 @@ def parse_args():
 def main():
     args = parse_args()
     net = Net(model_name=MODEL)
-    criterion = lambda pred, gt: net.loss(pred, gt)  # noqa: E731
+    criterion = batch_iou_prob
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 140], gamma=0.1)
-    run(args, net, criterion, optimizer, scheduler, forward_fn=lambda m, x: m(x))
+    to_logit = prob_to_logit_fn()
+
+    def forward_fn(m, x):
+        return m(x)
+
+    def logits_fn(m, x):
+        return to_logit(m(x))
+
+    run(args, net, criterion, optimizer, scheduler, forward_fn=forward_fn, logits_fn=logits_fn)
 
 
 if __name__ == '__main__':
