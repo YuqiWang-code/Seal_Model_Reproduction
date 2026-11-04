@@ -53,8 +53,9 @@
 bash /share_datasets/Seal_Model_Reproduction/Ours/run_fullsup.sh 30 1
 ```
 
-权重：`Ours/weights/sam3.pt`（SHA256 `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e`）、
-`Ours/weights/RGB+LoRA/lora_weights.pt`、`Ours/weights/T+LoRA/lora_weights.pt`（后两者由 `train_lora.py` 在 Seal 上重训）。
+权重（服务器 `/share_datasets/Seal_Model_Reproduction/Ours/weights/`，3.21 GiB 主干不进本仓库，本地副本已删除）：
+`sam3.pt`（3,450,062,241 字节，SHA256 `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e`，服务器与本地曾逐字节一致）、
+`RGB+LoRA/lora_weights.pt`、`T+LoRA/lora_weights.pt`（后两者由 `train_lora.py` 在 Seal 上重训）。
 
 ## 冒烟与基准
 

@@ -32,7 +32,7 @@
 bash /share_datasets/Seal_Model_Reproduction/Ours/run_original.sh 30 1
 ```
 
-权重：`Ours/weights/sam3.pt`（3,450,062,241 字节，SHA256 `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e`，已与本地逐字节校验）、`Ours/weights/resnet50-19c8e357.pth`。
+权重（服务器 `/share_datasets/Seal_Model_Reproduction/Ours/weights/`，主干不进本仓库，本地副本已删除）：`sam3.pt`（3,450,062,241 字节，SHA256 `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e`，删除前已与服务器逐字节一致）、`resnet50-19c8e357.pth`。
 
 训练设置：30 epoch、lr 5e-5、batch 1、1008×1008，`--save_name best3.pth`，按 val MAE 选点。
 
