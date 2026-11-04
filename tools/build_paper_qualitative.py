@@ -36,6 +36,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib import gridspec  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 from scipy.ndimage import gaussian_filter  # noqa: E402
 
 SEAL = Path('/share_datasets/Seal_Model_Reproduction')
@@ -148,20 +149,20 @@ def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=2.1):
     ax.set_zlim(0, vmax)
     ax.view_init(elev=26, azim=-64)
 
-    # 坐标刻度：X/Y 是裁剪块像素坐标，Z 是响应值（二值图是 0/255，概率图 0-255）
-    ax.set_xticks([0, w // 4, w // 2, 3 * w // 4, w])
-    ax.set_yticks([0, h // 4, h // 2, 3 * h // 4, h])
-    zticks = [t for t in (0, 50, 100, 150, 200, 250) if t <= vmax] or [0, vmax]
-    ax.set_zticks(zticks)
+    # 坐标刻度：X/Y 是裁剪块像素坐标，Z 是响应值（概率图 0-255）；取整数"好刻度"，与 PDDiff 一致
+    loc = MaxNLocator(nbins=5, integer=True, steps=[1, 2, 2.5, 5, 10])
+    ax.xaxis.set_major_locator(loc)
+    ax.yaxis.set_major_locator(loc)
+    ax.zaxis.set_major_locator(MaxNLocator(nbins=5, integer=True, steps=[1, 2, 2.5, 5, 10]))
     ax.tick_params(axis='x', labelsize=tick_font, pad=-3.0, length=0.5, width=0.2,
                    colors='0.25')
     ax.tick_params(axis='y', labelsize=tick_font, pad=-3.0, length=0.5, width=0.2,
                    colors='0.25')
-    ax.tick_params(axis='z', labelsize=tick_font, pad=-2.0, length=0.5, width=0.2,
+    ax.tick_params(axis='z', labelsize=tick_font, pad=-1.5, length=0.5, width=0.2,
                    colors='0.25')
     ax.set_xlabel('X', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
     ax.set_ylabel('Y', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
-    ax.set_zlabel('Z', fontsize=tick_font + 0.3, labelpad=-8, color='0.15')
+    ax.set_zlabel('Z', fontsize=tick_font + 0.3, labelpad=-4, color='0.15')
 
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 1))
@@ -173,7 +174,7 @@ def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=2.1):
         axis.line.set_linewidth(0.25)
 
     ax.grid(True)
-    ax.set_box_aspect((1, 1, 0.55), zoom=1.05)
+    ax.set_box_aspect((1, 1, 0.55), zoom=0.78)
     ax.margins(0)
 
 
@@ -247,7 +248,7 @@ def main():
     fig_w = args.fig_width
     cell_w = fig_w / ncol
     head_h = 0.19
-    img_h = cell_w * (1.0 if args.roi_panels else 622.0 / 417.0)
+    img_h = cell_w * (1.0 if args.roi_panels else 417.0 / 622.0)
     surf_h = cell_w * (0.84 if args.roi_panels else 0.94)
     gap_h = 0.10
     fig_h = head_h + len(chosen) * (img_h + surf_h + gap_h) + 0.06
@@ -321,7 +322,7 @@ def main():
             ax = fig.add_subplot(gs[r_srf, j], projection='3d')
             vmax = 255.0 if args.z_mode == 'shared' else max(20.0, float(surf.max()))
             cmap = 'gray' if columns[j][2] == 'image' else 'jet'
-            smooth = 3.0 if columns[j][2] == 'image' else 2.0
+            smooth = 5.0 if columns[j][2] == 'image' else 2.0
             add_surface(ax, surf, vmax=vmax, cmap=cmap, smooth=smooth)
 
     png = out / f'{args.tag}_qualitative.png'
