@@ -158,13 +158,14 @@ def load_lora_weights(model: nn.Module, path: str, strict_suffix: bool = True) -
     """把 ``path`` 里的 LoRA 参数装到 ``model`` 上，返回成功匹配的张量数。
 
     兼容两种常见格式：只存 LoRA 的 state dict，或整模型的 state dict。
-    先按原键名精确匹配；剩余参数按“末尾两段”（如 ``attn.qkv.lora.down.weight``）
-    做后缀匹配，这样不同前缀（``backbone.`` / ``backbone.vision_backbone.``）都能装上。
+    先按原键名精确匹配；剩余参数用“唯一后缀”匹配：从长到短尝试键名末尾若干段，
+    只在目标里该后缀唯一时才采用，这样 ``module.`` / ``backbone.`` 之类前缀差异
+    既能匹配，也不会把 64 个 qkv/proj 站点混在一起。
     """
     payload = torch.load(path, map_location="cpu", weights_only=False)
     state = _extract_state_dict(payload)
 
-    own = model.state_dict()
+    own = {k: v for k, v in model.state_dict().items() if "lora" in k}
     candidates = {_normalize_key(k): v for k, v in state.items() if isinstance(v, torch.Tensor)}
     matched: dict[str, torch.Tensor] = {}
 
@@ -172,21 +173,33 @@ def load_lora_weights(model: nn.Module, path: str, strict_suffix: bool = True) -
         if key in own and own[key].shape == candidates[key].shape:
             matched[key] = candidates.pop(key)
 
-    if strict_suffix:
-        def suffix(key: str, depth: int = 4) -> str:
-            return ".".join(key.split(".")[-depth:])
+    if strict_suffix and candidates:
+        # 后缀 -> 唯一目标键；重复后缀不进入映射，避免错配。
+        unique_suffix: dict[str, str] = {}
+        ambiguous: set[str] = set()
+        for depth in range(10, 3, -1):
+            for target in own:
+                suffix = ".".join(target.split(".")[-depth:])
+                if suffix in unique_suffix:
+                    ambiguous.add(suffix)
+                else:
+                    unique_suffix[suffix] = target
+        by_suffix = {s: t for s, t in unique_suffix.items() if s not in ambiguous}
 
-        by_suffix = {suffix(k): k for k in own if "lora" in k}
         for key in list(candidates):
-            target = by_suffix.get(suffix(key))
-            if target and own[target].shape == candidates[key].shape:
-                matched[target] = candidates.pop(key)
+            parts = key.split(".")
+            for depth in range(min(10, len(parts)), 3, -1):
+                suffix = ".".join(parts[-depth:])
+                target = by_suffix.get(suffix)
+                if target is not None and own[target].shape == candidates[key].shape:
+                    matched[target] = candidates.pop(key)
+                    break
 
     if not matched:
         raise RuntimeError(f"{path} 中没有能与模型 LoRA 参数匹配的张量")
 
-    missing, unexpected = model.load_state_dict(matched, strict=False)
-    print(f"[lora] {path}: 匹配 {len(matched)} 个张量，未用 {len(candidates)} 个")
+    model.load_state_dict(matched, strict=False)
+    print(f"[lora] {path}: 匹配 {len(matched)}/{len(own)} 个张量，未用 {len(candidates)} 个")
     return len(matched)
 
 
