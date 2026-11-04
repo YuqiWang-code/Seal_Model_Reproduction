@@ -26,17 +26,26 @@
 
 | 项目 | 我们的设置 |
 |---|---|
-| 列 | `Image`、`Mask` + 5 个对比方法 + `Ours`（7 列，和论文同宽 7.2 in，双栏排版正好整宽） |
+| 列 | `Image`、`Mask` + 8 个对比方法 + `Ours`（11 列，`--fig-width 9.6`、`--header-font 7.5`） |
 | 输入 Image | Seal 热红外 `T`（`--image T`，可切 `RGB`）。**仅显示用**做 0.5–99.5 百分位重拉伸：Seal 单张热图被一个热点钉住 max，直接显示接近全黑 |
 | 二值面板 | `pred >= 128`（概率 > 0.5），与定量表、`AS1000Metrics` 完全同口径 |
-| 红框 | 由 **GT 包围框**外扩得到（所有方法共用同一个框，`MIN_BOX=96 px`、`MARGIN=32 px`），保证各列可比 |
-| 放大插图 | 右下角、红框、`ZOOM=8`、最近邻，最大占面板 40% |
-| 3D 响应面 | 取目标中心 `--crop3d 192` 的方形块，`jet`、`elev=26, azim=-64`、Z 默认按面板各自上限（`--z-mode per-panel`，与论文一致；`shared` 可强制 0–255 统一量程） |
+| 红框 | 由 **GT 包围框**外扩得到（所有方法共用同一个框，`--roi-min 64 px`、`--roi-margin 24 px`），保证各列可比；Seal 目标只有 3–5 px 宽，64 px 的框约等于目标的 10–20 倍视野 |
+| 放大插图 | 右下角、红框、`ZOOM=10`、最近邻，最大占面板 46%（`full` 版式） |
+| 3D 响应面 | 取目标中心 `--crop3d 192` 的方形块，`elev=26, azim=-64`、Z 按面板各自上限（`--z-mode per-panel`；`shared` 可强制 0–255）。**必须用概率图**：二值图是 0/255 阶跃，画出来只有一根尖刺；`--surf-maps` 指定 `results/<M>/Seal/fullsup_test_maps`。Image 列用 `gray` 配色 + `sigma=3` 平滑（热图纹理在 `jet` 下太花），其余列 `jet` + `sigma=2`，且不显示 Z 刻度（0.85 in 的面板里刻度只会变成噪点） |
+| 字体 | 默认 `--font "Microsoft YaHei,Noto Sans CJK JP,DejaVu Sans"`。服务器没有雅黑，matplotlib 认领 `NotoSansCJK-*.ttc`（`fontconfig` 装好的 `.ttc` matplotlib 默认看不到，脚本里显式 `addfont`）；在装过雅黑的 Windows/macOS 上重跑即自动用雅黑 |
+| 块间距 | 每个样例块之间插 0.12 in 白条（`gap_h`），否则相邻样例的 3D 行和下一块的 2D 行会粘在一起 |
 | 输出 | `<tag>_qualitative.png`（600 dpi）+ `<tag>_qualitative.pdf`（矢量）+ `<tag>_meta.json`（列名、样例、阈值、参数） |
 
-样例选择沿用 `docs/Seal定性对比样例.json`（按 GT 面积分位 + 两个多目标帧，**不按任何方法分数挑**）。
+两种 2D 行版式（其余部分完全相同）：
 
-试跑预览（占位 Ours，仅验证版式）：[`docs/assets/seal_qualitative_paper_dryrun.png`](assets/seal_qualitative_paper_dryrun.png)
+| 版式 | 2D 行 | 适用 |
+|---|---|---|
+| `full`（PDDiff 原版） | 整幅 622×417 二值图 + 红框 + 右下角放大插图 | 与 PDDiff Fig. 8 逐项对应，适合附录/完整版 |
+| `roi`（`--roi-panels`） | 每个面板直接就是红框区域，最近邻放大到 384 px（约 6 倍） | **Seal 推荐**：目标只有 3–5 px，整幅图里几乎看不见，只有放大插图能看清；roi 版把所有方法都放到同一放大倍率下比，漏检/虚警一眼可辨 |
+
+样例：`full` 版沿用 `docs/Seal定性对比样例.json`（按 GT 面积分位挑，不按分数挑）；正式图改用 `docs/qualitative_rank_top200.json` 里用户挑选的排名样例（见第六节）。
+
+试跑预览（旧 Ours 占位，仅验证版式）：[`docs/assets/seal_qualitative_paper_dryrun.png`](assets/seal_qualitative_paper_dryrun.png)
 
 ## 三、拿到 Ours 结果后怎么接
 
@@ -77,6 +86,44 @@ python tools/build_paper_qualitative.py \
 
 ## 五、已知差异与待办
 
-1. PDDiff 的 3D 面看起来更"饱满"，是因为他们的响应图有较宽的软响应；Seal 的滑窗推理输出很干脆（目标处直接到 250+、背景接近 0），3D 上表现为细尖峰 + 平坦背景——这本身就是"响应集中"的证据，不需要额外平滑（脚本默认 `smooth=0.8`，仅用于显示抗锯齿）。
+1. PDDiff 的 3D 面看起来更"饱满"，是因为他们的响应图有较宽的软响应；Seal 的滑窗推理输出很干脆（目标处直接到 250+、背景接近 0），3D 上表现为细尖峰 + 平坦背景——这本身就是"响应集中"的证据，`smooth=2.0` 只是显示抗锯齿，不改数值。
 2. 版式里的红框按 GT 画；如果审稿人要求框出"预测"的漏检/虚警，可再加一组红/蓝双色框版本（`compose_panel` 里留了 `with_box` 参数，扩展即可）。
-3. 目前 `qualitative_paper/dryrun_*` 用的是**旧 Ours 预测**（`Ours/test_maps`）占位，仅用于验证版式；正式图等新的 Ours 结果到位后按第三节命令重出。
+3. 11 列 × 11 样例在 9.6 in 宽下每列 0.87 in。若论文按 7.2 in 双栏整宽排版，列宽缩到 0.65 in、表头 7.5 pt 会掉到 5.6 pt——**主图建议用 `seal_pick6_roi` + `seal_pick5_roi` 两张**（各 6 / 5 个样例），11 张一起的 `seal_pick11*` 只适合附录整页或汇报 PPT。
+
+## 六、2026-11 最终图（用户挑选的 11 个样例）
+
+样例来源：`docs/qualitative_rank_top200.json`（`tools/rank_qualitative_samples.py` 按 `score = F1(Ours) − mean_k F1(baseline_k)` 排序前 200，并在 `docs/qualitative_review_top200.html` 里逐图带缩略图复核）。用户从中挑选排名 **1,2,5,6,8,11,13,15,19,21,29**：
+
+| 排名 | ID | GT 面积 (px) | GT 尺寸 | Ours 预测 |
+|---:|---|---:|---|---|
+| 1 | 2656 | 12 | 5×4 | 12 px，1 连通域 |
+| 2 | 2735 | 10 | 3×4 | 8 px |
+| 5 | 2185 | 11 | 4×4 | 13 px |
+| 6 | 3899 | 10 | 3×5 | 9 px（8 个基线全部漏检，SAM3 有响应） |
+| 8 | 3896 | 11 | 5×4 | 7 px |
+| 11 | 2712 | 11 | 4×4 | 11 px |
+| 13 | 3398 | 26 | 9×15 | 18 px，2 连通域 |
+| 15 | 2688 | 45 | 49×57 | 36 px，3 连通域 |
+| 19 | 2120 | 103 | 19×97 | 92 px，3 连通域 |
+| 21 | 2894 | 24 | 98×72（多目标） | 20 px，3 连通域 |
+| 29 | 2888 | 9 | 4×4 | 12 px |
+
+（`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
+
+构建：`bash tools/make_paper_qualitative_pick.sh all`（`full`/`roi` 二选一也行），产物在服务器 `qualitative_paper/user_pick/`：
+
+| 文件 | 内容 | 尺寸 |
+|---|---|---|
+| `seal_pick11_qualitative.png/pdf` | 11 样例 × 11 列，`full` 版式（整幅 + 红框 + 插图） | 5760×10618 px / 9.6×17.7 in |
+| `seal_pick6_qualitative.*` / `seal_pick5_qualitative.*` | 同样例拆成 6 + 5 两张 | 5760×5860 / 5760×4908 px |
+| `seal_pick11_roi_qualitative.*` | 11 样例，`roi` 版式（面板 = 6 倍放大 ROI） | 5760×11425 px / 9.6×19.0 in |
+| `seal_pick6_roi_*` / `seal_pick5_roi_*` | 同上拆两张 | 5760×6300 / 5760×5275 px |
+
+仓库内预览（1800 px 宽，仅用于查看版式）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
+
+从图上直接能读到的事实（对照表 21～32 行）：
+
+- `3899`：8 个基线全部空预测，只有 SAM3 和 Ours 出目标——但 SAM3 的斑块明显大于 GT（GT 10 px，SAM3 一坨），Ours 的斑块与 GT 同量级。
+- `2656`：`RPCANet++` 在框内画出一道弧（虚警），`RPCANet`/`BGM` 有零散噪点，`DNA-Net`/`MSHNet`/`HDNet`/`L2SKNet` 全空，Ours 单点命中。
+- `2888`：9 个像素的极小目标，只有 Ours 和 SAM3 命中，两者都偏大 1–3 px。
+- 与定量表一致：SAM3 检出率高但斑块偏大（Fa 与像素级 F1 都不如 Ours），12 个基线在 3–5 px 目标上大量漏检。定性图只能说明"命中/漏检"的差别，不能替代表里的 IoU/F1/Pd/Fa。
