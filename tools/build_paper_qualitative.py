@@ -134,7 +134,8 @@ def roi_panel(sheet, roi, target=384):
     return cv2.cvtColor(canvas, cv2.COLOR_GRAY2BGR)
 
 
-def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet'):
+def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=2.1):
+    """PDDiff Fig. 9 style surface: white panes, light grid, thin grey axes, tick labels."""
     arr = data.astype(np.float32)
     if smooth > 0:
         arr = gaussian_filter(arr, smooth)
@@ -146,14 +147,33 @@ def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet'):
                     antialiased=True, vmin=0, vmax=vmax, shade=False)
     ax.set_zlim(0, vmax)
     ax.view_init(elev=26, azim=-64)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_zticks([])
+
+    # 坐标刻度：X/Y 是裁剪块像素坐标，Z 是响应值（二值图是 0/255，概率图 0-255）
+    ax.set_xticks([0, w // 4, w // 2, 3 * w // 4, w])
+    ax.set_yticks([0, h // 4, h // 2, 3 * h // 4, h])
+    zticks = [t for t in (0, 50, 100, 150, 200, 250) if t <= vmax] or [0, vmax]
+    ax.set_zticks(zticks)
+    ax.tick_params(axis='x', labelsize=tick_font, pad=-3.0, length=0.5, width=0.2,
+                   colors='0.25')
+    ax.tick_params(axis='y', labelsize=tick_font, pad=-3.0, length=0.5, width=0.2,
+                   colors='0.25')
+    ax.tick_params(axis='z', labelsize=tick_font, pad=-2.0, length=0.5, width=0.2,
+                   colors='0.25')
+    ax.set_xlabel('X', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
+    ax.set_ylabel('Y', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
+    ax.set_zlabel('Z', fontsize=tick_font + 0.3, labelpad=-8, color='0.15')
+
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 1))
-        axis.pane.set_edgecolor((0.82, 0.82, 0.82, 1))
-        axis._axinfo['grid'].update(color=(0.9, 0.9, 0.9, 1), linewidth=0.2)
-    ax.set_box_aspect((1, 1, 0.55), zoom=1.18)
+        axis.pane.set_edgecolor((0.85, 0.85, 0.85, 1))   # 细浅灰外框
+        axis.pane.set_linewidth(0.3)
+        axis._axinfo['grid'].update(color=(0.86, 0.86, 0.86, 1), linewidth=0.22)
+        # 去掉 matplotlib 默认的黑色粗轴线，改成很细的灰线（PDDiff 没有黑粗线）
+        axis.line.set_color((0.45, 0.45, 0.45, 1))
+        axis.line.set_linewidth(0.25)
+
+    ax.grid(True)
+    ax.set_box_aspect((1, 1, 0.55), zoom=1.05)
     ax.margins(0)
 
 
@@ -227,13 +247,9 @@ def main():
     fig_w = args.fig_width
     cell_w = fig_w / ncol
     head_h = 0.19
-    if args.roi_panels:
-        img_h = cell_w * 0.98
-        surf_h = cell_w * 0.84
-    else:
-        img_h = cell_w * 0.74
-        surf_h = cell_w * 0.94
-    gap_h = 0.12
+    img_h = cell_w * (1.0 if args.roi_panels else 622.0 / 417.0)
+    surf_h = cell_w * (0.84 if args.roi_panels else 0.94)
+    gap_h = 0.10
     fig_h = head_h + len(chosen) * (img_h + surf_h + gap_h) + 0.06
 
     fig = plt.figure(figsize=(fig_w, fig_h), dpi=200, facecolor='white')
@@ -241,8 +257,8 @@ def main():
     for _ in chosen:
         heights += [img_h, surf_h, gap_h]
     gs = gridspec.GridSpec(len(heights), ncol, figure=fig, height_ratios=heights,
-                           hspace=0.03, wspace=0.02,
-                           left=0.004, right=0.996, top=0.998, bottom=0.004)
+                           hspace=0.015, wspace=0.004,
+                           left=0.003, right=0.997, top=0.998, bottom=0.003)
 
     for j, (name, _, kind) in enumerate(columns):
         ax = fig.add_subplot(gs[0, j])

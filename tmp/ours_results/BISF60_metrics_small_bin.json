@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "IoU": 0.42800160853829516,
+    "F1": 0.5994413535379675,
+    "Pd": 0.8354327509142625,
+    "Fa": 4.0269189029744335e-05
+  },
+  "counts": {
+    "n_images": 1983,
+    "tp": 78760,
+    "fp": 78306,
+    "fn": 26952,
+    "n_gt": 7383,
+    "n_pred": 7261,
+    "n_detected": 6168,
+    "false_alarm_pixels": 20712,
+    "total_pixels": 514338642
+  },
+  "protocol": {
+    "name": "AS1000Metrics",
+    "threshold": 0.5,
+    "threshold_operator": ">",
+    "gt_threshold_uint8": 128,
+    "match_distance": 3,
+    "distance_operator": "<",
+    "connectivity": 8,
+    "matching": "raster-order greedy one-to-one centroid matching",
+    "aggregation": "whole-dataset counts",
+    "Fa_definition": "unmatched prediction component area / total image pixels",
+    "units": "raw ratios [0,1]"
+  },
+  "prediction_dir": "/share_datasets/Seal_Model_Reproduction/results/Ours/BISF_60ep/test_maps_bin",
+  "gt_dir": "/share_datasets/Seal_Model_Reproduction/Seal_data/test/GT"
+}

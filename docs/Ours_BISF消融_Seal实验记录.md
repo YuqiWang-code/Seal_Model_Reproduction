@@ -87,6 +87,13 @@ GT 组件 7,383、预测组件 7,261、匹配成功 6,168、未匹配面积 20,7
 60 epoch 相对 30 epoch 的增益：Fw 0.62993→0.63566、IoU 0.42453→0.42800、Pd 0.81322→0.83543、
 F1 0.59602→0.59944、Fa 4.52e-05→4.03e-05，说明延长训练确实在收敛（val IoU 0.4920→0.5011）。
 
+### 入表
+
+已按**二值化口径（60 epoch、val 最优 ep43）**写入 `docs/Seal量化SOTA表.xlsx` → `Ablation` 工作表
+**第 15 行 `B+BISF`**（B 0.49875 / C 0.63566 / D 0.69189 / E 0.00020 / F 0.42800 / G 0.59944 /
+H 0.83543 / I 4.027e-05 / J 40.3），列按表头定位、样式与精度沿用第 14 行 `B`。
+同表 `Total` 区的第 22 行 `B+BISF` 未填：那需要 `B + CM-LoRA + BISF`（LoRA 变体 + BISF）的单独实验。
+
 ## 产物
 
 - 30 epoch：`results/Ours/BISF/`（`best.pth` ep21、`test_maps/`、`metrics4.json`、`metrics_small.json`，
