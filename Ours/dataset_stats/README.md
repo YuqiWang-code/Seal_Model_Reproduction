@@ -31,9 +31,12 @@
 
 | 文件 | 内容 |
 |---|---|
-| `seal_dataset_statistics.png` | **(a)(b) 双栏合并图，可直接进论文** |
-| `seal_target_number_distribution.png` | 单图 (a)：横轴每图目标个数 |
-| `seal_target_size_distribution.png` | 单图 (b)：横轴目标大小（像素） |
+| `seal_dataset_statistics.png` / `.pdf` | **(a)(b) 双栏合并图，可直接进论文** |
+| `seal_target_number_distribution.png` / `.pdf` | 单图 (a)：横轴每图目标个数 |
+| `seal_target_size_distribution.png` / `.pdf` | 单图 (b)：横轴目标大小（像素） |
+
+PNG 为 300 dpi 位图；PDF 为矢量图，字体以 TrueType 子集嵌入（`pdf.fonttype=42`，不是部分期刊拒收的 Type 3），
+可直接用于 LaTeX `\includegraphics`。
 
 两栏都以**占比**为纵轴、右轴给**累计占比**（Fig. 4(b) 的做法）：
 

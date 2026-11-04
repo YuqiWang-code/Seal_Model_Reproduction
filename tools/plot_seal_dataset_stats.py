@@ -60,6 +60,8 @@ def setup(font):
         "ytick.direction": "in",
         "savefig.dpi": 300,
         "savefig.bbox": "tight",
+        "pdf.fonttype": 42,   # TrueType, accepted by most journals (not Type 3)
+        "ps.fonttype": 42,
     })
 
 
@@ -175,8 +177,9 @@ def render(stats, outdir: Path):
     fig.subplots_adjust(wspace=0.45, bottom=0.22)
     out = outdir / "seal_dataset_statistics.png"
     fig.savefig(out)
+    fig.savefig(out.with_suffix(".pdf"))
     plt.close(fig)
-    print(f"wrote {out}")
+    print(f"wrote {out} (+ .pdf)")
 
     for maker, name in ((panel_number, "seal_target_number_distribution.png"),
                         (panel_size, "seal_target_size_distribution.png")):
@@ -185,8 +188,9 @@ def render(stats, outdir: Path):
         fig.subplots_adjust(bottom=0.16)
         out = outdir / name
         fig.savefig(out)
+        fig.savefig(out.with_suffix(".pdf"))
         plt.close(fig)
-        print(f"wrote {out}")
+        print(f"wrote {out} (+ .pdf)")
 
 
 def main():
