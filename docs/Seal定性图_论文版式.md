@@ -112,7 +112,7 @@ python tools/build_paper_qualitative.py \
 
 （`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
 
-构建：`bash tools/make_paper_qualitative_pick.sh all`（`full`/`roi` 二选一也行）。
+构建：`bash tools/make_paper_qualitative_pick.sh all qualitative_paper/v2_20261105`（第二个参数是输出目录，默认 `qualitative_paper/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
 
 ### 版本
 
