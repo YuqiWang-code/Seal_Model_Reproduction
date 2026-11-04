@@ -24,6 +24,10 @@ DOCS = {
     'HDNet': 'HDNet_Seal实验记录.md',
     'ILNet': 'ILNet_Seal实验记录.md',
     'RPCANet++': 'RPCANet++_Seal实验记录.md',
+    'L2SKNet': 'L2SKNet_Seal实验记录.md',
+    'BGM': 'BGM_Seal实验记录.md',
+    'DRPCA-Net': 'DRPCA-Net_Seal实验记录.md',
+    'DURD': 'DURD_Seal实验记录.md',
 }
 
 
@@ -36,7 +40,7 @@ def read_table():
             if isinstance(v, str) and v.strip() in HEADERS:
                 col[HEADERS[v.strip()]] = c
     rows = {}
-    for r in range(21, 29):
+    for r in range(21, 33):
         name = ws.cell(r, 1).value.strip()
         rows[name] = {'row': r, **{k: ws.cell(r, c).value for k, c in col.items()}}
     return rows

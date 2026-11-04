@@ -26,6 +26,10 @@ ART = {
     'HDNet': 'HDNet_Seal评估产物',
     'ILNet': 'ILNet_Seal评估产物',
     'RPCANet++': 'RPCANetpp_Seal评估产物',
+    'L2SKNet': 'L2SKNet_Seal评估产物',
+    'BGM': 'BGM_Seal评估产物',
+    'DRPCA-Net': 'DRPCANet_Seal评估产物',
+    'DURD': 'DURD_Seal评估产物',
 }
 
 
@@ -38,7 +42,7 @@ def table():
             if isinstance(v, str) and v.strip() in HEADERS:
                 col[HEADERS[v.strip()]] = c
     return {ws.cell(r, 1).value.strip(): {k: ws.cell(r, c).value for k, c in col.items()}
-            for r in range(21, 29)}
+            for r in range(21, 33)}
 
 
 def main():
