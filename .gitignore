@@ -28,3 +28,8 @@ __pycache__/*.py[cod]
 *.swp
 .DS_Store
 Thumbs.db
+
+# 上传打包产物
+tmp/upload/
+Ours/venv_ours/
+

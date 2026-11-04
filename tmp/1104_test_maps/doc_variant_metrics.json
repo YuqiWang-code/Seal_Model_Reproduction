@@ -1,0 +1,26 @@
+{
+  "variant": "docs/小目标评价指标.pdf draft algorithm (percent output)",
+  "notes": "Fa = pixel-level FP / total pixels; matching distance <=3, distance-sorted greedy; binarization 0.5 (draft used pred>0 on 0/255 masks)",
+  "counts": {
+    "n_images": 1983,
+    "tp": 81033,
+    "fp": 70238,
+    "fn": 24679,
+    "n_gt": 7383,
+    "n_detected": 6447,
+    "false_pixels": 70238,
+    "n_pixels": 514338642
+  },
+  "percent": {
+    "IoU": 46.05456095481669,
+    "F1": 63.0648719954238,
+    "Pd": 87.32222673709755,
+    "Fa": 0.0136559834833487
+  },
+  "fraction": {
+    "IoU": 0.46054560954816687,
+    "F1": 0.630648719954238,
+    "Pd": 0.8732222673709755,
+    "Fa": 0.000136559834833487
+  }
+}
