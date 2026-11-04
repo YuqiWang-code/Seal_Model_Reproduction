@@ -27,18 +27,27 @@
 
 95.2%（3,793 张）的图像最多 10 个目标，尾部单张最多 47 个。
 
-## 两张图
+## 三张图
 
 | 文件 | 内容 |
 |---|---|
-| `seal_target_number_distribution.png` | 横轴：每图目标个数；纵轴：图像数（样本数） |
-| `seal_target_size_distribution.png` | 横轴：目标大小（像素）；纵轴：mask 个数（目标数） |
+| `seal_dataset_statistics.png` | **(a)(b) 双栏合并图，可直接进论文** |
+| `seal_target_number_distribution.png` | 单图 (a)：横轴每图目标个数 |
+| `seal_target_size_distribution.png` | 单图 (b)：横轴目标大小（像素） |
 
+两栏都以**占比**为纵轴、右轴给**累计占比**（Fig. 4(b) 的做法）：
+
+- (a) 纵轴 = 该目标个数的图像数 / 全部图像数（%）；右轴 = 累计图像占比。
+- (b) 纵轴 = 该尺寸区间的目标数 / 全部目标数（%）；右轴 = 累计目标占比。
 - 横轴分箱：目标个数用 1–10 精确值 + `11-15` / `16-20` / `>20` 三组；目标大小用 5 像素一格（0–60），
   末端 `>60` 单独一根柱（全部数据里只有 30 个目标，占 0.24%，最大 114 px），避免长尾把主体压扁。
-- 样式：单色柱 + 黑边，仅保留左/下坐标轴、无网格，柱顶标数值；字体 **Microsoft YaHei**，
-  300 dpi，`bbox_inches='tight'`。
-- 两张图的柱颜色统一为 `#8CBF3F`。
+- 样式：单色柱（`#8CBF3F`）+ 黑边；累计曲线用红棕色（`#C0392B`）圆点线画在右轴；
+  仅保留必要坐标轴、无网格；字体 **Microsoft YaHei**，300 dpi，`bbox_inches='tight'`。
+
+图注可用：
+
+> Fig. X. Statistics of the Seal dataset. (a) Target number per image and (b) target size
+> distribution. Bars: percentage of images / targets; red lines (right axis): cumulative percentage.
 
 ## 复算
 
@@ -50,7 +59,7 @@ ssh RSML-3 "python /share_datasets/Seal_Model_Reproduction/tools/compute_seal_da
   > Ours/dataset_stats/seal_dataset_stats.json
 
 # 本地
-python tools/plot_seal_dataset_stats.py                     # 全部 3,983 张
+python tools/plot_seal_dataset_stats.py                 # 全部 3,983 张，输出 3 张图
 python tools/plot_seal_dataset_stats.py --split test        # 只看 test
 ```
 
