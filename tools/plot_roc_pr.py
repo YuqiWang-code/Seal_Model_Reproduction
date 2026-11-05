@@ -227,6 +227,13 @@ def save(fig, outdir, stem, dpi):
     return png, pdf
 
 
+def legend_inside(ax, loc, labels, ncol=1, fontsize=6.4):
+    """Legend inside the axes (keeps the exported PNG square)."""
+    ax.legend(fontsize=fontsize, frameon=True, ncol=ncol, loc=loc,
+              labelspacing=0.28, handlelength=1.8, borderpad=0.4,
+              edgecolor='0.8', framealpha=0.92)
+
+
 def legend_outside(fig, ax, handles, labels, ncol=1, fontsize=7.4, gap=0.012):
     """Legend hugging the right edge of `ax` (figure coordinates).
 
@@ -254,6 +261,8 @@ def main():
                      help='single-panel figure width in inches (raise it for a longer x axis)')
     ap_.add_argument('--square', action='store_true',
                      help='make the axes box square (1:1) so the rise looks steeper')
+    ap_.add_argument('--legend-inside', action='store_true',
+                     help='put the legend inside the axes so the exported PNG is square too')
     ap_.add_argument('--two-segment', action='store_true',
                      help='draw each ROC as straight rise + straight plateau (knee style)')
     ap_.add_argument('--highlight', default='Ours',
@@ -299,7 +308,10 @@ def main():
     if args.square:
         ax.set_box_aspect(1)
     handles, labels = ax.get_legend_handles_labels()
-    legend_outside(fig, ax, handles, labels)
+    if args.legend_inside:
+        legend_inside(ax, 'lower right', labels, ncol=2 if len(labels) > 9 else 1)
+    else:
+        legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'roc', args.dpi)
 
     # ---- PR only
@@ -308,12 +320,15 @@ def main():
     if args.square:
         ax.set_box_aspect(1)
     handles, labels = ax.get_legend_handles_labels()
-    legend_outside(fig, ax, handles, labels)
+    if args.legend_inside:
+        legend_inside(ax, 'lower left', labels, ncol=2 if len(labels) > 9 else 1)
+    else:
+        legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'pr', args.dpi)
 
     # ---- two panels sharing one legend
     fig, axes = plt.subplots(1, 2, figsize=(min(args.fig_width * 2 + 0.6, 11.5), 3.4))
-    fig.subplots_adjust(wspace=0.28, left=0.06, right=0.9)
+    fig.subplots_adjust(wspace=0.14, left=0.06, right=0.9)
     draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
     axes[0].set_title('(a) ROC', fontsize=9.5)
     draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight)
