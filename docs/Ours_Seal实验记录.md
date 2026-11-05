@@ -251,7 +251,7 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 
 产物：服务器 `Ours/Feature_Map/v6/`（`panels/` 180 张 384×384、`raw/`、`manifest.json`、两条色标、`Ours_FeatureMap_v6.vsdx`）；本地 `Ours/Feature_Map/v6/` 只放 vsdx。重建：`tools/feature_maps_v6.py --stems 3974,3372,2180,2732,2498,2226,2931,2773,2146,2105`（默认 ROI 64 / 6×，`--roi-min/--roi-margin/--panel-px` 可调）+ `tools/make_visio_feature_maps_v6.ps1`（113 个形状，11.31×12.46 in）。
 
-### v7（现行，`Ours/Feature_Map/v7/`）
+### v7（红核为渐变的过渡版，已被 v8 取代；`Ours/Feature_Map/v7/`）
 
 **用途明确**：这张图是给作者自己看模块作用的直觉图，不进论文、不做证据，因此允许**逐列不同的显示定标**。内容仍是 v1/v6 的主干特征热力图，九列不变。
 
@@ -262,3 +262,15 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 **读图限制**：按 rank 切开意味着每列的颜色不表示同一个数值区间，跨列不可比、跨行也不可比；红核的形状是"该列最热的 q 比例像素"，遇到细长峰时会呈现断续的条状，这是排序切分的固有表现，不是渲染错误。三组配额可用命令行参数微调后重出（十张约 5 s + Visio 约 1 min）。
 
 产物：服务器 `Ours/Feature_Map/v7/`（`panels/` 180 张 384×384、`raw/`、`manifest.json`、两条色标、`Ours_FeatureMap_v7.vsdx`）；本地 `Ours/Feature_Map/v7/` 只放 vsdx。重建：`tools/feature_maps_v7.py --stems 3974,3372,2180,2732,2498,2226,2931,2773,2146,2105` + `tools/make_visio_feature_maps_v7.ps1`（113 个形状，11.31×12.46 in）。
+
+### v8（现行，`Ours/Feature_Map/v8/`）
+
+**只改颜色映射**：v7 把最热的那一截映射成"黄→橙→红"，于是核心看起来是黄绿色的圈；v8 把这一段直接压成**橙红→暗红**（`hot = 0.80 + 0.20·t`），核心整块是红的，只有边缘一圈橙红，中心是暗红。冷端再压暗一档（`bg_gain 0.55 → 0.50`，并做 1.4 次幂），四周的蓝/青纹理保留但更暗，红核因此更突出。
+
+**红核大小仍按列指定**（`--red-nolora / --red-lora / --red-bsrf` = 0.30 / 0.16 / 0.10，按 ROI 内像素排序切分）。十张样例实测红色面积：w/o CM-LoRA **0.27**、w/ CM-LoRA **0.14**、BSRF **0.06**，逐张都满足 03 > 05 > 07，没有例外。
+
+**读图限制**（同 v7）：每列按自身排序切分，颜色不对应同一数值区间，跨列不可比；红核形状就是"该列最热的 q 比例像素"，融合特征的热区是一条细长脊，所以 07 列有时呈断续的弧形/条状，这是排序切分的必然结果。真实数据里 BSRF 的热区其实**最大**（ROI 内高于 0.9×峰值：3974 为 0.24，w/o 0.16、w/ 0.06），v8 的"红核最小"是绘图约定，不能当证据。
+
+想改红核大小：`--red-bsrf 0.16` 之类调参后重跑（十张约 5 s），再跑 `tools/make_visio_feature_maps_v8.ps1`（约 1 min）。
+
+产物：服务器 `Ours/Feature_Map/v8/`（`panels/` 180 张 384×384、`raw/`、`manifest.json`、两条色标、`Ours_FeatureMap_v8.vsdx`）；本地 `Ours/Feature_Map/v8/` 只放 vsdx。重建：`tools/feature_maps_v8.py --stems 3974,3372,2180,2732,2498,2226,2931,2773,2146,2105` + `tools/make_visio_feature_maps_v8.ps1`（113 个形状，11.31×12.46 in）。
