@@ -60,7 +60,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--panel-px", type=int, default=396)
     p.add_argument("--resp-lo", type=float, default=2.0)
     p.add_argument("--resp-hi", type=float, default=98.0)
-    p.add_argument("--resp-window", type=float, default=0.85,
+    p.add_argument("--resp-window", type=float, default=0.0,
                    help="keep only the top (1 - window) of the stretched response; the rest goes to "
                         "the blue end (same window for every feature column)")
     p.add_argument("--resp-gamma", type=float, default=1.0,
