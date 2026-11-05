@@ -137,7 +137,7 @@ v3 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 单图拆分用 `--split-dir <out>/panels_roi`；3D 单图按拼图格子的实际尺寸（1.6 × 1.344 in）渲染，贴回 Visio/PPT 时字号与拼图一致。
 
-Visio 版由 `tmp/fullsup3/make_visio.ps1` 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
+Visio 版由 [tools/make_visio_qualitative.ps1](tools/make_visio_qualitative.ps1) 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
 
 仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v3）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
