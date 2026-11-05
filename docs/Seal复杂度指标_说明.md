@@ -1,6 +1,6 @@
 # Seal 全监督基线的复杂度指标：Params / GFLOPs / FPS
 
-`docs/Seal量化SOTA表.xlsx` 第 13–15 列（`Params↓`、`GFLOPs↓`、`FPS↑`）的测量口径、实测值，以及与各方法原论文/官方仓库公布值的对照。测量对象是第 21–32 行的 12 个全监督 IRSTD 基线；第 3–20 行弱监督/跨域方法不在此次测量范围内。
+`docs/Seal量化SOTA表.xlsx` 第 13–15 列（`Params↓`、`GFLOPs↓`、`FPS↑`）的测量口径、实测值，以及与各方法原论文/官方仓库公布值的对照。第 21–32 行 12 个全监督 IRSTD 基线按 256² 单窗测；第 20 行 Ours 按原生 1008×1008 单图测（见[下文](#ours第-20-行10081008-原生输入)），与基线不是同一口径，数字不可横比。第 3–19 行弱监督/跨域方法仍未测量。
 
 ## 测量协议
 
@@ -34,6 +34,49 @@
 | DURD | TGRS26 | 2.466 | 52.847 | 125.34 | 7.978 |
 
 排序读法：参数最少的是 RPCANet（0.680 M）与 L2SKNet（0.899 M）；计算量最大的是 RPCANet++（190.7 G，6 阶段展开）与 DRPCA-Net（73.8 G）；单次延迟最低的是 L2SKNet（3.01 ms），最高的是 DRPCA-Net（89.0 ms）。参数少不等于延迟低——RPCANet 只有 0.68 M 却要 44.6 G MACs，因为它把 RPCA 展开成 6 个阶段、每阶段在全分辨率上做多组卷积。
+
+## Ours（第 20 行）：1008×1008 原生输入
+
+Ours 不能按 256² 测：SAM3 视觉主干的 2D rope 频率表 `freqs_cis` 在建模型时按 `input_size=1008`（72×72 token）固定，换成其它分辨率直接形状不符。所以表中第 20 行三列是**原生 1008×1008、每图一次前向**的实测，与第 21–32 行的 256² 单窗**不是同一协议**，数字不能横着比。
+
+| 项目 | Ours 的口径 |
+|---|---|
+| 输入 | 每模态 `1×3×1008×1008`；RGB 与 T 各跑一次冻结 SAM3，1 个框提示（Decoder 的 query 数不随提示框数量变） |
+| 精度 | bf16 autocast，即 `test.py` → `forward_sample` 的真实推理路径（冻结主干本来就以 bf16 存储）；基线是 FP32，这里不能套用 |
+| Params | 全部 `nn.Parameter`：两支冻结 SAM3 各 843.672 M + LoRA3 1.573 M + M1 1.191 M = **1690.108 M**；其中真正可训练的只有 M1 + LoRA3 = 2.764 M |
+| GFLOPs | `torch.utils.flop_counter.FlopCounterMode` 的 FLOPs ÷ 2 ÷ 1e9（乘加次数）= **5935.732**：两支 backbone 5662.381、Decoder + M1 273.351。`thop` 不统计 attention 里的 SDPA，会漏算，所以这里用 PyTorch 自带计数器 |
+| FPS | **9.65**（中位 103.61 ms；三轮 103.61 / 103.70 / 103.91 ms，每轮前先做 4 s 矩阵乘把 GPU 时钟拉满） |
+| 排除 | 文本编码（`"visual"` 只编码一次、`test.py` 里缓存复用）、数据读取、resize、sigmoid 与 PNG 写盘 |
+| 硬件 / 脚本 | RTX 5090（`cuda:1`，空闲），torch 2.14.0+cu132；`Ours/CODE/efficiency.py`（作者自带）＋ `tmp/verify_eff.py`（多轮中位数复核）；原始 JSON 在服务器 `results/complexity/ours_code.json`，日志在 `results/complexity/logs/` |
+
+`Ours/CODE/efficiency.py` 自己跑出来是 1690.11 M / 5935.73 G / 9.72 FPS（102.90 ms，50 次均值），与复核脚本（1690.108 / 5935.732 / 9.65）一致到 0.7 %；GFLOPs 两处逐位相同。
+
+同 harness、同分辨率下顺手测的两个变体，供消融参考：
+
+| 变体 | Params (M) | GFLOPs | FPS | 中位延迟 (ms) |
+|---|---:|---:|---:|---:|
+| B + Fusion（`--no-lora`：单份冻结 SAM3 两路共用，无模态 LoRA / LoRA3） | 841.70 | 5886.80 | 11.28 | 88.65 |
+| CM-LoRA + BISF（`--no-lora3`：两路模态 LoRA，不挂共享 LoRA3） | 1688.53 | 5919.42 | 10.34 | 96.71 |
+| Ours / CODE（CM-LoRA + BISF + LoRA3） | 1690.108 | 5935.732 | 9.65 | 103.61 |
+
+注意 `--no-lora` 的两路仍各跑一次 `forward_image`（只是共用同一份权重），所以 GFLOPs 只比双份模型少 0.8 %，参数却少一半——参数与计算在这里完全解耦。
+
+**换算成"每张图"才是同一件事**：Ours 一张图只前向一次（框提示，不需要滑窗），基线一张图要 12 个 256² 窗口。
+
+| 方法 | 单图 GFLOPs | 单图 FPS |
+|---|---:|---:|
+| DNA-Net | 171.4 | 5.35 |
+| MSHNet | 73.3 | 12.69 |
+| RPCANet | 534.8 | 17.61 |
+| HDNet | 68.4 | 7.13 |
+| L2SKNet | 82.7 | 27.68 |
+| BGM | 81.3 | 17.68 |
+| RPCANet++ | 2288.0 | 6.70 |
+| Ours | 5935.7 | 9.65 |
+
+Ours 的单图计算量是最重的 RPCANet++ 的 2.6 倍，但单图吞吐 9.65 张/s 落在中间：快于 DNA-Net（5.35）、RPCANet++（6.70）、HDNet（7.13），慢于 L2SKNet（27.7）、BGM（17.7）、RPCANet（17.6）、MSHNet（12.7）。原因是 bf16 下的大矩阵乘把算力吃得很满（11.9 TFLOPs ÷ 0.1036 s ≈ 115 TFLOP/s，约 5090 bf16 稠密峰值的 55 %），而基线是 12 次小窗口、小卷积，瓶颈在 kernel 启动与显存搬运（参见 DNA-Net 的 1.45× 那条）。
+
+**填表与正文的写法约束**：① Ours 三列必须标注"1008² 原生单图、bf16、每图 1 次前向"，基线标注"256² 单窗、FP32、每图 12 窗"，否则读者会把 9.65 与 64.22 直接比；② 参数量要说明 1690.108 M 中 1687.3 M 是冻结预训练主干、训练的是 2.764 M；③ 若正文需要同口径，只能改成"单图成本/单图吞吐"两列（上表），不能把 Ours 折算到 256²。
 
 ## 与原论文 / 官方仓库公布值的对照
 
@@ -112,9 +155,9 @@ PDDiff 的表则不自洽：它给 SCTransNet 20.24 G、HDNet 11.20 G，正好�
 
 ## 与表中其他列的配合读法
 
-- 复杂度三列与八项指标同源（同一份官方代码、同一输入尺寸），但**与跨域行（第 3–20 行）不同协议**，不能横向拼比。
+- 复杂度三列与八项指标同源（同一份官方代码、同一输入尺寸），但**与跨域行（第 3–19 行）不同协议**，不能横向拼比；第 20 行 Ours 是 1008² 原生单图，也与第 21–32 行的 256² 单窗不同协议。
 - 参数/计算量与 Seal 上的精度没有单调关系：参数最少的 RPCANet（0.680 M）与计算量最大的 RPCANet++（190.7 G）在 Seal test 上的 IoU 是 0.30638 / 0.30095，几乎相同；BGM（4.076 M / 6.773 G）反而是 IoU 最高的 0.30735。12 个方法的 IoU 全部落在 0.19–0.31、F1 0.32–0.47 的窄带内，与 [IoU 边界敏感性](小目标评价指标_定义与代码对照.md#iou-的边界敏感性seal-gt-实测)（1 像素膨胀/腐蚀即 0.3910/0.0826）一致，因此复杂度列的作用是描述"达到同一水平所需的代价"，而不是解释分数高低。
-- 写论文时若需要"整图耗时"，用 12 个滑窗折算（GFLOPs×12、FPS÷12）；若需要与论文表对照，用单窗 256² 的数值，并注明硬件。
+- 写论文时若需要"整图耗时"，用 12 个滑窗折算（GFLOPs×12、FPS÷12）；若需要与论文表对照，用单窗 256² 的数值，并注明硬件。Ours 每图本来就只有一次前向，直接读单图数即可。
 
 ## 复现
 
@@ -126,6 +169,16 @@ cd /share_datasets/Seal_Model_Reproduction/DNANet-main
 
 # 12 个方法批量跑，结果写 results/complexity/<kind>.json
 bash /share_datasets/Seal_Model_Reproduction/tmp/fullsup4/measure_all.sh
+
+# Ours（1008²）：作者自带 harness + 复核脚本
+cd /share_datasets/Seal_Model_Reproduction/Ours/CODE
+CUDA_VISIBLE_DEVICES=1 /share_datasets/Seal_Model_Reproduction/Ours/venv_ours/bin/python \
+  efficiency.py --sam_checkpoint /share_datasets/Seal_Model_Reproduction/Ours/weights/sam3.pt \
+  --img_size 1008 --warmup 10 --iters 50
+cd /share_datasets/Seal_Model_Reproduction/Ours/CODE && PYTHONPATH=$PWD CUDA_VISIBLE_DEVICES=1 \
+  /share_datasets/Seal_Model_Reproduction/Ours/venv_ours/bin/python /share_datasets/Seal_Model_Reproduction/tmp/verify_eff.py
+# 两个变体：给 efficiency.py 加 --no-lora（B+Fusion）/ --no-lora3（CM-LoRA+BISF）
+bash tmp/run_eff_1008.sh; bash tmp/run_eff_variants.sh
 ```
 
 `--kind` 与目录的对应：`dnanet`→`DNANet-main`、`mshnet`→`MSHNet-main`、`uiunet`→`UIU-Net-main`、`sctransnet`→`SCTransNet-main`、`rpcanet`/`rpcanetpp`→`RPCANet-main`、`hdnet`→`HDNet-main`、`ilnet`→`ILNet-main`、`l2sknet`→`L2SKNet-main`、`bgm`→`BGM-main`、`drpcanet`→`DRPCA-Net-main`、`durd`→`DURD-main`。

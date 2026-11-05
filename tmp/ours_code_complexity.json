@@ -1,0 +1,39 @@
+{
+  "method": "Ours (Ours/CODE: CM-LoRA + BISF)",
+  "harness": "Ours/CODE/efficiency.py（作者自带 harness）+ tmp/verify_eff.py 复核",
+  "protocol": {
+    "input": "1 x 3 x 1008 x 1008 per modality (RGB and T), 1 box prompt, native SAM3 resolution",
+    "why_not_256": "SAM3 vision trunk 的 2D rope 频率表 freqs_cis 在 build 时按 input_size=1008 固定（72x72 token），其它分辨率直接形状不符",
+    "dtype": "bf16 autocast（test.py / forward_sample 的真实推理路径）；冻结 backbone 权重以 bf16 存储",
+    "params": "sum(p.numel() for p in module.parameters())，包含两支冻结 SAM3、模态 LoRA、LoRA3、M1",
+    "gflops": "torch.utils.flop_counter.FlopCounterMode 的 FLOPs / 2 / 1e9（即乘加次数），包含 attention matmul；thop 口径会漏掉 SDPA",
+    "fps": "1000 / 中位延迟；三轮 x（50 warm-up + 100 计时），先做 4 s 矩阵乘把 GPU 时钟拉满，取最好一轮的中位数",
+    "excluded": "文本编码（'visual' 只编码一次，test.py 里缓存复用）、数据读取、resize、PNG 写盘",
+    "hardware": "单卡 RTX 5090（cuda:1，空闲），torch 2.14.0+cu132"
+  },
+  "results": {
+    "params_m": 1690.108,
+    "params_breakdown_m": {
+      "rgb_sam3_with_lora": 843.672,
+      "t_sam3_with_lora": 843.672,
+      "lora3": 1.573,
+      "m1_bisf": 1.191,
+      "trainable_total": 2.764
+    },
+    "gflops_madds": 5935.732,
+    "gflops_breakdown": {
+      "two_backbones": 5662.381,
+      "decoder_plus_m1": 273.351
+    },
+    "latency_ms_median": 103.61,
+    "fps": 9.65,
+    "efficiency_py_own_run": {"params_m": 1690.11, "gflops": 5935.73, "fps": 9.72, "latency_ms": 102.90},
+    "rounds_ms": {"r1": 103.61, "r2": 103.70, "r3": 103.91}
+  },
+  "variants_same_harness": {
+    "no_lora_B_plus_fusion": {"params_m": 841.70, "gflops": 5886.80, "fps": 11.28, "latency_ms": 88.65},
+    "no_lora3_cm_lora_plus_bisf": {"params_m": 1688.53, "gflops": 5919.42, "fps": 10.34, "latency_ms": 96.71}
+  },
+  "table_row": "Quantity 第 20 行（Ours）：Params 1690.108 / GFLOPs 5935.732 / FPS 9.65",
+  "date": "2026-11-05"
+}
