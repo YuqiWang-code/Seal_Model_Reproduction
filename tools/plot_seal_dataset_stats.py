@@ -86,13 +86,13 @@ def setup(font):
     })
 
 
-def tidy(ax):
+def tidy(ax, ylim=(0, 52), yticks=(0, 10, 20, 30, 40, 50)):
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     ax.grid(axis="y", color=GRID_COLOR, linewidth=0.5, zorder=0)
     ax.set_axisbelow(True)
-    ax.set_ylim(0, 52)
-    ax.set_yticks([0, 10, 20, 30, 40, 50])
+    ax.set_ylim(*ylim)
+    ax.set_yticks(list(yticks))
     ax.yaxis.set_major_formatter(FormatStrFormatter("%d"))
 
 
@@ -174,6 +174,37 @@ def panel_size(ax, stats):
                 fontsize=6.6, color="#6B6B6B")
 
 
+SCR_BIN = 1.0          # SCR bins of 1 (0..20), tail >20 in a corner note
+SCR_MAX = 20.0
+
+
+def panel_scr(ax, scr):
+    """Number of images per target-SCR bin (image SCR = max SCR of its targets)."""
+    values = [float(v) for v in scr["per_image"]]
+    total = len(values)
+    edges = [i * SCR_BIN for i in range(int(SCR_MAX / SCR_BIN))]
+    counts = [sum(1 for v in values if lo <= v < lo + SCR_BIN) for lo in edges]
+    tail = sum(1 for v in values if v >= SCR_MAX)
+    pct = [c / total * 100 for c in counts]
+
+    centers = [lo + SCR_BIN / 2 for lo in edges]
+    ax2 = ax.twinx()
+    ax.bar(centers, counts, width=SCR_BIN * 0.85, color=BAR_FILL, edgecolor=BAR_EDGE,
+           linewidth=0.5, zorder=2)
+    draw_curve(ax2, centers, pct)
+
+    ax.set_xticks(list(range(0, int(SCR_MAX) + 1, 5)))
+    ax.set_xlim(0, SCR_MAX)
+    ax.set_xlabel("Target SCR")
+    ax.set_ylabel("Number of images")
+    ax.xaxis.set_minor_locator(MultipleLocator(1))
+    tidy(ax, ylim=(0, 560), yticks=(0, 100, 200, 300, 400, 500))
+    couple(ax2)
+    ax.annotate(f">{int(SCR_MAX)}: {tail} images ({tail / total * 100:.2f} %)",
+                xy=(0.02, 0.97), xycoords="axes fraction", ha="left", va="top",
+                fontsize=6.6, color="#6B6B6B")
+
+
 def shared_legend(fig):
     handles = [Patch(facecolor=BAR_FILL, edgecolor=BAR_EDGE, linewidth=0.6, label="Percentage"),
                Line2D([], [], color=CURVE_COLOR, marker="o", markersize=2.6,
@@ -219,6 +250,8 @@ def main():
     ap.add_argument("--stats", type=Path,
                     default=ROOT / "Ours" / "dataset_stats" / "seal_dataset_stats.json")
     ap.add_argument("--outdir", type=Path, default=ROOT / "Ours" / "dataset_stats")
+    ap.add_argument("--scr", type=Path,
+                    default=ROOT / "Ours" / "dataset_stats" / "seal_scr_stats.json")
     ap.add_argument("--split", default="all", help="all / train / val / test")
     args = ap.parse_args()
 
@@ -231,6 +264,8 @@ def main():
     render_combined(stats, args.outdir)
     render_single(stats, args.outdir, panel_number, "seal_target_number_distribution.png", width=3.9)
     render_single(stats, args.outdir, panel_size, "seal_target_size_distribution.png", width=4.2)
+    scr = json.loads(args.scr.read_text(encoding="utf-8"))[args.split]
+    render_single(scr, args.outdir, panel_scr, "seal_target_scr_distribution.png", width=4.2)
     print("images", stats["images"], "targets", stats["targets"],
           "empty", stats["empty_images"], "area", stats["area_summary"])
 

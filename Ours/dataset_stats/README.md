@@ -27,16 +27,34 @@
 
 95.2%（3,793 张）的图像最多 10 个目标，尾部单张最多 47 个。
 
-## 三张图
+## 四张图
 
 | 文件 | 内容 |
 |---|---|
 | `seal_dataset_statistics.png` / `.pdf` | **(a)(b) 双栏合并图，可直接进论文** |
 | `seal_target_number_distribution.png` / `.pdf` | 单图 (a)：横轴每图目标个数 |
 | `seal_target_size_distribution.png` / `.pdf` | 单图 (b)：横轴目标大小（像素） |
+| `seal_target_scr_distribution.png` / `.pdf` | 单图：横轴目标 SCR、纵轴图片数量 |
 
 PNG 为 300 dpi 位图；PDF 为矢量图，字体以 TrueType 子集嵌入（`pdf.fonttype=42`，不是部分期刊拒收的 Type 3），
 可直接用于 LaTeX `\includegraphics`。
+
+## SCR 定义与结果
+
+SCR = `|mean(target) − mean(background)| / std(background)`，在**原始 16 位热图**上算
+（逐图 min-max 到 8 位是线性变换，不改变 SCR，但 16 位避免量化误差）。背景取目标包围框外扩一倍
+（窗口边长 = 3 × 包围框边长）的局部区域、去掉目标像素；局部背景不足 20 像素或 std 为 0 时退回全图背景。
+**每张图取该图所有目标 SCR 的最大值**，因此纵轴是「图片数量」；按目标统计的分布另存在 JSON 里。
+
+| 划分 | 图片 | 图像 SCR 中位数 | 均值 | P95 | 最大 |
+|---|---:|---:|---:|---:|---:|
+| train | 1,500 | 4.08 | 4.85 | 11.50 | 21.34 |
+| val | 500 | 4.84 | 5.79 | 15.61 | 24.58 |
+| test | 1,983 | 5.16 | 5.66 | 11.60 | 20.03 |
+| **全部** | **3,983** | **4.79** | **5.37** | **11.93** | **24.58** |
+
+全部 3,983 张按 1 个 SCR 一格统计（图里 0–20，`>20` 的 7 张 / 0.18% 用角注）：峰值在 SCR 3–4（467 张），
+SCR 1–6 区间集中 2,140 张（53.7%），SCR ≥ 10 的 448 张（11.2%）。
 
 两栏都以**占比**为纵轴、右轴给**累计占比**（Fig. 4(b) 的做法）：
 
@@ -66,9 +84,11 @@ PNG 为 300 dpi 位图；PDF 为矢量图，字体以 TrueType 子集嵌入（`p
 # 服务器（任意 python3 + opencv）
 ssh RSML-3 "python /share_datasets/Seal_Model_Reproduction/tools/compute_seal_dataset_stats.py" \
   > Ours/dataset_stats/seal_dataset_stats.json
+ssh RSML-3 "python /share_datasets/Seal_Model_Reproduction/tools/compute_seal_scr.py" \
+  > Ours/dataset_stats/seal_scr_stats.json
 
 # 本地
-python tools/plot_seal_dataset_stats.py                 # 全部 3,983 张，输出 3 张图
+python tools/plot_seal_dataset_stats.py                 # 全部 3,983 张，输出 3 张图 + SCR 图
 python tools/plot_seal_dataset_stats.py --split test        # 只看 test
 ```
 
