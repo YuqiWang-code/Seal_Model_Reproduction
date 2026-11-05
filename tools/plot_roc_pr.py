@@ -25,11 +25,24 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 # Ours first (red); baselines get clearly separated hues, no near-duplicates.
+MAIN_COLOR = '#d62728'          # reserved for the highlighted method
 COLORS = [
-    '#d62728',  # Ours
     '#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#8c564b', '#e377c2',
     '#17becf', '#bcbd22', '#7f7f7f', '#393b79', '#637939', '#8c6d31',
+    '#4e79a7', '#a55194', '#76b7b2', '#59a14f',
 ]
+
+
+def color_map(data, highlight):
+    """One colour per curve; the highlighted method always gets the red."""
+    out, j = {}, 0
+    for label, _ in data:
+        if label == highlight:
+            out[label] = MAIN_COLOR
+        else:
+            out[label] = COLORS[j % len(COLORS)]
+            j += 1
+    return out
 
 
 def load(path):
@@ -168,13 +181,14 @@ def two_segment(cv, xmax, knee_frac):
 
 def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, highlight='Ours'):
     """Plot one polyline per method; the axes clip it at the window border."""
+    cmap = color_map(data, highlight)
     for i, (label, cv) in enumerate(data):
         if two:
             f, t = two_segment(cv, xmax, knee_frac)
         else:
             f, t = cv['fpr_plot'], cv['tpr_plot']
         main = (label == highlight)
-        ax.plot(f, t, color=COLORS[i % len(COLORS)],
+        ax.plot(f, t, color=cmap[label],
                 lw=lw_main if main else lw,
                 zorder=5 if main else 3,
                 solid_capstyle='round', label=label)
@@ -189,10 +203,11 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, hi
 
 
 def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours'):
+    cmap = color_map(data, highlight)
     for i, (label, cv) in enumerate(data):
         r, p = pr_points(cv, style)
         main = (label == highlight)
-        ax.plot(r, p, color=COLORS[i % len(COLORS)],
+        ax.plot(r, p, color=cmap[label],
                 lw=lw_main if main else lw,
                 zorder=5 if main else 3,
                 solid_capstyle='round', label=label)

@@ -1,0 +1,8 @@
+﻿曲线 v9：全量 14 条（Ours + 12 基线 + SAM3）
+
+- 方法按用户给定顺序：DNA-Net / UIU-Net / MSHNet / SCTransNet / RPCANet / HDNet / ILNet / L2SKNet / BGM / DRPCA-Net / RPCANet++ / DURD / SAM3 / Ours
+- Ours 用 1105 最新预测，红色加粗置顶；调色板去掉红色，其余 13 条从不含红的 16 色里取（新增 color_map()，否则第一条基线与 Ours 会同为红色）
+- 画法沿用 v5/v8：两段直线、横轴 0-8e-4、图宽 6.8 in、P-R 用 v1 版式、图例贴紧坐标轴
+- 指标：Ours pAUC@5e-4 0.85234 / @8e-4 0.89420 / AP 0.69984 全第一；次优 SCTransNet 0.58378、ILNet 0.57733、SAM3 pAUC@5e-4 0.59061
+- v9 定位为附录/备份全量版，正文主图仍用 v8（Ours + 8 个重点对比方法）
+- 同步到服务器 Ours/roc_pr/v9_20261105/（sha256 与本地一致）
