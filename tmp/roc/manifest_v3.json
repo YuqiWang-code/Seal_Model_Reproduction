@@ -1,0 +1,36 @@
+{
+ "methods": [
+  {
+   "label": "DNA-Net",
+   "hist": "tmp/roc\\server\\DNANet.json"
+  },
+  {
+   "label": "MSHNet",
+   "hist": "tmp/roc\\server\\MSHNet.json"
+  },
+  {
+   "label": "RPCANet",
+   "hist": "tmp/roc\\server\\RPCANet.json"
+  },
+  {
+   "label": "HDNet",
+   "hist": "tmp/roc\\server\\HDNet.json"
+  },
+  {
+   "label": "L2SKNet",
+   "hist": "tmp/roc\\server\\L2SKNet.json"
+  },
+  {
+   "label": "BGM",
+   "hist": "tmp/roc\\server\\BGM.json"
+  },
+  {
+   "label": "RPCANet++",
+   "hist": "tmp/roc\\server\\RPCANetpp.json"
+  },
+  {
+   "label": "SAM3",
+   "hist": "tmp/roc\\SAM3__test_maps.json"
+  }
+ ]
+}

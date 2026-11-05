@@ -1,0 +1,7 @@
+﻿曲线 v6：方法缩到 8 个（含 SAM3，不含 Ours）
+
+- 方法清单按用户给定顺序：DNA-Net / MSHNet / RPCANet / HDNet / L2SKNet / BGM / RPCANet++ / SAM3
+- SAM3 用 Ours/SAM3-test_maps，本地补算像素级直方图（TPR@128 0.70941、FPR 4.434e-04），与其余 7 个同一批 1,983 张预测
+- 画法沿用 v5：两段直线、横轴 0-8e-4、图宽 6.8 in、P-R 用 v1 版式、图例贴紧坐标轴；新增 --highlight 选项（默认 Ours，方法集里没有就不加粗）
+- 结果：SAM3 在这 8 个里 pAUC 与 AP 都第一（0.59061 / 0.38288），但 Fa@t=128 4.43e-4 是其余 7 个（1.1-2.3e-4）的 2-4 倍；BGM 0.54819 次之，HDNet 最低 0.38498
+- 同步到服务器 Ours/roc_pr/v6_20261105/（sha256 与本地一致）；docs/Seal_ROC_PR曲线.md 与 AGENTS.md 改为 v6 为当前推荐

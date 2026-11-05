@@ -1,0 +1,6 @@
+﻿曲线图同步到服务器 Ours/roc_pr/
+
+- Ours/roc_pr/ 全量上传到 /share_datasets/Seal_Model_Reproduction/Ours/roc_pr/（39 个文件，约 7.6 MB，v1-v5 全部 PNG+PDF+json+md + README）
+- 抽样 5 个文件 sha256 与本地一致（README.md、v5/roc.png、v5/roc_pr.pdf、v5/curves.json、v3/pd_fa_log.png）
+- tools/plot_roc_pr.py 与 tools/plot_target_curves.py 同步到服务器 tools/，sha256 校验一致
+- AGENTS.md 记录曲线成品与绘图脚本在服务器保持同步

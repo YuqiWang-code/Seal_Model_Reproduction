@@ -166,16 +166,17 @@ def two_segment(cv, xmax, knee_frac):
     return np.array([0.0, knee_f, xmax]), np.array([0.0, knee_t, plateau])
 
 
-def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98):
+def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, highlight='Ours'):
     """Plot one polyline per method; the axes clip it at the window border."""
     for i, (label, cv) in enumerate(data):
         if two:
             f, t = two_segment(cv, xmax, knee_frac)
         else:
             f, t = cv['fpr_plot'], cv['tpr_plot']
+        main = (label == highlight)
         ax.plot(f, t, color=COLORS[i % len(COLORS)],
-                lw=lw_main if i == 0 else lw,
-                zorder=5 if i == 0 else 3,
+                lw=lw_main if main else lw,
+                zorder=5 if main else 3,
                 solid_capstyle='round', label=label)
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, 1.02)
@@ -187,12 +188,13 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98):
     style_axes(ax)
 
 
-def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1'):
+def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours'):
     for i, (label, cv) in enumerate(data):
         r, p = pr_points(cv, style)
+        main = (label == highlight)
         ax.plot(r, p, color=COLORS[i % len(COLORS)],
-                lw=lw_main if i == 0 else lw,
-                zorder=5 if i == 0 else 3,
+                lw=lw_main if main else lw,
+                zorder=5 if main else 3,
                 solid_capstyle='round', label=label)
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
@@ -237,6 +239,8 @@ def main():
                      help='single-panel figure width in inches (raise it for a longer x axis)')
     ap_.add_argument('--two-segment', action='store_true',
                      help='draw each ROC as straight rise + straight plateau (knee style)')
+    ap_.add_argument('--highlight', default='Ours',
+                     help='label drawn thicker/on top; ignored when absent')
     ap_.add_argument('--knee-frac', type=float, default=0.98,
                      help='knee = first point whose TPR >= this fraction of the border TPR')
     args = ap_.parse_args()
@@ -274,14 +278,14 @@ def main():
 
     # ---- ROC only, one polyline per method (the reference figure's layout)
     fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
-    draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
+    draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'roc', args.dpi)
 
     # ---- PR only
     fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
-    draw_pr(ax, data, style=args.pr_style)
+    draw_pr(ax, data, style=args.pr_style, highlight=args.highlight)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'pr', args.dpi)
@@ -289,9 +293,9 @@ def main():
     # ---- two panels sharing one legend
     fig, axes = plt.subplots(1, 2, figsize=(min(args.fig_width * 2 + 0.6, 11.5), 3.4))
     fig.subplots_adjust(wspace=0.28, left=0.06, right=0.9)
-    draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
+    draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
     axes[0].set_title('(a) ROC', fontsize=9.5)
-    draw_pr(axes[1], data, style=args.pr_style)
+    draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
     handles, labels = axes[0].get_legend_handles_labels()
     legend_outside(fig, axes[1], handles, labels)
