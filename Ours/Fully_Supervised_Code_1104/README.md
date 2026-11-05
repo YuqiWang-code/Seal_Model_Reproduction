@@ -18,6 +18,7 @@
 | 文件 | 改动 |
 |---|---|
 | `data.py` | `load_t_image` 改回逐图 min-max：原式 `x - min/(max-min)*255` 只适用 8 位图，Seal 的 T 是 uint16（实测 26,400–28,500），原式转 uint8 会回绕成噪声 |
+| `train.py`（M1 融合） | **残差化（本项目改动）**：`fused = (rgb + thermal)/2 + fuse(...)`，且 `fuse` 的 1×1 卷积零初始化，其余 FPN 层/位置编码取两路平均。原因：原实现用 `Conv1x1(cat(R,T))` **替换**最深层，实测 val IoU 0.5011 < 纯平均融合 B 的 0.5262；残差化后第 0 步预测与 B **逐像素一致**（已冒烟验证），训练只会在 B 之上加增量。 |
 | `train.py` | 设备由 `SEAL_CUDA` 控制（默认 1）；`--checkpoint`、`--train_data_dir`、`--val_data_dir`、`--save_path` 默认值指向本服务器（`Ours/weights/sam3.pt`、`Seal_data/*`、`results/Ours/BISF`）；新增可选 `--seed` |
 | `test.py` | 设备同上；`--checkpoint`、`--sam_checkpoint`、`--test_data_dir`、`--save_dir` 默认值指向本服务器 |
 | `evaluate3.py` | 默认 GT 改到 `Seal_data/test/GT`，新增可选 `--json_output` |

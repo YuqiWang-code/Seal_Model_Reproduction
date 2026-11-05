@@ -218,6 +218,11 @@ class M1(nn.Module):
         self.self_rgb = SpatialSelfAttention(dim, num_heads)
         self.self_thermal = SpatialSelfAttention(dim, num_heads)
         self.fuse = nn.Conv2d(dim * 2, dim, kernel_size=1)
+        # 残差化（本项目改动）：把融合改成“平均融合 + M1 残差”，并把 1x1 输出零初始化，
+        # 使第 0 步严格等于 B 的 (RGB+T)/2 融合，训练只会在此基础上加增量。
+        nn.init.zeros_(self.fuse.weight)
+        if self.fuse.bias is not None:
+            nn.init.zeros_(self.fuse.bias)
 
     def forward(self, rgb_backbone_out: dict, t_backbone_out: dict) -> dict:
         rgb_fpn = rgb_backbone_out["backbone_fpn"]
@@ -243,10 +248,13 @@ class M1(nn.Module):
         rgb_aligned, thermal_aligned = self.cross(rgb, thermal, pos)
         rgb_refined = self.self_rgb(self.dw_rgb(rgb_aligned), pos)
         thermal_refined = self.self_thermal(self.dw_thermal(thermal_aligned), pos)
-        fused = self.fuse(torch.cat([rgb_refined, thermal_refined], dim=1))
+        # 残差化（本项目改动）：delta 零初始化，因此第 0 步 fused 就等于 (rgb + thermal) / 2；
+        # 其余 FPN 层与位置编码也取 RGB/T 的平均，等价于 B 的 add_backbone_out 基底。
+        delta = self.fuse(torch.cat([rgb_refined, thermal_refined], dim=1))
+        fused = (rgb + thermal) / 2 + delta
 
-        output = dict(rgb_backbone_out)
-        fpn = list(rgb_fpn)
+        output = add_backbone_out(rgb_backbone_out, t_backbone_out)
+        fpn = list(output["backbone_fpn"])
         fpn[-1] = fused
         output["backbone_fpn"] = fpn
         output["vision_features"] = fused
