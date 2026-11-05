@@ -123,3 +123,23 @@ Seal GT 的平均前景面积占比为 0.00020553，因此全黑预测的平均 
 | 旧预测（历史） | 0.44835 | 0.61912 | 0.82731 | 0.0000020998 |
 
 1105 批次计数：tp 87,702、fp 63,170、fn 18,010、n_gt 7,383、n_pred 6,853、n_detected 6,582、false_alarm_pixels 8,833、total_pixels 514,338,642。完整精度、计数及协议见 [`ours1105_small.json`](Ours_Seal评估产物/ours1105_small.json)（服务器 `results/ours1105_small.json`）；旧预测见 [Ours.json](小目标指标评估_20261103/Ours.json)；横向结果见[Seal 小目标指标评估](Seal小目标指标评估汇总.md)。
+
+## 特征响应图（`Ours/Feature_Map/v1/`）
+
+用最终权重（`Ours/CODE/train_logs2/best.pth` + 两套模态 LoRA + 共享 LoRA3 + `M1`/BSRF）为 10 个样例出 9 列响应图：
+
+| 列 | 内容 |
+|---|---|
+| 1–2 | RGB 原图、T 原图（16 位逐图 min-max → 8 位） |
+| 3–4 | **w/o CM-LoRA**：冻结 SAM3（`build_frozen_base_model`，无模态 LoRA、无 LoRA3、无 BSRF）的 backbone 最后一层响应 |
+| 5–6 | **w/ CM-LoRA**：两套模态 LoRA + 共享 LoRA3，取 BSRF **之前**的 backbone 最后一层响应 |
+| 7 | **BSRF 融合响应**：`M1(rgb_out, t_out)` 的 `backbone_fpn[-1]` |
+| 8 | 最终软预测（0–1 概率伪彩，与 `test.py` 同一路径：top-k logits → sigmoid → 恢复 GT 尺寸） |
+| 9 | GT mask |
+
+- 响应图取 `backbone_fpn[-1]`（256×72×72）的**通道 L2 范数**，按 2–98 百分位归一化后套 TURBO 伪彩；不用通道均值（bd16 特征均值会被均匀分量主导、目标被抹平）。
+- 样例按**逐图 F1**降序选前 10（`Ours/test_maps` 与 test GT 在 ≥128 阈值下逐图统计，同时记录 IoU）：2105（1.00000/1.00000）、3343（0.96774/0.93750）、2146（0.96552/0.93333）、2059（0.95146/0.90741）、3000（0.94737/0.90000）、3173（0.94737/0.90000）、2773（0.93506/0.87805）、3174（0.93333/0.87500）、2754（0.92857/0.86667）、3517（0.92308/0.85714）；完整排名见服务器 `ranking.json`。
+- 每张图三套输出：`full/`（原尺寸 417×622）、`roi/`（以 GT 外接框为中心、边长 `max(64, max(bbox)+2×24)` 并夹在图像内，×6 放大）与 `manifest.json`；Visio 用 `roi/`。
+- 产物：服务器 `Ours/Feature_Map/v1/`：`panels/<order>_<stem>/{full,roi}/01_rgb … 09_gt.png`（180 张）、`manifest.json`、`ranking.json`、`Ours_FeatureMap_v1.vsdx`（23.05 MB，一页 10 行 × 9 列，行首标 stem + F1/IoU，表头按列分组配色）；本地 `Ours/Feature_Map/v1/` **只放该 vsdx**，`Ours/Feature_Map/` 与 `tmp/feature_v1/` 按 `.gitignore` 不入库。
+- 复现：服务器 `CUDA_VISIBLE_DEVICES=1 Ours/venv_ours/bin/python tools/feature_maps.py --out Ours/Feature_Map/v1 --topk 10 --rank-by f1`（脚本 `tools/feature_maps.py`，日志 `logs/feature_maps_v1.log`）；Visio 由 `tools/make_visio_feature_maps.ps1`（Visio COM）从 `panels/` 重新生成。
+- 读数提示：前 8 行 ROI 均为 64×64（×6 后 384×384），第 10 行 3517 的 GT 较大、ROI 为 182×182，特征格相对更细；响应峰位置与第 8 列预测、第 9 列 GT 一致。

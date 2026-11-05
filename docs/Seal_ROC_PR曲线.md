@@ -223,9 +223,9 @@ P-R 曲线是**按 256 个阈值扫出来的**，和 ROC 用同一份直方图�
 | `pr_2.{png,pdf}` | **像素级**、sklearn 惯例（256 个阈值含 `t=0`"全预测"、精度 (0,1) 哨兵） | 从 (0,1) 沿真实阈值下降到右下角，Ours 在 recall 0.9 之后陡降 | AP 0.700，与 `summary.md` 的 AP 一致 |
 | `pr_obj.{png,pdf}` | **对象级**（每个目标/每个预测连通域算一个样本，匹配规则与表中 Pd/Fa 完全相同） | 高精度平台 + 右端陡降，**与参考图同形**；画布与 `roc` 完全一致（`--fig-width 5.569 --fig-height 3.601 --font-scale 1.25`，PNG 3079×2035） | 精度@t=128 0.960，AP 0.890（图例只用方法名，AP 见本表；要标在图上加 `--show-ap`） |
 
-对象级的定义与实现（[tools/target_pr.py](tools/target_pr.py)、[tools/target_pr_all.sh](tools/target_pr_all.sh)、出图 [tools/plot_pr_object.py](tools/plot_pr_object.py)）：
+对象级的定义与实现（[tools/target_pr.py](../tools/target_pr.py)、[tools/target_pr_all.sh](../tools/target_pr_all.sh)、出图 [tools/plot_pr_object.py](../tools/plot_pr_object.py)）：
 
-- `recall(t)` = 匹配上的 GT 目标数 / 全部 GT 目标数（7,383）= **表中 Pd**；`precision(t)` = 匹配上的预测连通域数 / 全部预测连通域数。阈值 `pred >= t`，8 连通、质心距离 <3 px、一对一、栅格序，与 [tools/target_curves.py](tools/target_curves.py) 完全同一套匹配。
+- `recall(t)` = 匹配上的 GT 目标数 / 全部 GT 目标数（7,383）= **表中 Pd**；`precision(t)` = 匹配上的预测连通域数 / 全部预测连通域数。阈值 `pred >= t`，8 连通、质心距离 <3 px、一对一、栅格序，与 [tools/target_curves.py](../tools/target_curves.py) 完全同一套匹配。
 - 一致性核对：14 个方法在 `t=128` 的 recall 与表中 Pd 逐位吻合（偏差 <5e-6，仅除法顺序的浮点差）；`precision@t=128` 为 Ours 0.960、其余 0.66–0.75。
 - 三条画图约定：① 起点 (0,1)（"什么都不报"时精度按惯例记 1）；② 按 sklearn 的 AP 口径取**精度上包络**（`precision(r) = max_{r'>=r}`），否则阈值抖动会让曲线回勾；③ 终点**用实线、同色、同样粗细**补到 (1,0)（`--close`，不画点、不留视觉接缝；拐角用 `--corner-radius 0.03` 做二次贝塞尔倒角），因为对象级召回最多到 0.71–0.92（低阈值下相邻目标被 8 连通粘成一个，且总有目标任何阈值都检出不了），那段 recall 物理上到不了，补的是"按惯例的角"。**图注必须写明**：末端那一段（各方法 0.71–0.92 → 1.0）不是实测，实线只是为了版式统一。
 - 结果：Ours AP 0.890，13 个基线 0.544–0.596；Ours 的召回上限 0.921（基线 0.707–0.822），右端陡降的位置因此最靠右。全量 14 个方法、1,983 张图、35 个阈值，服务器 `bash tools/target_pr_all.sh` 并行约 12 min，原始 JSON 在 `results/target_pr/<stem>.json`。
@@ -236,7 +236,7 @@ P-R 曲线是**按 256 个阈值扫出来的**，和 ROC 用同一份直方图�
 
 参考图同形的对象级版：![pr_obj](assets/seal_pr_obj_v13.png)
 
-> 字号与轴格式：`roc` 与 `pr_obj` 统一由 [tools/figure_style.py](tools/figure_style.py) 出样式，两份图的轴文字逐项相同——
+> 字号与轴格式：`roc` 与 `pr_obj` 统一由 [tools/figure_style.py](../tools/figure_style.py) 出样式，两份图的轴文字逐项相同——
 >
 > | 项目 | 规格（`--font-scale 1.25`） |
 > |---|---|

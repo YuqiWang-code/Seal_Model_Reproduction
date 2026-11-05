@@ -60,3 +60,7 @@ Ours/CODE/ablation/
 Ours/CODE/3LoRA/
 Ours/CODE/test_maps/
 Ours/CODE/__pycache__/
+
+# 特征响应图：成品（panels + vsdx）只放服务器与本地工作目录，脚本入库
+Ours/Feature_Map/
+tmp/feature_v1/
