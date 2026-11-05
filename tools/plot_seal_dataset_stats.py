@@ -38,8 +38,12 @@ ROOT = Path(__file__).resolve().parents[1]
 EXACT = list(range(1, 11))
 SIZE_EDGES = list(range(0, 60, 5))
 
-BAR_FILL = "#2E5E8C"       # deep blue
-BAR_EDGE = "#1E3F5E"
+PALETTES = {
+    "blue": {"fill": "#2E5E8C", "edge": "#1E3F5E"},      # v1
+    "orange": {"fill": "#E2903E", "edge": "#B26A20"},    # v2
+}
+BAR_FILL = PALETTES["blue"]["fill"]
+BAR_EDGE = PALETTES["blue"]["edge"]
 CURVE_COLOR = "#6FA8D0"    # light blue
 CURVE_TEXT = "#4A7FA8"     # readable shade for the right axis text
 GRID_COLOR = "#EAEAEA"
@@ -253,8 +257,13 @@ def main():
     ap.add_argument("--scr", type=Path,
                     default=ROOT / "Ours" / "dataset_stats" / "seal_scr_stats.json")
     ap.add_argument("--split", default="all", help="all / train / val / test")
+    ap.add_argument("--accent", choices=sorted(PALETTES), default="blue",
+                    help="bar colour scheme: blue = v1, orange = v2")
     args = ap.parse_args()
 
+    global BAR_FILL, BAR_EDGE
+    BAR_FILL = PALETTES[args.accent]["fill"]
+    BAR_EDGE = PALETTES[args.accent]["edge"]
     data = json.loads(args.stats.read_text(encoding="utf-8"))
     stats = data[args.split]
     args.outdir.mkdir(parents=True, exist_ok=True)

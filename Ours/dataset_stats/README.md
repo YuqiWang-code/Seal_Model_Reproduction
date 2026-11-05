@@ -27,7 +27,16 @@
 
 95.2%（3,793 张）的图像最多 10 个目标，尾部单张最多 47 个。
 
-## 四张图
+## 版本与文件
+
+两套配色都保留，图和 PDF 按版本放子目录，统计 JSON 在顶层共用：
+
+| 目录 | 柱子颜色 |
+|---|---|
+| `v1/` | 深蓝 `#2E5E8C`（细边 `#1F3F5E`） |
+| `v2/` | **橙色 `#E2903E`（细边 `#B26A20`）** |
+
+每个版本目录里都是同样 4 张图，各有 PNG 与 PDF：
 
 | 文件 | 内容 |
 |---|---|
@@ -38,6 +47,13 @@
 
 PNG 为 300 dpi 位图；PDF 为矢量图，字体以 TrueType 子集嵌入（`pdf.fonttype=42`，不是部分期刊拒收的 Type 3），
 可直接用于 LaTeX `\includegraphics`。
+
+生成时用 `--accent` 选配色、`--outdir` 指定版本目录：
+
+```bash
+python tools/plot_seal_dataset_stats.py --accent blue   --outdir Ours/dataset_stats/v1
+python tools/plot_seal_dataset_stats.py --accent orange --outdir Ours/dataset_stats/v2
+```
 
 ## SCR 定义与结果
 
@@ -88,7 +104,7 @@ ssh RSML-3 "python /share_datasets/Seal_Model_Reproduction/tools/compute_seal_sc
   > Ours/dataset_stats/seal_scr_stats.json
 
 # 本地
-python tools/plot_seal_dataset_stats.py                 # 全部 3,983 张，输出 3 张图 + SCR 图
+python tools/plot_seal_dataset_stats.py                 # 全部 3,983 张，默认 v1 输出到 ./Ours/dataset_stats
 python tools/plot_seal_dataset_stats.py --split test        # 只看 test
 ```
 
