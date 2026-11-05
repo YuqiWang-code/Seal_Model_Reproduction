@@ -112,7 +112,7 @@ python tools/build_paper_qualitative.py \
 
 （`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
 
-构建：`bash tools/make_paper_qualitative_pick.sh all Ours/qualitative/v7_20261105`（第二个参数是输出目录，默认 `Ours/qualitative/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
+构建：`bash tools/make_paper_qualitative_pick.sh all Ours/qualitative/v8_20261105`（第二个参数是输出目录，默认 `Ours/qualitative/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
 
 ### 版本
 
@@ -124,11 +124,12 @@ python tools/build_paper_qualitative.py \
 | v4 | `Ours/qualitative/v4_20261105/` | 已删除 | 3D 盒子铺满格子：每个 3D 先单独渲染（0.873×0.733 in @1200 dpi，与格子同尺寸同字号）→ 裁白边（26 px）→ `aspect='auto'` 贴回；拼图里的 3D 行因此变成位图，PDF 从 5–10 MB 降到 1–2.3 MB |
 | v5 | `Ours/qualitative/v5_20261105/` | 已删除 | 3D 更满（裁边 26→6 px）+ 峰更高更亮：平滑 σ 2.0→0.9、`vmax`=平滑后峰值、Z 轴统一 0–255、盒子 z 比例 0.55→1.00、自定义 `seal3d` 色带（深蓝底→青→黄→亮红）+ `PowerNorm(0.45)`；新增 `--diag` 诊断面板（TP 白 / FP 红 / FN 绿 + 红框），Visio 改用诊断面板 |/n| v6（当前） | `Ours/qualitative/v6_20261105/` | `Ours/qualitative/v6_20261105/` | 诊断面板的红框放大：从「GT 外扩 8 px」（384 面板里约 40 px）改成**至少占面板 36%（约 138 px）、3 px 线**，居中套在 GT 上；其余与 v5 相同 |
 | v6 | 已删除 | 已删除 | 诊断面板的红框放大：从「GT 外扩 8 px」（384 面板里约 40 px、2 px 线）改成**至少占面板 36%（约 138 px）、3 px 线**，居中套在 GT 上；其余与 v5 相同 |
-| v7（当前） | `Ours/qualitative/v7_20261105/` | `Ours/qualitative/v7_20261105/` | 3D 网格/刻度清晰化（网格 0.62 灰 0.45 pt、刻度 2.2 pt 近黑、每轴 3 个刻度、去掉 X/Y/Z 轴名避免与数字相撞）；Image 列 3D 改彩色（与 PDDiff 一致，线性映射）；诊断面板多目标时**每个连通域一个红框**（单目标 36%、多目标 0.45/n）；裁边 6→14 px |
+| v7 | 已删除 | 已删除 | 3D 网格/刻度清晰化（网格 0.62 灰 0.45 pt、刻度 2.2 pt 近黑、每轴 3 个刻度、去掉 X/Y/Z 轴名避免与数字相撞）；Image 列 3D 改彩色（与 PDDiff 一致，线性映射）；诊断面板多目标时**每个连通域一个红框**（单目标 36%、多目标 0.45/n）；裁边 6→14 px |
+| v8（当前） | `Ours/qualitative/v8_20261105/` | `Ours/qualitative/v8_20261105/` | **Image 列改成同一块 ROI 的 6 倍放大**（原来整幅 622×417），诊断模式下套与其它列完全相同的 GT 定位框——之前 Image 的红框是「ROI 窗口」、其它列是「GT 定位框」，两者不对应；顺带 Image 列从 0.85×0.57 in 的小图变成与其它列同尺寸 |
 
 服务器保留全部历史版本；本地只留最新一版，**整个 `Ours/qualitative/` 不进 git**（单版 100 MB 量级，`.gitignore` 已整目录排除）。
 
-v7 产物（600 dpi PNG + 矢量 PDF + meta）：
+v8 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 | 文件 | 内容 | 尺寸 |
 |---|---|---|
@@ -146,7 +147,7 @@ v7 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 Visio 版由 [tools/make_visio_qualitative.ps1](tools/make_visio_qualitative.ps1) 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
 
-仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v7）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
+仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v8）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
 从图上直接能读到的事实（对照表 21～32 行）：
 

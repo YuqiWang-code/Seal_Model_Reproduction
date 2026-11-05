@@ -134,13 +134,54 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
-def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8, box_frac=0.36):
-    """TP/FP/FN colour panel: TP white, FP red, FN green, plus a red GT box.
+def roi_crop_canvas(img_bgr, roi, target=384):
+    """Crop to the ROI, upscale nearest-neighbour, pad to a square canvas."""
+    y0, y1, x0, x1 = roi
+    crop = img_bgr[y0:y1, x0:x1]
+    side = max(crop.shape[:2])
+    k = max(1, int(round(target / max(1, side))))
+    crop = cv2.resize(crop, None, fx=k, fy=k, interpolation=cv2.INTER_NEAREST)
+    ch, cw = crop.shape[:2]
+    canvas = np.zeros((max(ch, cw), max(ch, cw), 3), np.uint8)
+    oy, ox = (canvas.shape[0] - ch) // 2, (canvas.shape[1] - cw) // 2
+    canvas[oy:oy + ch, ox:ox + cw] = crop
+    return canvas, k, ox, oy
+
+
+def draw_gt_boxes(canvas, gt_bin, roi, k, ox, oy, box_pad=8):
+    """One red locator box per GT connected component.
+
+    Single target -> 36% of the panel side; several targets -> 0.45/n so they do not
+    merge. The box only says "the target is here" — it is not a second magnification.
+    """
+    y0, y1, x0, x1 = roi
+    h, w = gt_bin.shape
+    n_lab, labels = cv2.connectedComponents(gt_bin.astype(np.uint8), connectivity=8)
+    comps = []
+    for lab in range(1, n_lab):
+        ys2, xs2 = np.where(labels == lab)
+        if len(ys2):
+            comps.append((int(xs2.min()), int(xs2.max()), int(ys2.min()), int(ys2.max())))
+    if not comps:
+        comps = [(x0, x1, y0, y1)]
+    frac = 0.36 if len(comps) == 1 else max(0.12, min(0.26, 0.45 / len(comps)))
+    H, W = canvas.shape[:2]
+    for (cx0, cx1, cy0, cy1) in comps:
+        cx = ox + ((cx0 + cx1) / 2.0 - x0) * k
+        cy = oy + ((cy0 + cy1) / 2.0 - y0) * k
+        span = max(frac * W, (cx1 - cx0 + 1) * k, (cy1 - cy0 + 1) * k)
+        half = span / 2.0 + box_pad
+        bx0, bx1 = max(0, int(round(cx - half))), min(W - 1, int(round(cx + half)))
+        by0, by1 = max(0, int(round(cy - half))), min(H - 1, int(round(cy + half)))
+        cv2.rectangle(canvas, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
+    return canvas
+
+
+def diag_panel(pred_bin, gt_bin, roi, roi_mode, target=384, box_pad=8):
+    """TP/FP/FN colour panel: TP white, FP red, FN green, plus a red GT locator box.
 
     Used for the Visio assembly so each method's error pattern (miss = green,
-    false alarm = red) is visible at a glance. The red box is deliberately large
-    (>= box_frac of the panel side) — it is there to point at the target, and a
-    box the size of a few pixels disappears at print size.
+    false alarm = red) is visible at a glance.
     """
     h, w = gt_bin.shape
     colour = np.zeros((h, w, 3), np.uint8)
@@ -148,47 +189,10 @@ def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8, box_f
     colour[pred_bin & ~gt_bin] = (0, 0, 255)      # BGR red
     colour[~pred_bin & gt_bin] = (0, 255, 0)      # BGR green
 
-    ys, xs = np.where(gt_bin)
-    if len(ys):
-        gx0, gx1 = int(xs.min()), int(xs.max())
-        gy0, gy1 = int(ys.min()), int(ys.max())
-    else:
-        gx0 = gx1 = gy0 = gy1 = 0
-
     y0, y1, x0, x1 = roi
     if roi_mode:
-        crop = colour[y0:y1, x0:x1]
-        side = max(crop.shape[:2])
-        k = max(1, int(round(target / max(1, side))))
-        crop = cv2.resize(crop, None, fx=k, fy=k, interpolation=cv2.INTER_NEAREST)
-        ch, cw = crop.shape[:2]
-        canvas = np.zeros((max(ch, cw), max(ch, cw), 3), np.uint8)
-        oy, ox = (canvas.shape[0] - ch) // 2, (canvas.shape[1] - cw) // 2
-        canvas[oy:oy + ch, ox:ox + cw] = crop
-
-        # 一个 mask 里有多个目标就各画一个框；单个目标用大框，多个目标按数量收一点
-        n_lab, labels = cv2.connectedComponents(gt_bin.astype(np.uint8), connectivity=8)
-        comps = []
-        for lab in range(1, n_lab):
-            ys2, xs2 = np.where(labels == lab)
-            if len(ys2) == 0:
-                continue
-            comps.append((int(xs2.min()), int(xs2.max()), int(ys2.min()), int(ys2.max())))
-        if not comps:
-            comps = [(gx0, gx1, gy0, gy1)]
-        frac = 0.36 if len(comps) == 1 else max(0.12, min(0.26, 0.45 / len(comps)))
-        H, W = canvas.shape[:2]
-        for (cx0, cx1, cy0, cy1) in comps:
-            cx = ox + (cx0 + cx1) / 2.0 * k - x0 * k
-            cy = oy + (cy0 + cy1) / 2.0 * k - y0 * k
-            span = max(frac * W, (cx1 - cx0 + 1) * k, (cy1 - cy0 + 1) * k)
-            half = span / 2.0 + box_pad
-            bx0, bx1 = int(round(cx - half)), int(round(cx + half))
-            by0, by1 = int(round(cy - half)), int(round(cy + half))
-            bx0, by0 = max(0, bx0), max(0, by0)
-            bx1, by1 = min(W - 1, bx1), min(H - 1, by1)
-            cv2.rectangle(canvas, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
-        return canvas
+        canvas, k, ox, oy = roi_crop_canvas(colour, roi, target)
+        return draw_gt_boxes(canvas, gt_bin, roi, k, ox, oy, box_pad)
 
     # 整幅模式：每个目标一个框
     panel = colour.copy()
@@ -434,7 +438,13 @@ def main():
         for name, path, kind in columns:
             if kind == 'image':
                 if args.roi_panels:
-                    panels.append(compose_panel(img, roi, with_box=True, with_inset=False))
+                    # roi 版式：Image 列也是同一块 ROI（热红外原图，6 倍放大），
+                    # 这样 11 列视野完全一致；诊断模式下套同样的定位框
+                    panel, kk, oxx, oyy = roi_crop_canvas(
+                        cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), roi)
+                    if args.diag:
+                        draw_gt_boxes(panel, gt > 127, roi, kk, oxx, oyy)
+                    panels.append(panel)
                 else:
                     panels.append(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
                 surfaces.append(img[sy0:sy1, sx0:sx1])
@@ -442,7 +452,7 @@ def main():
                 gt_bin = gt > 127
                 sheet = np.where(gt_bin, 255, 0).astype(np.uint8)
                 if args.diag:
-                    panels.append(diag_panel(gt_bin, gt_bin, gt, roi, args.roi_panels))
+                    panels.append(diag_panel(gt_bin, gt_bin, roi, args.roi_panels))
                 else:
                     panels.append(roi_panel(sheet, roi) if args.roi_panels else compose_panel(sheet, roi))
                 surfaces.append(sheet[sy0:sy1, sx0:sx1])
@@ -453,7 +463,7 @@ def main():
                 pred_bin = m >= 128
                 sheet = np.where(pred_bin, 255, 0).astype(np.uint8)
                 if args.diag:
-                    panels.append(diag_panel(pred_bin, gt > 127, gt, roi, args.roi_panels))
+                    panels.append(diag_panel(pred_bin, gt > 127, roi, args.roi_panels))
                 else:
                     panels.append(roi_panel(sheet, roi) if args.roi_panels else compose_panel(sheet, roi))
                 if name in surf_dirs:
