@@ -303,6 +303,8 @@ def main():
     ap_.add_argument('--dpi', type=int, default=600)
     ap_.add_argument('--pr-style', choices=('v1', 'v2'), default='v1',
                      help='v1 = full PR curve with the (0,1) sentinel; v2 = trimmed')
+    ap_.add_argument('--fig-height', type=float, default=3.3,
+                     help='panel height in inches (ignored with --square)')
     ap_.add_argument('--fig-width', type=float, default=4.5,
                      help='single-panel figure width in inches (raise it for a longer x axis)')
     ap_.add_argument('--square', action='store_true',
@@ -363,7 +365,7 @@ def main():
               f'AUC={row["auc_roc"]:.4f}')
 
     # ---- ROC only, one polyline per method (the reference figure's layout)
-    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else 3.3))
+    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else args.fig_height))
     draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
     if args.square:
         ax.set_box_aspect(1)
@@ -375,7 +377,7 @@ def main():
     save(fig, args.outdir, 'roc', args.dpi)
 
     # ---- PR only
-    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else 3.3))
+    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else args.fig_height))
     draw_pr(ax, data, style=args.pr_style, highlight=args.highlight, cut_fpr=args.pr_cut_fpr,
             endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred,
             close=args.pr_close)
