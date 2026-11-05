@@ -133,16 +133,39 @@ def roc_points(cv, xmax):
     return f[keep], t[keep]
 
 
-def pr_points(cv, style='v1'):
+def pr_points(cv, style='v1', cut_fpr=None, min_pred=0):
     """PR polyline.
 
-    style='v1': the full curve as computed, i.e. (0,1) at the top of the ranking
-    and the degenerate t=0 point at recall 1 (the "bow-tie" look).
-    style='v2': from the first point that detects something, no sentinel, no tail.
+    style='v1' keeps the (0, 1) sentinel (the "bow-tie" look frozen in the figures);
+    style='v2' starts at the first point that detects something.
+    ``cut_fpr`` keeps only the thresholds whose FPR is inside the ROC window, so
+    PR and ROC describe the same operating range and no curve dangles into the
+    "everything is foreground" tail.
     """
-    if style == 'v1':
-        return cv['pr_recall'], cv['pr_precision']
     r, p = cv['pr_recall'], cv['pr_precision']
+    if min_pred > 0:
+        # 丢掉"预测像素太少"的阈值：那种阈值下 precision 只由个位数像素决定，
+        # 会在 recall≈0 处画出竖直的毛刺
+        keep = ((cv['threshold'] >= 1) & ((cv['tp'] + cv['fp']) >= min_pred) & (cv['tp'] > 0))
+        r2, p2 = cv['tpr'][keep], cv['precision'][keep]
+        order = np.argsort(r2, kind='stable')
+        r2, p2 = r2[order], p2[order]
+        if style == 'v1':
+            r2 = np.concatenate([[0.0], r2])
+            p2 = np.concatenate([[1.0], p2])
+        return r2, p2
+    if cut_fpr is not None:
+        # rebuild from the raw threshold arrays so the cut uses each threshold's FPR
+        keep = (cv['threshold'] >= 1) & (cv['fpr'] <= cut_fpr) & ((cv['tp'] + cv['fp']) > 0)
+        r, p = cv['tpr'][keep], cv['precision'][keep]
+        order = np.argsort(r, kind='stable')
+        r, p = r[order], p[order]
+        if style == 'v1':
+            r = np.concatenate([[0.0], r])
+            p = np.concatenate([[1.0], p])
+        return r, p
+    if style == 'v1':
+        return r, p
     keep = r > 0
     return r[keep], p[keep]
 
@@ -202,15 +225,20 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, hi
     style_axes(ax)
 
 
-def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours'):
+def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours', cut_fpr=None,
+            endpoint_dot=False, min_pred=0):
     cmap = color_map(data, highlight)
     for i, (label, cv) in enumerate(data):
-        r, p = pr_points(cv, style)
+        r, p = pr_points(cv, style, cut_fpr, min_pred)
         main = (label == highlight)
         ax.plot(r, p, color=cmap[label],
                 lw=lw_main if main else lw,
                 zorder=5 if main else 3,
                 solid_capstyle='round', label=label)
+        if endpoint_dot and len(r):
+            ax.plot([r[-1]], [p[-1]], marker='o', ms=3.2 if main else 2.4,
+                    color=cmap[label], zorder=6 if main else 4,
+                    markeredgecolor='white', markeredgewidth=0.5)
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
     ax.set_xlabel('Recall', fontsize=9)
@@ -265,6 +293,12 @@ def main():
                      help='put the legend inside the axes so the exported PNG is square too')
     ap_.add_argument('--two-segment', action='store_true',
                      help='draw each ROC as straight rise + straight plateau (knee style)')
+    ap_.add_argument('--pr-min-pred', type=int, default=0,
+                     help='drop thresholds predicting fewer than this many pixels (kills the vertical hairball)')
+    ap_.add_argument('--pr-endpoint-dot', action='store_true',
+                     help='mark the last PR point (each curve ends at its highest reachable recall)')
+    ap_.add_argument('--pr-cut-fpr', type=float, default=None,
+                     help='only draw PR thresholds with FPR <= this (e.g. same window as ROC)')
     ap_.add_argument('--highlight', default='Ours',
                      help='label drawn thicker/on top; ignored when absent')
     ap_.add_argument('--knee-frac', type=float, default=0.98,
@@ -316,7 +350,8 @@ def main():
 
     # ---- PR only
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else 3.3))
-    draw_pr(ax, data, style=args.pr_style, highlight=args.highlight)
+    draw_pr(ax, data, style=args.pr_style, highlight=args.highlight, cut_fpr=args.pr_cut_fpr,
+            endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred)
     if args.square:
         ax.set_box_aspect(1)
     handles, labels = ax.get_legend_handles_labels()
@@ -331,7 +366,8 @@ def main():
     fig.subplots_adjust(wspace=0.14, left=0.06, right=0.9)
     draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
     axes[0].set_title('(a) ROC', fontsize=9.5)
-    draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight)
+    draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight, cut_fpr=args.pr_cut_fpr,
+            endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
     if args.square:
         for a in axes:

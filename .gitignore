@@ -50,3 +50,13 @@ tmp/figdl/
 tmp/fullsup3/
 tmp/*.png
 tmp/*.vsdx
+
+# Ours 最终代码：只入库 .py；SAM3 源码树、权重、预测与调试图不入库
+Ours/CODE/sam3/
+Ours/CODE/SAM3_LoRA/
+Ours/CODE/outputs/
+Ours/CODE/train_logs2/
+Ours/CODE/ablation/
+Ours/CODE/3LoRA/
+Ours/CODE/test_maps/
+Ours/CODE/__pycache__/

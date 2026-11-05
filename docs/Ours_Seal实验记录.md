@@ -8,6 +8,44 @@
 - 表格将 Ours 标为 RGB-T、Box。本次使用已有预测进行评估，不重新训练或推理。
 - 评估日期：旧预测 2026-11-03，1105 批次 2026-11-05。四项指标直接调用 `Ours/evaluate.py` 的四个固定原函数计算，每个函数均评估 1,983 对预测与 GT。E 为原函数对连续灰度预测计算的结果。
 
+## 最终代码与复现（`Ours/CODE/`）
+
+最终代码在 `Ours/CODE/`，与 `Ours/1105Ours_result/Ours.zip` 一一对应；本表第 20 行、定性图（v12）、ROC/P-R（v10/v11）与目标级 Pd–Fa（v12）都用这批预测。代码内的指标实现与项目权威版本逐字节相同：`evaluate.py` = `Ours/evaluate.py`，`metrics.py` = 根目录 `metrics.py`（四个原函数与 `AS1000Metrics` 均未改）。
+
+| 文件 | 作用 |
+|---|---|
+| `CM-LoRA.py` | 冻结的 SAM3 + 两套视觉模态 LoRA（`outputs/{RGB+LoRA,T+LoRA}/best/lora_weights.pt`），共享 LoRA3 挂到同一批 qkv/proj 线性层（rank 8、α 16），不注册进 SAM3 |
+| `BISF.py` | `M1` 双向交互空间融合：两路 backbone 最后一层做双向空间交叉注意力 + 深度卷积 + 空间自注意力，`fused = (R+T)/2 + Conv1x1(cat(R′,T′))`，1×1 权重与偏置零初始化 |
+| `train.py` | 训练入口：只训练 `M1`（1,191,168 参数）与共享 LoRA3（1,572,864），SAM3 与模态 LoRA 冻结；损失 = 结构损失 + Sigmoid Focal（α=0.25、γ=2）+ Dice，等权；AdamW lr 5e-5、weight decay 0.01；默认 30 epoch、每卡 batch 1、1008×1008 |
+| `test.py` | 推理入口：加载 `best.pth`（`m1`+`lora3`）+ `sam3.pt` + 两套模态 LoRA；用数据集里的**真实框**作 Decoder 几何提示；1008² 前向 → sigmoid → 双线性恢复 GT 尺寸 → 逐图 min-max → 8 位 PNG |
+| `data.py`、`utils.py` | Seal 数据集（16 位 `T` 逐图 min-max → 8 位）、增强、框/掩码处理与概率后处理 |
+| `evaluate.py`、`evaluate3.py`、`metrics.py` | 四个原函数、八项合并评估、`AS1000Metrics` |
+| `efficiency.py` | 参数 / FLOPs / FPS 统计 |
+
+复现命令（服务器，在 `Ours/CODE/` 下）：
+
+```bash
+# 训练（3 卡，每卡 batch 1）
+python train.py --epoch 30 --lr 5e-5 --img_size 1008 \
+  --train_data_dir /share_datasets/Seal_Model_Reproduction/Seal_data/train \
+  --val_data_dir   /share_datasets/Seal_Model_Reproduction/Seal_data/val \
+  --save_path train_logs
+# 测试：输出与 GT 同名的 8 位 PNG
+python test.py --checkpoint train_logs/best.pth --save_dir test_maps \
+  --test_data_dir /share_datasets/Seal_Model_Reproduction/Seal_data/test
+# 八项指标（权威口径用项目根目录入口，显式传 --gt_dir）
+python /share_datasets/Seal_Model_Reproduction/evaluate.py --pred_root test_maps \
+  --gt_dir /share_datasets/Seal_Model_Reproduction/Seal_data/test/GT
+python /share_datasets/Seal_Model_Reproduction/evaluate_small_targets.py --pred_root test_maps \
+  --gt_dir /share_datasets/Seal_Model_Reproduction/Seal_data/test/GT --json_output small.json
+```
+
+消融开关：`--no-lora3`（只训 M1）、`--no-lora`（RGB/T/LoRA3 都不用，共用冻结 SAM3）、`--no-m1`（融合退化为 `(RGB+T)/2`）。代码目录 `ablation/LoRA/{RGB,RGB+LoRA,T,T+LoRA,RGB-T,RGB-T+LoRA,3LoRA}/` 存各消融的 1,983 张预测，对应表内 `Ablation` 工作表。
+
+权重与源码：`outputs/{RGB+LoRA,T+LoRA}/best/lora_weights.pt`（各 12.11 MB）、`3LoRA/best.pth`（6.03 MB）、`train_logs2/best.pth`（10.59 MB，`m1`+`lora3`）均已入库；SAM3 主干 `sam3.pt`（3.21 GiB）只在服务器 `Ours/weights/`；`CODE/sam3/`、`CODE/SAM3_LoRA/` 是随代码带的 SAM3 源码树（本地约 106 MB），按 `.gitignore` 不入库，服务器保留完整副本。
+
+**批次核对（2026-11-05）**：`Ours/1105Ours_result/Ours.zip`、`Ours/CODE/test_maps/`、`Ours/test_maps/` 三处的 1,983 张预测逐字节相同（sha256 前缀 `22b95e54`）。用根目录入口复算得到 S 0.4995640741534494、Fw 0.6196639054873058、E 0.6969485079429705、MAE 0.00020247850625310093、IoU 0.5193093402494049、F1 0.6836123842484333、Pd 0.8915075172694027，与第 20 行一致（S 仅在第 11 位差 5×10⁻¹¹）。旧预测（S 0.49915、Fw 0.67338、E 0.66731、MAE 0.00015、IoU 0.44835）已移到 `Ours/test_maps_20261105_prev/`。
+
 ## 统一评估结果
 
 现行口径为 2026-11-05 的 **1105 批次**，定性图、ROC/P-R、目标级 Pd–Fa 曲线与量化表第 20 行均用这批预测：
@@ -69,7 +107,10 @@ Seal GT 的平均前景面积占比为 0.00020553，因此全黑预测的平均 
 
 ## 已知问题
 
-- 压缩包未附对应训练检查点、训练配置或推理命令；本记录确认的是这批预测图在 Seal 测试 GT 上的指标。
+- **最终检查点用 Seal test 选点（须重跑）**：`Ours/CODE/train_logs2/train.log` 记录本次训练（2026-11-05 11:28 起，30 epoch）的 `val_data_dir=/data/RGB-T-dataset/Seal/test`、`samples: 1983`、`bestIoU 0.51925 bestEpoch 3`。第 20 行的 test IoU 0.51931 与该"验证"值几乎相同，说明第 20 行的检查点按 Seal **test** 选择。这违反「不根据 Seal 测试集指标选择权重」。投稿前须把 `--val_data_dir` 指向 `Seal_data/val`（500 张）、按 val 像素 IoU 重选检查点，再用 `test.py` 重新推理，并同步第 20 行的八项指标、定性图（现 v12）、ROC/P-R（现 v10/v11）与目标级 Pd–Fa（现 v12）。当前数值如实保留并在此标注，不做任何掩盖。
+- `Ours/CODE/evaluate3.py` 的 GT 路径硬编码为作者本地的 `/data/RGB-T-dataset/Seal/test/GT`；在本仓库/服务器上须改参数或直接用根目录 `evaluate.py` + `evaluate_small_targets.py`（显式 `--gt_dir`）。权威口径始终是根目录入口，`evaluate3.py` 只作为作者侧八项合并结果的对照。
+- `test.py` 的默认 `--checkpoint` 是 `train_logs/best.pth`，本次最终权重实际在 `train_logs2/best.pth`，运行时需显式指定；默认 `--test_data_dir`、`--sam_checkpoint` 也是作者本地路径，服务器上应换成 `/share_datasets/Seal_Model_Reproduction/...`。
+- 预测包本体未附训练配置快照；本文依据的是 `Ours/CODE/train_logs2/train.log` 的实参记录（epoch 30、lr 5e-5、wd 0.01、batch 1/卡、1008²、3 卡）与 `best.pth` 的键（`m1`+`lora3`）。
 - 使用指定原函数后，结果仍未完全复现腾讯表格旧值。两种口径的 MAE 实现相同，旧预测均得到 0.00015090（1105 批次为 0.00020248）；原表 MAE 0.00055 的差异不能由此次公式切换解释。原表未附预测、GT 路径及评估日志，具体输入差异尚不能确定。
 
 ## 小目标指标（同批预测）

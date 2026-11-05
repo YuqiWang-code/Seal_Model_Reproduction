@@ -1,5 +1,7 @@
 # Ours（原始版，RGB-T + 框提示双解码器）：Seal 训练与测试记录
 
+> **历史版本（2026-11-04，`Ours/Original_Code/`）**。最终代码是 `Ours/CODE/`（CM-LoRA + BISF 融合），对应预测与指标见 [Ours_Seal实验记录.md](Ours_Seal实验记录.md)（1105 批次）。本文件仅作版本演进记录。
+
 代码：`Ours/Original_Code/`（作者原始实现，本仓库只做运行相关修补，见下）。训练、验证、
 测试全部使用 `Seal_data/{train,val,test}`，train 1,500 / val 500 / test 1,983。
 

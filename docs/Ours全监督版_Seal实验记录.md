@@ -1,5 +1,7 @@
 # Ours（全监督版，RGB-T 全像素 GT）：Seal 训练与测试记录
 
+> **历史版本（2026-11-04，`Ours/Fully_Supervised_Code_1104/`，val 选点 ep20）**。最终代码是 `Ours/CODE/`（CM-LoRA + BISF 融合，`train.py`/`test.py`），对应预测与指标见 [Ours_Seal实验记录.md](Ours_Seal实验记录.md)（1105 批次）。本文件保留 1104 版的协议与数值，供版本对照。
+
 代码：`Ours/Fully_Supervised_Code_1104/`。由原始代码改成全监督：冻结 SAM3 与两套视觉
 模态 LoRA，训练融合模块 `M1` 与共享 LoRA3；SAM3 的 Decoder 用数据集的真实框作几何提示，
 预测 mask 用 GT 做结构损失 + Sigmoid Focal + Dice。训练、验证、测试全部使用 `Seal_data`。
