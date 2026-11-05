@@ -44,3 +44,7 @@ tmp/1104_test_maps/
 # 定性图成品（600 dpi PNG + 矢量 PDF + Visio，单版约 100 MB）：本地只保留最新一版，
 # 历史版本留在服务器 qualitative_paper/，整目录不进仓库。
 Ours/qualitative/
+
+# 定性图/曲线成品压缩包与临时调试图（成品在服务器 Ours/qualitative、Ours/roc_pr，本地只留 docs/assets 预览）
+tmp/figdl/
+tmp/fullsup3/

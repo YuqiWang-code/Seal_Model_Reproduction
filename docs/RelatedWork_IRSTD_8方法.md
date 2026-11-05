@@ -28,8 +28,8 @@
 | [4] | L2SKNet | F. Wu, A. Liu, T. Zhang, L. Zhang, J. Luo, Z. Peng, "Saliency at the Helm: Steering Infrared Small Target Detection With Learnable Kernels," *IEEE TGRS*, vol. 63, pp. 1–14, 2025, DOI 10.1109/TGRS.2024.3521947（IEEE 10813615，2024 年末在线） |
 | [5] | BGM | Y. Liu, Z. Ma, W. Zhu, N. Li, C. Li, K. Xiong, "Forgetting the Background: A Masking Approach for Enhanced Infrared Small-Target Detection," *IEEE TGRS*, vol. 63, 2025, DOI 10.1109/TGRS.2025.3589602（IEEE 11082367） |
 | [6] | RPCANet | F. Wu, T. Zhang, L. Li, Y. Huang, Z. Peng, "RPCANet: Deep Unfolding RPCA Based Infrared Small Target Detection," *WACV*, 2024, pp. 4809–4818 |
-| [7] | RPCANet++ | F. Wu, Y. Dai, T. Zhang, Y. Ding, J. Yang, M.-M. Cheng, Z. Peng, "RPCANet++: Deep Interpretable Robust PCA for Sparse Object Segmentation," *IEEE TPAMI*, 2026（awesome 列表记 TPAMI 2026；公开可下载版为 arXiv:2508.04190, 2025） |
-| [8] | SAM 3 | N. Carion, L. Gustafson, Y.-T. Hu, et al., "SAM 3: Segment Anything with Concepts," arXiv:2511.16719v2, Meta Superintelligence Labs, 2026 |
+| [7] | RPCANet++ | F. Wu, Y. Dai, T. Zhang, Y. Ding, J. Yang, M.-M. Cheng, Z. Peng, "RPCANet++: Deep Interpretable Robust PCA for Sparse Object Segmentation," *IEEE TPAMI*, vol. 48, no. 10, pp. 12420–12440, Oct. 2026, DOI 10.1109/TPAMI.2026.3697815（IEEE 11537388，2026-06-01 上线） |
+| [8] | SAM 3 | N. Carion, L. Gustafson, Y.-T. Hu, et al., "SAM 3: Segment Anything with Concepts," *Proc. ICLR*, 2026（OpenReview zF3CrB1iGO，Accept (Poster)；arXiv:2511.16719） |
 
 ## 四、逐句证据（官方摘要原文）
 
@@ -41,12 +41,12 @@
 | L2SKNet | 把"中心减邻域"先验做成可学习局部核 | "This approach implements a learnable local saliency kernel module (LLSKM) that embodies the concept of 'Center subtracts Neighbors,' guiding the network to capture saliency features (points or edges)." | IEEE 10813615 摘要（OpenAlex 取回） |
 | BGM | 训练时随机遮背景，逼网络忽略背景 | "The proposed BGM aims to force the network to focus exclusively on the target by masking out irrelevant background information … a proxy training task with masking, enabling the network to simultaneously predict on both the original input and the masked data, where the background is randomly masked/forgotten." | [IEEE 11082367](https://ieeexplore.ieee.org/document/11082367/) |
 | RPCANet | 展开 RPCA，交替估计背景 / 提取目标 | "our approach formulates the ISTD task as sparse target extraction, low-rank background estimation, and image reconstruction in a relaxed Robust Principle Component Analysis (RPCA) model. By unfolding the iterative optimization updating steps into a deep-learning framework …" | [WACV 2024 摘要页](https://openaccess.thecvf.com/content/WACV2024/html/Wu_RPCANet_Deep_Unfolding_RPCA_Based_Infrared_Small_Target_Detection_WACV_2024_paper.html) |
-| RPCANet++ | MAM 保背景 + DCPM 强化目标提取 | "To mitigate inter-stage transmission loss in the BAM, we introduce a Memory-Augmented Module (MAM) to enhance background feature preservation, while a Deep Contrast Prior Module (DCPM) leverages saliency cues to expedite object extraction." | [arXiv:2508.04190 摘要](https://arxiv.org/abs/2508.04190) |
-| SAM 3 | 可提示概念分割：短语/示例 → 该概念全部实例 | "concept prompts, which we define as either short noun phrases … image exemplars, or a combination of both. Promptable Concept Segmentation (PCS) takes such prompts and returns segmentation masks and unique identities for all matching object instances." | [arXiv:2511.16719v2 第 1 页](https://arxiv.org/abs/2511.16719) |
+| RPCANet++ | MAM 保背景 + DCPM 强化目标提取 | "To mitigate inter-stage transmission loss in BAM, we introduce a Memory-Augmented Module (MAM) to enhance background feature preservation, while a Deep Contrast Prior Module (DCPM) leverages saliency cues to expedite object extraction." | [IEEE 11537388（TPAMI 正式版）](https://ieeexplore.ieee.org/abstract/document/11537388/) |
+| SAM 3 | 可提示概念分割：短语/示例 → 该概念全部实例 | "concept prompts, which we define as either short noun phrases … image exemplars, or a combination of both. Promptable Concept Segmentation (PCS) takes such prompts and returns segmentation masks and unique identities for all matching object instances." | [OpenReview（ICLR 2026）](https://openreview.net/forum?id=zF3CrB1iGO)；[arXiv:2511.16719](https://arxiv.org/abs/2511.16719) 第 1 页 |
 
 ## 五、投稿前注意
 
-1. **SAM 3 是 arXiv 技术报告**（Meta Superintelligence Labs，v2 2026-03），不是 CCF-A 正式论文。若期刊卡引用，写成 "recent foundation models such as SAM 3 [8]" 并并引 SAM / SAM 2 同族文献。
-2. **RPCANet++ 出处**：awesome 列表记 TPAMI 2026，公开可下载的只有 arXiv:2508.04190（2025-08），GrokCV 出版物页也标为 arXiv preprint。定稿前按 IEEE Xplore / DOI 再确认卷期页。
+1. **SAM 3 已正式发表**：ICLR 2026（OpenReview 记录 "Decision: Accept (Poster)"，2026-01-26 发布），可放心按会议论文引用 `Proc. ICLR, 2026`，并附 arXiv:2511.16719。
+2. **RPCANet++ 已正式发表**：IEEE TPAMI vol. 48, no. 10, pp. 12420–12440, Oct. 2026（DOI 10.1109/TPAMI.2026.3697815），IEEE 版摘要与 arXiv 版一致，MAM/DCPM 说法可直接引。
 3. **DNA-Net 年份**：在线首发 2022（DOI 10.1109/TIP.2022.3199107），正式卷期 2023（vol. 32）；本项目表里记 "TIP22"，正文引用建议统一到卷期年。
 4. **L2SKNet**：DOI 属 2024 年末在线（10.1109/TGRS.2024.3521947），卷期是 2025（vol. 63），正文写 2025 即可。
