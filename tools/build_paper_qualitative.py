@@ -37,6 +37,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib import gridspec  # noqa: E402
+from matplotlib.colors import LinearSegmentedColormap, PowerNorm  # noqa: E402
 from matplotlib.ticker import MaxNLocator  # noqa: E402
 from scipy.ndimage import gaussian_filter  # noqa: E402
 
@@ -52,6 +53,17 @@ RED = (0, 0, 255)          # BGR
 ZOOM = 10
 MARGIN = 32
 MIN_BOX = 80
+
+# 3D 响应面配色：底色深蓝（近乎黑），峰顶亮红——和压平的背景形成强对比
+SURF_CMAP = LinearSegmentedColormap.from_list('seal3d', [
+    (0.00, '#0a1746'),
+    (0.22, '#1f5fbe'),
+    (0.40, '#22c6d8'),
+    (0.60, '#ffe14d'),
+    (0.74, '#ff8a1f'),
+    (0.86, '#ff2d2d'),
+    (1.00, '#e00b2b'),
+])
 
 
 def load_image(stem, modality, gamma=1.0, stretch='percentile'):
@@ -122,6 +134,50 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
+def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8):
+    """TP/FP/FN colour panel: TP white, FP red, FN green, plus a red GT box.
+
+    Used for the Visio assembly so each method's error pattern (miss = green,
+    false alarm = red) is visible at a glance.
+    """
+    h, w = gt_bin.shape
+    colour = np.zeros((h, w, 3), np.uint8)
+    colour[pred_bin & gt_bin] = (255, 255, 255)
+    colour[pred_bin & ~gt_bin] = (0, 0, 255)      # BGR red
+    colour[~pred_bin & gt_bin] = (0, 255, 0)      # BGR green
+
+    ys, xs = np.where(gt_bin)
+    if len(ys):
+        gx0, gx1 = int(xs.min()), int(xs.max())
+        gy0, gy1 = int(ys.min()), int(ys.max())
+    else:
+        gx0 = gx1 = gy0 = gy1 = 0
+
+    y0, y1, x0, x1 = roi
+    if roi_mode:
+        crop = colour[y0:y1, x0:x1]
+        side = max(crop.shape[:2])
+        k = max(1, int(round(target / max(1, side))))
+        crop = cv2.resize(crop, None, fx=k, fy=k, interpolation=cv2.INTER_NEAREST)
+        ch, cw = crop.shape[:2]
+        canvas = np.zeros((max(ch, cw), max(ch, cw), 3), np.uint8)
+        oy, ox = (canvas.shape[0] - ch) // 2, (canvas.shape[1] - cw) // 2
+        canvas[oy:oy + ch, ox:ox + cw] = crop
+        # GT box in the upscaled ROI
+        bx0 = ox + (gx0 - x0) * k - box_pad
+        bx1 = ox + (gx1 - x0) * k + box_pad
+        by0 = oy + (gy0 - y0) * k - box_pad
+        by1 = oy + (gy1 - y0) * k + box_pad
+        thick = 2
+        cv2.rectangle(canvas, (max(0, bx0), max(0, by0)), (min(canvas.shape[1] - 1, bx1),
+                      min(canvas.shape[0] - 1, by1)), RED, thick, cv2.LINE_AA)
+        return canvas
+
+    panel = colour.copy()
+    cv2.rectangle(panel, (x0, y0), (x1, y1), RED, 2, cv2.LINE_AA)
+    return panel
+
+
 def roi_panel(sheet, roi, target=384):
     """Panel = the ROI itself, upscaled with nearest-neighbour (no inset)."""
     y0, y1, x0, x1 = roi
@@ -154,50 +210,52 @@ def trim_white(img_bgr, pad=10, thr=250):
     return img_bgr[y0:y1, x0:x1]
 
 
-def render_surface_png(surf, path, vmax, cmap='jet', smooth=2.0,
-                       size_in=(0.873, 0.733), dpi=1200, pad=26):
+def render_surface_png(arr, path, vmax, cmap='jet',
+                       size_in=(0.873, 0.733), dpi=1200, pad=6):
     """One 3D box as a standalone PNG, tight-cropped so the box fills the frame.
 
-    Rendered at exactly one cell of the composite figure (0.873 x 0.733 in) with the
-    same tick font, then the white border is trimmed. The composite figure pastes this
-    PNG back into the cell with aspect='auto', so the 3D box fills the cell instead of
-    floating in matplotlib's generous default margins.
+    `arr` is the already-smoothed response crop. Rendered at one cell of the composite
+    figure (0.873 x 0.733 in) with the same tick font, then the white border is trimmed
+    to `pad` px, so pasting it back with aspect='auto' fills the cell.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     f = plt.figure(figsize=size_in, dpi=dpi, facecolor='white')
     ax = f.add_subplot(111, projection='3d')
-    add_surface(ax, surf, vmax=vmax, cmap=cmap, smooth=smooth)
+    add_surface(ax, arr, vmax=vmax, cmap=cmap)
     f.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
     import io
 
     buf = io.BytesIO()
     f.savefig(buf, format='png', dpi=dpi, facecolor='white')
     plt.close(f)
-    arr = cv2.imdecode(np.frombuffer(buf.getvalue(), np.uint8), cv2.IMREAD_COLOR)
-    arr = trim_white(arr, pad=pad)
-    cv2.imwrite(str(path), arr)
+    img = cv2.imdecode(np.frombuffer(buf.getvalue(), np.uint8), cv2.IMREAD_COLOR)
+    img = trim_white(img, pad=pad)
+    cv2.imwrite(str(path), img)
     return path
 
 
-def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=1.8):
-    """PDDiff Fig. 9 style surface: white panes, light grid, thin grey axes, tick labels."""
-    arr = data.astype(np.float32)
-    if smooth > 0:
-        arr = gaussian_filter(arr, smooth)
+def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=1.7):
+    """PDDiff Fig. 9 style surface: filled frame, light grid, thin grey axes, tick labels.
+
+    `arr` must already be smoothed; `vmax` is normally the peak of `arr`, so the target
+    response always reaches the top of the box (tall, obvious peak) and gets the hot end
+    of the colour map.
+    """
     h, w = arr.shape
     step = max(1, min(h, w) // 48)
     yy, xx = np.mgrid[0:h:step, 0:w:step]
     zz = arr[::step, ::step]
-    ax.plot_surface(xx, yy, zz, cmap=cmap, rstride=1, cstride=1, linewidth=0,
-                    antialiased=True, vmin=0, vmax=vmax, shade=False)
+    norm = PowerNorm(gamma=0.45, vmin=0, vmax=vmax)
+    ax.plot_surface(xx, yy, zz, cmap=cmap, norm=norm, rstride=1, cstride=1, linewidth=0,
+                    antialiased=True, shade=False)
     ax.set_zlim(0, vmax)
     ax.view_init(elev=26, azim=-64)
 
-    # 坐标刻度：X/Y 是裁剪块像素坐标，Z 是响应值（概率图 0-255）；取整数"好刻度"，与 PDDiff 一致
-    loc = MaxNLocator(nbins=5, integer=True, steps=[1, 2, 2.5, 5, 10])
+    # 坐标刻度：X/Y 是裁剪块像素坐标，Z 是响应值；取整数"好刻度"，与 PDDiff 一致
+    loc = MaxNLocator(nbins=4, integer=True, steps=[1, 2, 2.5, 5, 10])
     ax.xaxis.set_major_locator(loc)
     ax.yaxis.set_major_locator(loc)
-    ax.zaxis.set_major_locator(MaxNLocator(nbins=5, integer=True, steps=[1, 2, 2.5, 5, 10]))
+    ax.zaxis.set_major_locator(MaxNLocator(nbins=4, integer=True, steps=[1, 2, 2.5, 5, 10]))
     ax.tick_params(axis='x', labelsize=tick_font, pad=-3.0, length=0.4, width=0.15,
                    colors='0.45')
     ax.tick_params(axis='y', labelsize=tick_font, pad=-3.0, length=0.4, width=0.15,
@@ -218,7 +276,7 @@ def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=1.8):
         axis.line.set_linewidth(0.22)
 
     ax.grid(True)
-    ax.set_box_aspect((1, 1, 0.55), zoom=0.85)
+    ax.set_box_aspect((1, 1, 1.00), zoom=0.88)
     ax.margins(0)
 
 
@@ -242,6 +300,8 @@ def main():
                          '<dir>/<nn>_<id>/2d/<col>.png and .../3d/<col>.png')
     ap.add_argument('--roi-min', type=int, default=MIN_BOX, help='minimum ROI side (px)')
     ap.add_argument('--roi-margin', type=int, default=MARGIN, help='padding around the GT bbox (px)')
+    ap.add_argument('--diag', action='store_true',
+                    help='2D panels = TP white / FP red / FN green + red GT box (for Visio)')
     ap.add_argument('--roi-panels', action='store_true',
                     help='2D row = upscaled ROI instead of full frame + inset')
     ap.add_argument('--z-mode', default='per-panel', choices=['shared', 'per-panel'])
@@ -345,15 +405,23 @@ def main():
                     panels.append(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
                 surfaces.append(img[sy0:sy1, sx0:sx1])
             elif kind == 'mask':
-                sheet = np.where(gt > 127, 255, 0).astype(np.uint8)
-                panels.append(roi_panel(sheet, roi) if args.roi_panels else compose_panel(sheet, roi))
+                gt_bin = gt > 127
+                sheet = np.where(gt_bin, 255, 0).astype(np.uint8)
+                if args.diag:
+                    panels.append(diag_panel(gt_bin, gt_bin, gt, roi, args.roi_panels))
+                else:
+                    panels.append(roi_panel(sheet, roi) if args.roi_panels else compose_panel(sheet, roi))
                 surfaces.append(sheet[sy0:sy1, sx0:sx1])
             else:
                 m = load_map(path / f'{stem}.png')
                 if m.shape != gt.shape:
                     raise ValueError(f'{name}/{stem}: {m.shape} != {gt.shape}')
-                sheet = np.where(m >= 128, 255, 0).astype(np.uint8)
-                panels.append(roi_panel(sheet, roi) if args.roi_panels else compose_panel(sheet, roi))
+                pred_bin = m >= 128
+                sheet = np.where(pred_bin, 255, 0).astype(np.uint8)
+                if args.diag:
+                    panels.append(diag_panel(pred_bin, gt > 127, gt, roi, args.roi_panels))
+                else:
+                    panels.append(roi_panel(sheet, roi) if args.roi_panels else compose_panel(sheet, roi))
                 if name in surf_dirs:
                     resp = load_map(surf_dirs[name] / f'{stem}.png')
                     if resp.shape != gt.shape:
@@ -371,13 +439,15 @@ def main():
             for spine in ax.spines.values():
                 spine.set_color('black'), spine.set_linewidth(0.3)
         for j, surf in enumerate(surfaces):
-            vmax = 255.0 if args.z_mode == 'shared' else max(20.0, float(surf.max()))
-            cmap = 'gray' if columns[j][2] == 'image' else 'jet'
-            smooth = 5.0 if columns[j][2] == 'image' else 2.0
+            cmap = 'gray' if columns[j][2] == 'image' else SURF_CMAP
+            smooth = 5.0 if columns[j][2] == 'image' else 0.9
+            arr = gaussian_filter(surf.astype(np.float32), smooth)
+            peak = float(arr.max())
+            vmax = 255.0 if args.z_mode == 'shared' else max(20.0, peak)
             col = safe_name(columns[j][0])
-            p3d = cache_root / f'{stem}_{j:02d}_{col}_{int(vmax)}.png'
+            p3d = cache_root / f'{stem}_{j:02d}_{col}_{int(round(vmax))}.png'
             if not p3d.exists():
-                render_surface_png(surf, p3d, vmax=vmax, cmap=cmap, smooth=smooth)
+                render_surface_png(arr, p3d, vmax=vmax, cmap=cmap)
             if split_root is not None:
                 dst = split_root / f'{si + 1:02d}_{stem}' / '3d' / f'{j:02d}_{col}.png'
                 dst.parent.mkdir(parents=True, exist_ok=True)

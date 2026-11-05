@@ -112,7 +112,7 @@ python tools/build_paper_qualitative.py \
 
 （`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
 
-构建：`bash tools/make_paper_qualitative_pick.sh all qualitative_paper/v4_20261105`（第二个参数是输出目录，默认 `qualitative_paper/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
+构建：`bash tools/make_paper_qualitative_pick.sh all qualitative_paper/v5_20261105`（第二个参数是输出目录，默认 `qualitative_paper/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
 
 ### 版本
 
@@ -121,11 +121,12 @@ python tools/build_paper_qualitative.py \
 | v1 | `qualitative_paper/user_pick/` | 已删除 | 首版：3D 无刻度、有黑色粗轴线、列间距 0.02、Image 列 `gray+sigma3` |
 | v2 | `qualitative_paper/v2_20261105/` | 已删除 | 列间距压到 0.004、2D 行按真实比例、3D 加网格+整数刻度+轴名、去掉黑粗轴线、3D 盒子 `zoom=0.78` |
 | v3 | `qualitative_paper/v3_20261105/` | 已删除 | 3D 刻度 1.8 pt、`zoom=0.85`；新增单图拆分 `panels_roi/` 与 Visio 版 |
-| v4（当前） | `qualitative_paper/v4_20261105/` | `Ours/qualitative/v4_20261105/` | 3D 盒子铺满格子：每个 3D 先单独渲染（0.873×0.733 in @1200 dpi，与格子同尺寸同字号）→ 裁白边（26 px）→ `aspect='auto'` 贴回，盒子占格宽从 66% 提到约 90%；拼图里的 3D 行因此变成位图，PDF 从 5–10 MB 降到 1–2.3 MB |
+| v4 | `qualitative_paper/v4_20261105/` | 已删除 | 3D 盒子铺满格子：每个 3D 先单独渲染（0.873×0.733 in @1200 dpi，与格子同尺寸同字号）→ 裁白边（26 px）→ `aspect='auto'` 贴回；拼图里的 3D 行因此变成位图，PDF 从 5–10 MB 降到 1–2.3 MB |
+| v5（当前） | `qualitative_paper/v5_20261105/` | `Ours/qualitative/v5_20261105/` | 3D 更满（裁边 26→6 px）+ 峰更高更亮：平滑 σ 2.0→0.9、`vmax`=平滑后峰值、Z 轴统一 0–255、盒子 z 比例 0.55→1.00、自定义 `seal3d` 色带（深蓝底→青→黄→亮红）+ `PowerNorm(0.45)`；新增 `--diag` 诊断面板（TP 白 / FP 红 / FN 绿 + 红框），Visio 改用诊断面板 |
 
 服务器保留全部历史版本；本地只留最新一版，**整个 `Ours/qualitative/` 不进 git**（单版 100 MB 量级，`.gitignore` 已整目录排除）。
 
-v4 产物（600 dpi PNG + 矢量 PDF + meta）：
+v5 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 | 文件 | 内容 | 尺寸 |
 |---|---|---|
@@ -133,14 +134,17 @@ v4 产物（600 dpi PNG + 矢量 PDF + meta）：
 | `seal_pick6_qualitative.*` / `seal_pick5_qualitative.*` | 同样例拆成 6 + 5 两张 | 5760×5569 / 5760×4666 px |
 | `seal_pick11_roi_qualitative.*` | 11 样例，`roi` 版式（面板 = 6 倍放大 ROI） | 5760×11408 px / 9.6×19.0 in |
 | `seal_pick6_roi_*` / `seal_pick5_roi_*` | 同上拆两张 | 5760×6290 / 5760×5267 px |
-| `panels_roi/<nn>_<id>/2d|3d/<col>.png` | 单图拆分：每个 2D 面板、每个 3D 盒子各一张 | 2D 384×384；3D 923×743（已裁白边） |
-| `seal_qualitative_11col.vsdx` | Visio 可编辑版：11 页（每样例一页），34 个独立形状/页 | 页面 18.3×4.3 in |
+| `seal_diag_roi_qualitative.*` | 诊断版拼图（TP 白 / FP 红 / FN 绿 + 红框） | 5760×11408 px |
+| `panels_roi/…` / `panels_diag/…` | 单图拆分各 242 张：`<nn>_<id>/2d|3d/<col>.png` | 2D 384×384；3D ~923×806（已裁白边） |
+| `seal_qualitative_11col.vsdx` | Visio 可编辑版（诊断面板）：11 页，34 个独立形状/页 | 页面 18.3×4.3 in |
 
 单图拆分的 3D 图就是拼图里贴的那张（同一次渲染、缓存目录 `<out>/_3d_cache/`），所以 Visio 里看到的效果与拼图完全一致。
 
+3D 的 Z 轴用 `--z-mode shared` 固定 0–255：所有列都是同一量纲的概率图，跨列可比（PDDiff 也是这么做的）；峰高=真实响应强度，颜色用 `PowerNorm(gamma=0.45)` 让中等响应也偏暖色，避免"响应弱就看不出峰"。
+
 Visio 版由 [tools/make_visio_qualitative.ps1](tools/make_visio_qualitative.ps1) 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
 
-仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v4）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
+仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v5）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
 从图上直接能读到的事实（对照表 21～32 行）：
 

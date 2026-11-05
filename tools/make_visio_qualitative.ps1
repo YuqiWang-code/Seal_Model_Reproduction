@@ -2,8 +2,8 @@
 # 用法：powershell -File tools/make_visio_qualitative.ps1 -PanelRoot <...>\panels_roi -OutFile <...>.vsdx
 # 每样例一页，页内 = 11 个表头矩形 + 11 张 2D 图 + 11 张 3D 图 + 1 行页脚，全部是独立形状。
 param(
-    [string]$PanelRoot = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v3_20261105\panels_roi",
-    [string]$OutFile   = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v3_20261105\seal_qualitative_11col.vsdx"
+    [string]$PanelRoot = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v5_20261105\panels_diag",
+    [string]$OutFile   = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v5_20261105\seal_qualitative_11col.vsdx"
 )
 
 $ErrorActionPreference = 'Stop'
