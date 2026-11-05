@@ -226,7 +226,7 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, hi
 
 
 def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours', cut_fpr=None,
-            endpoint_dot=False, min_pred=0):
+            endpoint_dot=False, min_pred=0, close=False):
     cmap = color_map(data, highlight)
     for i, (label, cv) in enumerate(data):
         r, p = pr_points(cv, style, cut_fpr, min_pred)
@@ -235,7 +235,18 @@ def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours', cut_fp
                 lw=lw_main if main else lw,
                 zorder=5 if main else 3,
                 solid_capstyle='round', label=label)
-        if endpoint_dot and len(r):
+        if close and len(r):
+            # 手工补到 (1, 0)：真值（recall=1 时 precision = 前景占比 2.1e-4）在 0–1
+            # 的纵轴上就是 0，所以从最后一个实测点拉一条直线到右下角是"大致"画法；
+            # 用虚线 + 交接点空心圈表示这一段是外推，不是实测。
+            ax.plot([r[-1], 1.0], [p[-1], 0.0], color=cmap[label],
+                    lw=(lw_main * 0.8 if main else lw * 0.9),
+                    ls=(0, (3.0, 2.2)), alpha=0.95,
+                    zorder=4 if main else 2)
+            ax.plot([r[-1]], [p[-1]], marker='o', ms=3.0 if main else 2.2,
+                    mfc='white', mec=cmap[label], mew=0.9,
+                    zorder=6 if main else 4)
+        if endpoint_dot and len(r) and not close:
             ax.plot([r[-1]], [p[-1]], marker='o', ms=3.2 if main else 2.4,
                     color=cmap[label], zorder=6 if main else 4,
                     markeredgecolor='white', markeredgewidth=0.5)
@@ -297,6 +308,10 @@ def main():
                      help='drop thresholds predicting fewer than this many pixels (kills the vertical hairball)')
     ap_.add_argument('--pr-endpoint-dot', action='store_true',
                      help='mark the last PR point (each curve ends at its highest reachable recall)')
+    ap_.add_argument('--pr-close', action='store_true',
+                     help='extrapolate each PR curve from its last measured point to (1, 0) '
+                          'with a dashed segment (the true precision at recall=1 is the '
+                          'foreground rate, ~2e-4, i.e. visually 0)')
     ap_.add_argument('--pr-cut-fpr', type=float, default=None,
                      help='only draw PR thresholds with FPR <= this (e.g. same window as ROC)')
     ap_.add_argument('--highlight', default='Ours',
@@ -351,7 +366,8 @@ def main():
     # ---- PR only
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else 3.3))
     draw_pr(ax, data, style=args.pr_style, highlight=args.highlight, cut_fpr=args.pr_cut_fpr,
-            endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred)
+            endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred,
+            close=args.pr_close)
     if args.square:
         ax.set_box_aspect(1)
     handles, labels = ax.get_legend_handles_labels()
@@ -367,7 +383,8 @@ def main():
     draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
     axes[0].set_title('(a) ROC', fontsize=9.5)
     draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight, cut_fpr=args.pr_cut_fpr,
-            endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred)
+            endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred,
+            close=args.pr_close)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
     if args.square:
         for a in axes:
