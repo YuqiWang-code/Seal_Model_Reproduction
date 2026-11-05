@@ -140,13 +140,13 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
-def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX, gt_box=None, pad=4):
-    """Image column = the whole scene, with ONE red box marking the magnified ROI.
+def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX, gt_box=None,
+                    pad=4, draw_box=False):
+    """Image column = the whole scene (the ROI is magnified in the next columns).
 
-    The box is square and keeps a fixed floor size (``min_box`` scaled, ≈48 px) so the
-    panels look uniform; when the GT itself is larger than that floor (2688/2120/2894),
-    the box grows to ``max(GT span) + 2*pad`` so the whole target stays inside. Placement
-    is clamped to the panel while guaranteeing the GT rectangle is covered.
+    draw_box=False (默认，v12 起) 不画任何框：Image 列就是原图，定位交给各列一致的视野。
+    需要框时（`--image-box`）边长取 ``max(min_box, max(GT 宽, GT 高) + 2*pad)`` 换算到面板坐标，
+    以 GT 包围盒为中心并保证 GT 矩形整体落在框内。
     """
     h, w = img.shape[:2]
     y0, y1, x0, x1 = roi
@@ -162,11 +162,14 @@ def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX, gt_box=N
         k = target / float(side)
         bx0, bx1 = int(round((x0 - x0c) * k)), int(round((x1 - x0c) * k))
         by0, by1 = int(round((y0 - y0c) * k)), int(round((y1 - y0c) * k))
-        cv2.rectangle(panel, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
+        if draw_box:
+            cv2.rectangle(panel, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
         return panel
 
     panel = cv2.resize(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), (target, target),
                        interpolation=cv2.INTER_AREA)
+    if not draw_box:
+        return panel
     sx, sy = target / float(w), target / float(h)
     uni = min_box * (sx * sy) ** 0.5          # 统一框边长下限（64 px ROI → 约 48 px）
 
@@ -410,6 +413,8 @@ def main():
     ap.add_argument('--roi-margin', type=int, default=MARGIN, help='padding around the GT bbox (px)')
     ap.add_argument('--image-mode', default='full', choices=['full', 'crop417'],
                     help='roi 版式的 Image 列：full = 整幅压成正方形；crop417 = 417x417 原比例窗口')
+    ap.add_argument('--image-box', action='store_true',
+                    help='在 Image 列画红框（v12 起默认不画；仅为兼容旧版式保留）')
     ap.add_argument('--diag', action='store_true',
                     help='2D panels = TP white / FP red / FN green + red GT box (for Visio)')
     ap.add_argument('--roi-panels', action='store_true',
@@ -516,7 +521,8 @@ def main():
                     # roi 版式：Image 列 = 整幅场景压缩成正方形 + 唯一一个正方形红框，
                     # 表示其余各列就是这块区域放大出来的（Mask 之后不再画框）
                     panels.append(image_panel_roi(img, roi, mode=args.image_mode,
-                                                   min_box=args.roi_min, gt_box=gt_box))
+                                                   min_box=args.roi_min, gt_box=gt_box,
+                                                   draw_box=args.image_box))
                 else:
                     panels.append(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
                 surfaces.append(img[sy0:sy1, sx0:sx1])
