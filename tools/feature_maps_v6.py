@@ -60,6 +60,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--panel-px", type=int, default=396)
     p.add_argument("--resp-lo", type=float, default=2.0)
     p.add_argument("--resp-hi", type=float, default=98.0)
+    p.add_argument("--resp-window", type=float, default=0.85,
+                   help="keep only the top (1 - window) of the stretched response; the rest goes to "
+                        "the blue end (same window for every feature column)")
+    p.add_argument("--resp-gamma", type=float, default=1.0,
+                   help="extra tone curve after the window (1 = off)")
     p.add_argument("--device", default="cuda")
     return p.parse_args()
 
@@ -102,13 +107,24 @@ def crop_zoom(image: np.ndarray, box: tuple, zoom: int, nearest: bool = False) -
     return cv2.resize(crop, (side * zoom, side * zoom), interpolation=mode)
 
 
-def response_u8(feature: torch.Tensor, lo_p: float, hi_p: float) -> np.ndarray:
-    """(1, C, h, w) -> uint8 channel-L2 response, per-map robust scaling (v1 rule)."""
+def response_u8(feature: torch.Tensor, lo_p: float, hi_p: float,
+                window: float = 0.0, gamma: float = 1.0) -> np.ndarray:
+    """(1, C, h, w) -> uint8 channel-L2 response, per-map robust scaling (v1 rule).
+
+    `window` keeps only the top part of the stretched response (values below it go
+    to the blue end) and `gamma` is an extra monotone curve; both are the same for
+    every feature column, so the panels stay comparable.
+    """
     f = feature.float()[0].norm(dim=0).detach().cpu().numpy()
     lo, hi = float(np.percentile(f, lo_p)), float(np.percentile(f, hi_p))
     if hi - lo < 1e-6:
         hi = lo + 1e-6
-    return (np.clip((f - lo) / (hi - lo), 0.0, 1.0) * 255.0).round().astype(np.uint8)
+    norm = np.clip((f - lo) / (hi - lo), 0.0, 1.0)
+    if window > 0.0:
+        norm = np.clip((norm - window) / max(1.0 - window, 1e-6), 0.0, 1.0)
+    if gamma != 1.0:
+        norm = np.power(norm, gamma)
+    return (norm * 255.0).round().astype(np.uint8)
 
 
 def colorize(u8: np.ndarray, size_wh: tuple) -> np.ndarray:
@@ -177,12 +193,13 @@ def main() -> None:
             outputs = decode(rgb_model, branch_backbone(fused, text_rgb), boxes, find_stage)
             probability = prediction_probability(merge_topk_logits(outputs, k), gt_mask)
 
+        w, g = args.resp_window, args.resp_gamma
         responses = {
-            "nolora_rgb": response_u8(base_rgb["backbone_fpn"][-1], args.resp_lo, args.resp_hi),
-            "nolora_t": response_u8(base_t["backbone_fpn"][-1], args.resp_lo, args.resp_hi),
-            "lora_rgb": response_u8(lora_rgb["backbone_fpn"][-1], args.resp_lo, args.resp_hi),
-            "lora_t": response_u8(lora_t["backbone_fpn"][-1], args.resp_lo, args.resp_hi),
-            "bsrf": response_u8(fused["backbone_fpn"][-1], args.resp_lo, args.resp_hi),
+            "nolora_rgb": response_u8(base_rgb["backbone_fpn"][-1], args.resp_lo, args.resp_hi, w, g),
+            "nolora_t": response_u8(base_t["backbone_fpn"][-1], args.resp_lo, args.resp_hi, w, g),
+            "lora_rgb": response_u8(lora_rgb["backbone_fpn"][-1], args.resp_lo, args.resp_hi, w, g),
+            "lora_t": response_u8(lora_t["backbone_fpn"][-1], args.resp_lo, args.resp_hi, w, g),
+            "bsrf": response_u8(fused["backbone_fpn"][-1], args.resp_lo, args.resp_hi, w, g),
         }
         prob = probability.detach().float().cpu().numpy()
         prob = prob.reshape(prob.shape[-2], prob.shape[-1]) if prob.ndim > 2 else prob
@@ -236,8 +253,8 @@ def main() -> None:
     cv2.imwrite(str(args.out / "legend_prob.png"), bar)
     (args.out / "manifest.json").write_text(json.dumps({
         "protocol": (f"03-07: channel-L2 of backbone_fpn[-1], per-map {args.resp_lo:g}-{args.resp_hi:g} "
-                     "percentile scaling (v1 rule), turbo; 08: prediction, fixed 0-1 turbo; "
-                     "no annotations"),
+                     f"percentile scaling then a top-{int((1 - args.resp_window) * 100)} % window (same for all "
+                     "feature columns), turbo; 08: prediction, fixed 0-1 turbo; no annotations"),
         "labels": LABELS, "selection": args.selection_note,
         "roi_min": args.roi_min, "roi_margin": args.roi_margin, "panel_px": args.panel_px,
         "samples": manifest,

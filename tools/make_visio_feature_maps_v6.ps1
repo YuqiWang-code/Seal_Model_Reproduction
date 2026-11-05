@@ -122,7 +122,7 @@ try {
     $barW = 1.45
     $barH = 0.10
     Add-Picture $page (Join-Path $legendRoot 'legend_prob.png') $left $yLegend $barW $barH | Out-Null
-    Add-Text $page "feature response  low - high  (per panel 2-98 %)" ($left + $barW + 0.06) $yLegend ($left + $barW + 2.75) ($yLegend + 0.17) 5.6 @(70, 70, 70) 0 0 | Out-Null
+    Add-Text $page "feature response  low - high  (top 15 % of each panel)" ($left + $barW + 0.06) $yLegend ($left + $barW + 2.75) ($yLegend + 0.17) 5.6 @(70, 70, 70) 0 0 | Out-Null
     $xBar2 = $left + $barW + 1.75
     Add-Picture $page (Join-Path $legendRoot 'legend_feature.png') $xBar2 $yLegend $barW $barH | Out-Null
     Add-Text $page "prediction  0 - 1  (fixed)" ($xBar2 + $barW + 0.06) $yLegend ($xBar2 + $barW + 1.85) ($yLegend + 0.17) 5.6 @(70, 70, 70) 0 0 | Out-Null
