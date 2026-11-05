@@ -37,7 +37,7 @@
 
 ## Ours（第 20 行）：1008×1008 原生输入
 
-Ours 不能按 256² 测：SAM3 视觉主干的 2D rope 频率表 `freqs_cis` 在建模型时按 `input_size=1008`（72×72 token）固定，换成其它分辨率直接形状不符。所以表中第 20 行三列是**原生 1008×1008、每图一次前向**的实测，与第 21–32 行的 256² 单窗**不是同一协议**，数字不能横着比。
+Ours 不能按 256² 测：SAM3 视觉主干的 2D rope 频率表 `freqs_cis` 在建模型时按 `input_size=1008`（72×72 token）固定，换成其它分辨率直接形状不符（实测 512² 在 `vitdet.reshape_for_broadcast` 的 `assert freqs_cis.shape == (x.shape[-2], x.shape[-1])` 处 AssertionError，1008² 正常输出 `(1, 256, 72, 72)`，见 `tmp/probe_resolution.py`）。所以表中第 20 行三列是**原生 1008×1008、每图一次前向**的实测，与第 21–32 行的 256² 单窗**不是同一协议**，数字不能横着比。
 
 | 项目 | Ours 的口径 |
 |---|---|
