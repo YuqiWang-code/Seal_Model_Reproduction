@@ -140,7 +140,7 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
-def image_panel_roi(img, roi, target=384, mode='full'):
+def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX):
     """Image column = the whole scene, with ONE red box marking the magnified ROI.
 
     mode='full'    : the 622x417 frame squeezed into a square (keeps the whole scene;
@@ -169,7 +169,8 @@ def image_panel_roi(img, roi, target=384, mode='full'):
     panel = cv2.resize(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), (target, target),
                        interpolation=cv2.INTER_AREA)
     sx, sy = target / float(w), target / float(h)
-    half = (x1 - x0) * (sx * sy) ** 0.5 / 2.0          # area-preserving square
+    # 所有样例统一框：按"标准 64 px ROI"换算（≈48 px 边长），不随实际 ROI 变大
+    half = min_box * (sx * sy) ** 0.5 / 2.0
     px, py = cx * sx, cy * sy
     bx0, bx1 = int(round(px - half)), int(round(px + half))
     by0, by1 = int(round(py - half)), int(round(py + half))
@@ -504,7 +505,8 @@ def main():
                 if args.roi_panels:
                     # roi 版式：Image 列 = 整幅场景压缩成正方形 + 唯一一个正方形红框，
                     # 表示其余各列就是这块区域放大出来的（Mask 之后不再画框）
-                    panels.append(image_panel_roi(img, roi, mode=args.image_mode))
+                    panels.append(image_panel_roi(img, roi, mode=args.image_mode,
+                                                   min_box=args.roi_min))
                 else:
                     panels.append(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
                 surfaces.append(img[sy0:sy1, sx0:sx1])
