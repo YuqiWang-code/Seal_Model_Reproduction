@@ -26,7 +26,7 @@
 - 统一运行入口是项目根目录的 `evaluate.py`，其四个指标函数须与 `Ours/evaluate.py` 原文一致；仅入口参数允许适配路径。预测图放在单独的结果目录，文件名与 `Seal_data/test/GT` 一一对应。服务器运行时显式指定 `--gt_dir /share_datasets/Seal_Model_Reproduction/Seal_data/test/GT`。
 - `E` 使用上述原始 `e_measure_folder` 对连续灰度预测计算，不使用 256 阈值 mean E-measure 替代。已有其他评估口径的结果须明确标记，按指定四个原函数重算后才能作为最终比较结果。
 - 新增小目标指标由根目录 `metrics.py` 的 `AS1000Metrics` 与 `evaluate_small_targets.py` 统一计算。固定预测阈值 >0.5、8 连通、质心距离严格小于 3 像素的一对一匹配；IoU/F1 采用全数据集累计像素计数，Pd 为检出目标数/GT目标数，Fa 为未匹配预测连通域面积/总像素数。表中均存 0～1 原始比例，不将 Fa 乘 10^6 后填入未标单位的列。定义、文献与官方代码对照见 [docs/小目标评价指标_定义与代码对照.md](docs/小目标评价指标_定义与代码对照.md)。同行八项指标必须来自同一模型和预测，原有四个指标函数保持不变。
-- `docs/小目标评价指标.pdf` 是早期草稿，使用 `pred > 0`、像素假阳 Fa、`距离 <= 3` 与 ×100 百分数，与现行实现不同；差异及数值影响（Ours 的 Fa 相差 31.8 倍）见定义对照文档，两种口径不得混用。`docs/小目标指标评估_20261103/` 的 NESS-Net 行必须是公开 refinement + NAMLab 跨域结果，框适配第 5 epoch 的结果仅存档为 `NESS-Net_Seal框适配_epoch5.json`。
+- `docs/小目标评价指标.pdf` 是早期草稿，使用 `pred > 0`、像素假阳 Fa、`距离 <= 3` 与 ×100 百分数，与现行实现不同；差异及数值影响（旧预测 Ours 的 Fa 相差 31.8 倍、1105 批次为 7.15 倍）见定义对照文档，两种口径不得混用。`docs/小目标指标评估_20261103/` 的 NESS-Net 行必须是公开 refinement + NAMLab 跨域结果，框适配第 5 epoch 的结果仅存档为 `NESS-Net_Seal框适配_epoch5.json`。
 - 跨域指训练源数据与 Seal 目标数据不同，监督形式差异另行注明，不能以 Seal 框适配或 GT 抽点训练代替源域训练。
 - LRDNet 的公开权重链接失效，主表采用已完成的原始 S-COD 涂鸦监督训练：4,040 张 S-COD/CAMO 训练图像及公开涂鸦标注，两阶段均取预先确定的第 100 epoch 权重；不使用 Seal 数据选权重。Seal 框适配仅作历史实验存档。结果记录在 [docs/LRDNet_Seal实验记录.md](docs/LRDNet_Seal实验记录.md)。
 - 不根据 Seal 测试集指标选择权重。先依据论文配置、代码结构和检查点参数确定主方法权重，再运行完整测试集。

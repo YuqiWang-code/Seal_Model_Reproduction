@@ -86,7 +86,7 @@ cd /share_datasets/Seal_Model_Reproduction
 1. **计数自洽**：六个 JSON 的 IoU、F1、Pd、Fa 均可由存储的 `tp/fp/fn/n_detected/n_gt/false_alarm_pixels/total_pixels` 精确复算，差值 0（复算脚本 `tmp/verify_small_target_jsons.py`）。`n_gt = 7,383`、`total_pixels = 514,338,642` 在六组间完全一致，即同一批 GT 与同一批 1,983 张原尺寸预测。
 2. **像素数与独立记录一致**：`total_pixels / 1,983 = 259,374 = 417×622`，与 Ours 记录的 GT 尺寸、GT 前景占比 0.00020553（tp+fn = 105,712）一致；Ours 1105 批次的像素 precision/recall 58.13%/82.96% 也可由 tp+fp、tp+fn 复现（旧预测为 64.64%/59.39%）。
 3. **协议一致**：六组均为 `AS1000Metrics` 默认参数（阈值 >0.5、GT >128、8 连通、距离 <3、全数据集累计），`protocol` 字段逐项相同。
-4. **与 `docs/小目标评价指标.pdf` 草稿的差异**：该草稿使用 `pred > 0`、像素级假阳 Fa、`距离 <= 3` 与 ×100 百分数；本项目按已发表官方代码采用 `prob > 0.5`、未匹配连通域 Fa、`距离 < 3` 和 0～1 原始比例。差异明细与数值影响（Ours 的 Fa 相差 31.8 倍）见[小目标评价指标：定义与代码对照](小目标评价指标_定义与代码对照.md#与-docs小目标评价指标pdf-参考实现的差异)。表值只与同口径结果比较。
+4. **与 `docs/小目标评价指标.pdf` 草稿的差异**：该草稿使用 `pred > 0`、像素级假阳 Fa、`距离 <= 3` 与 ×100 百分数；本项目按已发表官方代码采用 `prob > 0.5`、未匹配连通域 Fa、`距离 < 3` 和 0～1 原始比例。差异明细与数值影响（Ours 旧预测的 Fa 相差 31.8 倍、1105 批次为 7.15 倍）见[小目标评价指标：定义与代码对照](小目标评价指标_定义与代码对照.md#与-docs小目标评价指标pdf-参考实现的差异)。表值只与同口径结果比较。
 5. **跨方法可比性**：五个对比方法的 `*/infer_seal.py` 都对预测做逐图 min-max 归一化，>0.5 因此是各图动态范围的中点而非校准概率，弱响应图会被拉伸。SSFam 的 Pd 0.28742 与 IoU 0.00099 并存即为典型：大量斑点落在 GT 质心 3 像素内，但几乎没有像素重叠。Pd/Fa 须与 IoU、F1 合看，见定义对照的已知问题。
 
 主表行值可由 `python tmp/apply_ness_cross_domain_row.py` 写回 `docs/Seal量化SOTA表.xlsx`（需先关闭 Excel）；本次核对已生成同内容副本 `tmp/backup/Seal量化SOTA表.with_ness_cross_domain.xlsx`。
