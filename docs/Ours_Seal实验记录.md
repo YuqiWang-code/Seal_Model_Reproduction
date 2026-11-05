@@ -146,7 +146,7 @@ Seal GT 的平均前景面积占比为 0.00020553，因此全黑预测的平均 
 - 复现：服务器 `CUDA_VISIBLE_DEVICES=1 Ours/venv_ours/bin/python tools/feature_maps.py --out Ours/Feature_Map/v1 --topk 10 --rank-by f1`（脚本 `tools/feature_maps.py`，日志 `logs/feature_maps_v1.log`）；Visio 由 `tools/make_visio_feature_maps.ps1`（Visio COM）从 `panels/` 重新生成。
 - 读数提示：前 8 行 ROI 均为 64×64（×6 后 384×384），第 10 行 3517 的 GT 较大、ROI 为 182×182，特征格相对更细；响应峰位置与第 8 列预测、第 9 列 GT 一致。
 
-### v2（现行，`Ours/Feature_Map/v2/`）
+### v2（已被 v3 取代，`Ours/Feature_Map/v2/`）
 
 v2 与 v1 的差别在于**把 03–06 换成各模态自己的解码输出**（而不是 backbone 特征），只保留 07 作为特征图，这样九列讲的是同一条链路：单模态原始输出 → 单模态适配输出 → 跨模态融合特征 → 最终输出 → GT。
 
@@ -168,3 +168,28 @@ v2 与 v1 的差别在于**把 03–06 换成各模态自己的解码输出**（
 5. **ROI 与标注**：ROI 仍 6×（边长 `max(64, bbox+2×24)`，夹在图像内）；每行左侧写 final F1/IoU，每列下方写该分支 IoU，07 下方写 peak 距离与 inside/outside 比。
 
 产物：服务器 `Ours/Feature_Map/v2/`（`panels/<order>_<stem>/{full,roi}/01–09.png` 共 180 张、`legend_prob.png`、`legend_feature.png`、`manifest.json`、`Ours_FeatureMap_v2.vsdx` 9.2 MB）；本地 `Ours/Feature_Map/v2/` 只放该 vsdx。重建：`tools/feature_maps_v2.py` + `tools/make_visio_feature_maps_v2.ps1`。
+
+### v3（现行，`Ours/Feature_Map/v3/`）
+
+v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/train_logs2/best.pth`、同一 1105 预测），概率面板的 IoU 与 v2 逐位相同。
+
+要解决的问题：v2 的第 7 列比第 8 列更大更糊，读起来像"融合之后反而退化"。根因是分辨率而不是模型——融合层 `backbone_fpn[-1]` 是 72×72，一格约 9×6 原生像素，而目标只有 3–5 px，所以按 0–1 全量上色必然得到一块比预测还大的色斑。实测这条响应是一个平滑峰：50% 水平半径中位 15.2 px，但 90% 水平只有 3.6 px——"清晰"不在低阈值上，在峰顶。
+
+| 等值线水平 | 0.5 | 0.7 | 0.8 | 0.9 |
+|---|---:|---:|---:|---:|
+| 半径中位（px，10 张） | 15.2 | 8.2 | 6.2 | 3.6 |
+
+做法：
+
+1. **07 只画峰顶**：`rel = (v - median) / (peak - median)`，显示窗口 rel 0.85–1（γ 1.5），白线为 rel 0.9 等值线（半径约 3.6 px），白色十字为 argmax。第 7 列因此变成"目标框里的一个紧凑峰"，与第 8 列同量级。
+2. **03–06、08 保持固定 0–1 概率色标**，并叠加 0.5 白等值线，也就是算 IoU 的那块区域；读图时"白线圈出的面积"从散 / 无 → 一个目标 → 精确边界。
+3. **GT 框统一成青色虚线**（在放大后的面板上按 1 px 画，两张原图仍是青色实线）：青色 = 参考位置，白色 = 响应，两者不再混。
+4. **ROI 收到 `max(44, bbox + 28)`**，放大倍数按面板统一到 396 px（本批全部 44 px / 9×），10 行可直接比较。
+5. **样例改为"逐图 F1 前 10 且 GT 框 ≤ 32 px"**：v2 的第 10 张 3517 GT 框 128 px，ROI 与倍数都和其它行不同，峰值距 GT 质心 108 px，放进"小目标"图里会误导；改取排名第 11 的 3974。10 张为 2105、3343、2146、2059、3000、3173、2773、3174、2754、3974。
+6. **底部加中位数行**：raw RGB/T 0.63 / 0.61，CM-LoRA RGB/T 0.88 / 0.78，final 0.89；BSRF 峰距 1.7 px、inside/outside 1.67×。
+
+读数（10 张，1105 预测）：融合特征峰值 **10/10 落在 GT 框内**，距质心中位 1.7 px，目标内外强度比中位 1.67×；最终预测 median IoU 0.889、最低 0.818；CM-LoRA 把 RGB 分支 0.63 → 0.88、T 分支 0.61 → 0.78，与 v2 集合（0.50 → 0.88、0.61 → 0.76）同向。
+
+局限（须写进图注）：07 是**峰**不是掩膜，低阈值上的宽度受 72×72 分辨率限制（50% 水平半径中位 15 px），不能用来论证边界精度；10 张是按 F1 选出的头部样本，不是随机抽样。
+
+产物：服务器 `Ours/Feature_Map/v3/`（`panels/<order>_<stem>/{full,roi}/01–09.png` 共 180 张、`raw/<stem>.npz` 缓存、`manifest.json`、两条色标、`Ours_FeatureMap_v3.vsdx`）；本地 `Ours/Feature_Map/v3/` 只放 vsdx。重建：`tools/feature_maps_v3.py`（GPU 约 40 s；`raw/*.npz` 存了响应与四路概率，只改显示时不必再跑模型）+ `tools/make_visio_feature_maps_v3.ps1`（Visio COM，单页 11.15×15.41 in、191 个形状）。
