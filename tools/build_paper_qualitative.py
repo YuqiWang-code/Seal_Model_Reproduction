@@ -54,15 +54,14 @@ ZOOM = 10
 MARGIN = 32
 MIN_BOX = 80
 
-# 3D 响应面配色：底色深蓝（近乎黑），峰顶亮红——和压平的背景形成强对比
+# 3D 响应面配色：浅蓝底（亮、不压抑）+ 暖色峰（金 → 橙 → 红）
 SURF_CMAP = LinearSegmentedColormap.from_list('seal3d', [
-    (0.00, '#0a1746'),
-    (0.22, '#1f5fbe'),
-    (0.40, '#22c6d8'),
-    (0.60, '#ffe14d'),
-    (0.74, '#ff8a1f'),
-    (0.86, '#ff2d2d'),
-    (1.00, '#e00b2b'),
+    (0.00, '#d3e5f7'),
+    (0.32, '#a6cbe9'),
+    (0.52, '#5fb0d8'),
+    (0.66, '#f2b04a'),
+    (0.80, '#e8622e'),
+    (1.00, '#c81e1e'),
 ])
 
 
@@ -174,8 +173,20 @@ def image_panel_roi(img, roi, target=384, mode='full'):
     px, py = cx * sx, cy * sy
     bx0, bx1 = int(round(px - half)), int(round(px + half))
     by0, by1 = int(round(py - half)), int(round(py + half))
+    # 框超出面板时整体平移回面板内（ROI 贴图像边缘时会发生），避免画出被切掉一半的框
+    if bx0 < 0:
+        bx1 -= bx0
+        bx0 = 0
+    if bx1 > target - 1:
+        bx0 -= (bx1 - (target - 1))
+        bx1 = target - 1
+    if by0 < 0:
+        by1 -= by0
+        by0 = 0
+    if by1 > target - 1:
+        by0 -= (by1 - (target - 1))
+        by1 = target - 1
     bx0, by0 = max(0, bx0), max(0, by0)
-    bx1, by1 = min(target - 1, bx1), min(target - 1, by1)
     cv2.rectangle(panel, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
     return panel
 
@@ -319,7 +330,7 @@ def render_surface_png(arr, path, vmax, cmap='jet', gamma=0.45,
     return path
 
 
-def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=2.2, gamma=0.45):
+def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=2.2, gamma=0.40):
     """PDDiff Fig. 9 style surface with a legible wireframe and tick labels.
 
     `arr` must already be smoothed; `vmax` is normally the peak of `arr`, so the target
@@ -539,7 +550,7 @@ def main():
             peak = float(arr.max())
             vmax = 255.0 if args.z_mode == 'shared' else max(20.0, peak)
             # Image 列：彩色（PDDiff 那样），用线性映射；预测列用 PowerNorm 提亮峰
-            gamma = None if is_img else 0.45
+            gamma = None if is_img else 0.40
             col = safe_name(columns[j][0])
             p3d = cache_root / f'{stem}_{j:02d}_{col}_{int(round(vmax))}_{"lin" if is_img else "pow"}.png'
             if not p3d.exists():
