@@ -40,6 +40,14 @@ function Add-Label($page, $text, $x0, $y0, $x1, $y1, $fill, $fontColor, $size = 
     return $s
 }
 
+function Get-ImgAspect($path) {
+    Add-Type -AssemblyName System.Drawing
+    $im = [System.Drawing.Image]::FromFile($path)
+    $r = $im.Height / $im.Width
+    $im.Dispose()
+    return $r
+}
+
 function Add-Picture($page, $path, $x0, $y0, $w, $h) {
     $shp = $page.Import($path)
     Set-Cell $shp 'Width'  "$w in"
@@ -86,7 +94,7 @@ try {
 
             Add-Label $page $name $x0 $yHead ($x0 + $colW) ($yHead + $headH) $fill $fc 10 1 | Out-Null
             Add-Picture $page (Join-Path $smp.FullName "2d\$file.png") $x0 $yImg $colW $imgH | Out-Null
-            Add-Picture $page (Join-Path $smp.FullName "3d\$file.png") $x0 $ySurf $colW $surfH | Out-Null
+            $p3 = Join-Path $smp.FullName "3d\$file.png"; $h3 = $colW * (Get-ImgAspect $p3); Add-Picture $page $p3 $x0 $ySurf $colW $h3 | Out-Null
         }
 
         $cap = $page.DrawRectangle($left, $yCap, $left + 11 * $colW, $yCap + $capH)

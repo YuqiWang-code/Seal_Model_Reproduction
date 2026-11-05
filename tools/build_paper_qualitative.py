@@ -27,6 +27,7 @@ Example
 """
 import argparse
 import json
+import shutil
 from pathlib import Path
 
 import cv2
@@ -139,20 +140,43 @@ def safe_name(name):
     return name.replace('+', 'p').replace('/', '_').replace(' ', '_')
 
 
-def render_surface_png(surf, path, vmax, cmap='jet', smooth=2.0,
-                       size_in=(1.6, 1.344), dpi=600):
-    """One 3D box as a standalone PNG, rendered at the size it will be placed in Visio.
+def trim_white(img_bgr, pad=10, thr=250):
+    """Crop the surrounding white border (keeps a small even pad)."""
+    g = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    ys, xs = np.where(g < thr)
+    if len(ys) == 0:
+        return img_bgr
+    h, w = g.shape
+    y0 = max(0, int(ys.min()) - pad)
+    y1 = min(h, int(ys.max()) + 1 + pad)
+    x0 = max(0, int(xs.min()) - pad)
+    x1 = min(w, int(xs.max()) + 1 + pad)
+    return img_bgr[y0:y1, x0:x1]
 
-    1.6 x 1.344 in matches one cell of the composite figure (cell_w x 0.84*cell_w),
-    so the tick labels keep the same visual size when pasted back at 1:1.
+
+def render_surface_png(surf, path, vmax, cmap='jet', smooth=2.0,
+                       size_in=(0.873, 0.733), dpi=1200, pad=26):
+    """One 3D box as a standalone PNG, tight-cropped so the box fills the frame.
+
+    Rendered at exactly one cell of the composite figure (0.873 x 0.733 in) with the
+    same tick font, then the white border is trimmed. The composite figure pastes this
+    PNG back into the cell with aspect='auto', so the 3D box fills the cell instead of
+    floating in matplotlib's generous default margins.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     f = plt.figure(figsize=size_in, dpi=dpi, facecolor='white')
     ax = f.add_subplot(111, projection='3d')
     add_surface(ax, surf, vmax=vmax, cmap=cmap, smooth=smooth)
     f.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
-    f.savefig(path, dpi=dpi, facecolor='white')
+    import io
+
+    buf = io.BytesIO()
+    f.savefig(buf, format='png', dpi=dpi, facecolor='white')
     plt.close(f)
+    arr = cv2.imdecode(np.frombuffer(buf.getvalue(), np.uint8), cv2.IMREAD_COLOR)
+    arr = trim_white(arr, pad=pad)
+    cv2.imwrite(str(path), arr)
+    return path
 
 
 def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=1.8):
@@ -236,6 +260,8 @@ def main():
     split_root = Path(args.split_dir) if args.split_dir else None
     if split_root is not None:
         split_root.mkdir(parents=True, exist_ok=True)
+    cache_root = out / '_3d_cache'
+    cache_root.mkdir(parents=True, exist_ok=True)
 
     if args.font:
         plt.rcParams['font.family'] = 'sans-serif'
@@ -345,15 +371,24 @@ def main():
             for spine in ax.spines.values():
                 spine.set_color('black'), spine.set_linewidth(0.3)
         for j, surf in enumerate(surfaces):
-            ax = fig.add_subplot(gs[r_srf, j], projection='3d')
             vmax = 255.0 if args.z_mode == 'shared' else max(20.0, float(surf.max()))
             cmap = 'gray' if columns[j][2] == 'image' else 'jet'
             smooth = 5.0 if columns[j][2] == 'image' else 2.0
-            add_surface(ax, surf, vmax=vmax, cmap=cmap, smooth=smooth)
+            col = safe_name(columns[j][0])
+            p3d = cache_root / f'{stem}_{j:02d}_{col}_{int(vmax)}.png'
+            if not p3d.exists():
+                render_surface_png(surf, p3d, vmax=vmax, cmap=cmap, smooth=smooth)
             if split_root is not None:
-                render_surface_png(surf, split_root / f'{si + 1:02d}_{stem}' / '3d' /
-                                   f'{j:02d}_{safe_name(columns[j][0])}.png',
-                                   vmax=vmax, cmap=cmap, smooth=smooth)
+                dst = split_root / f'{si + 1:02d}_{stem}' / '3d' / f'{j:02d}_{col}.png'
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(p3d, dst)
+            # 贴回格子并铺满（PNG 已裁掉白边，aspect='auto' 让 3D 盒子占满整格）
+            ax = fig.add_subplot(gs[r_srf, j])
+            ax.imshow(cv2.cvtColor(cv2.imread(str(p3d)), cv2.COLOR_BGR2RGB),
+                      aspect='auto', interpolation='lanczos')
+            ax.set_xticks([]), ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(False)
 
         if split_root is not None:
             sdir = split_root / f'{si + 1:02d}_{stem}' / '2d'
