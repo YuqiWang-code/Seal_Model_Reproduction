@@ -11,7 +11,8 @@
 | `v1_20261105/` | 像素级 | 首版：ROC 只画窗口内的点（末点断掉），PR 含 (0,1) 哨兵 |
 | `v2_20261105/` | 像素级 | 整条折线交给坐标轴裁剪、PR 去尖刺、图例按 pAUC 排序（原曲线版） |
 | `v3_20261105/` | 目标级 Pd–Fa | **两段直线**（0,0 → 拐点 → 平台）；`pd_fa.png` 线性轴、`pd_fa_log.png` log 轴（推荐） |
-| `v4_20261105/` | 像素级 ROC | **两段直线**（`--two-segment`），示例图同款；PR 保持原曲线 |
+| `v4_20261105/` | 像素级 ROC | **两段直线**（`--two-segment`），窗口 0–5×10⁻⁴ |
+| `v5_20261105/` | 像素级 | **当前推荐**：两段直线 + 横轴拉长到 8×10⁻⁴（图宽 6.8 in）+ **PR 用 v1 版式**；summary 同时给 pAUC@5×10⁻⁴ 与 @8×10⁻⁴ |
 
 两段直线的定义：平台 = 该方法在右边框处的取值（像素级取 TPR@FPR=5×10⁻⁴，目标级取 max Pd），拐点 = 沿横轴升序第一个达到 `0.98 × 平台` 的点。
 
@@ -40,9 +41,10 @@ scp -r yqwang@172.18.232.202:/share_datasets/Seal_Model_Reproduction/results/tar
 python tools/roc_hist.py --maps Ours/test_maps --gt Ours/Seal_test_GT \
     --out tmp/roc/Ours__test_maps.json --label Ours
 
-# 像素级两段直线（v4 这一版）
+# 像素级两段直线（v5 这一版：横轴 8e-4、图宽 6.8 in、PR 用 v1 版式）
 python tools/plot_roc_pr.py --manifest tmp/roc/manifest_v2.json \
-    --outdir Ours/roc_pr/v4_20261105 --title "Seal test (1,983 images)" --two-segment
+    --outdir Ours/roc_pr/v5_20261105 --title "Seal test (1,983 images)" \
+    --two-segment --xmax 8e-4 --fig-width 6.8 --pr-style v1
 
 # 目标级（v3 这一版，线性 + log 各出一次）
 python tools/plot_target_curves.py --manifest tmp/roc/manifest_target_v1.json \

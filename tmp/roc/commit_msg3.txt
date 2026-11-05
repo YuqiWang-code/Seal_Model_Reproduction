@@ -1,0 +1,10 @@
+曲线 v5：ROC 横轴拉长到 8e-4，P-R 用回 v1 版式
+
+- 用户两点要求：① ROC 横坐标更长（原来平台贴右边框，"戛然而止"）；② P-R 用 v1 那版好看的
+- v5_20261105：plot_roc_pr.py --two-segment --xmax 8e-4 --fig-width 6.8 --pr-style v1
+  - 横轴 0-8e-4、刻度 0/2/4/6/8，平台段横向占比明显变大，拐弯晚的 SCTransNet/ILNet/UIU-Net 也不再贴边框折断
+  - PR 回到 v1 版式：(0,1) 起点、画到 recall→1，两头收拢
+- 新增 --fig-width / --pr-style / 双 pAUC 列：summary 同时给 pAUC@5e-4 与 pAUC@8e-4
+  - pAUC@5e-4（主指标，所有方法操作点 Fa<=2.4e-4）Ours 0.64391 第一
+  - pAUC@8e-4 会被弥散型 SCTransNet(0.68489)/ILNet(0.68050)/UIU-Net(0.66798) 反超 Ours(0.65945)，已在文档写明不要报这个窗口
+- 文档与 AGENTS 记录画法要点：--xmax 决定平台取值与 pAUC 窗口，--pr-style 选 PR 版式，--fig-width 控制图宽

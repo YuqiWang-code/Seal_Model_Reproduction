@@ -1,8 +1,0 @@
-ROC / P-R 曲线 v2：按示例图重画，每个方法一条完整折线
-
-- ROC 不再预切 FPR>5e-4 的点，改画整条折线交给坐标轴裁剪，曲线呈"上升 + 平台后冲出右边框"，与示例图一致
-- PR 的 (0,1) 哨兵点只用于 AP 积分，绘图从第一个真正检出目标的点开始，去掉 recall=0 处的竖直尖刺
-- 图例按 pAUC 从高到低排行（Ours 红色加粗置顶），13 个可区分配色
-- 指标数值与 v1 完全一致：Ours pAUC 0.64386 / AP 0.50410 双第一；v1 保留作对照
-- 新增目标级 Pd-Fa 方案（更贴近示例图的平台形态）：tools/target_curves.py（8 连通 + 质心<3px 一对一匹配，与 metrics.py 同定义）、tools/target_curves_all.sh（13 方法并行）、tools/plot_target_curves.py
-- docs/Seal_ROC_PR曲线.md 补 v1/v2 画法对照与目标级方案；预览 docs/assets/seal_roc_pr_v2.png

@@ -120,12 +120,15 @@ def roc_points(cv, xmax):
     return f[keep], t[keep]
 
 
-def pr_points(cv):
-    """PR polyline from the first operating point that detects something.
+def pr_points(cv, style='v1'):
+    """PR polyline.
 
-    The (0, 1) sentinel is kept only for the AP integral; plotting it (or points
-    with recall 0 and precision 0) would draw a fake vertical spike at recall 0.
+    style='v1': the full curve as computed, i.e. (0,1) at the top of the ranking
+    and the degenerate t=0 point at recall 1 (the "bow-tie" look).
+    style='v2': from the first point that detects something, no sentinel, no tail.
     """
+    if style == 'v1':
+        return cv['pr_recall'], cv['pr_precision']
     r, p = cv['pr_recall'], cv['pr_precision']
     keep = r > 0
     return r[keep], p[keep]
@@ -178,15 +181,15 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98):
     ax.set_ylim(0, 1.02)
     ax.set_xlabel('False Positive Rate (FPR)', fontsize=9)
     ax.set_ylabel('True Positive Rate (TPR)', fontsize=9)
-    ax.set_xticks(np.linspace(0, xmax, 6))
+    ax.set_xticks(np.linspace(0, xmax, 5))
     ax.ticklabel_format(axis='x', style='sci', scilimits=(-4, -4), useMathText=True)
     ax.yaxis.set_major_locator(MaxNLocator(6))
     style_axes(ax)
 
 
-def draw_pr(ax, data, lw=1.15, lw_main=2.0):
+def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1'):
     for i, (label, cv) in enumerate(data):
-        r, p = pr_points(cv)
+        r, p = pr_points(cv, style)
         ax.plot(r, p, color=COLORS[i % len(COLORS)],
                 lw=lw_main if i == 0 else lw,
                 zorder=5 if i == 0 else 3,
@@ -221,6 +224,10 @@ def main():
     ap_.add_argument('--title', default='')
     ap_.add_argument('--xmax', type=float, default=5e-4, help='FPR window for ROC and pAUC')
     ap_.add_argument('--dpi', type=int, default=600)
+    ap_.add_argument('--pr-style', choices=('v1', 'v2'), default='v1',
+                     help='v1 = full PR curve with the (0,1) sentinel; v2 = trimmed')
+    ap_.add_argument('--fig-width', type=float, default=4.5,
+                     help='single-panel figure width in inches (raise it for a longer x axis)')
     ap_.add_argument('--two-segment', action='store_true',
                      help='draw each ROC as straight rise + straight plateau (knee style)')
     ap_.add_argument('--knee-frac', type=float, default=0.98,
@@ -242,6 +249,7 @@ def main():
             'images': rec['images'],
             'auc_roc': auc(cv['fpr'], cv['tpr']),
             'pauc': pauc(cv['fpr_plot'], cv['tpr_plot'], args.xmax),
+            'pauc_5e4': pauc(cv['fpr_plot'], cv['tpr_plot'], 5e-4),
             'ap_pr': ap(cv['pr_recall'], cv['pr_precision']),
             'fg_rate': cv['n_pos_px'] / (cv['n_pos_px'] + cv['n_neg_px']),
             'pd_at_128': op['tpr'],
@@ -258,7 +266,7 @@ def main():
               f'AUC={row["auc_roc"]:.4f}')
 
     # ---- ROC only, one polyline per method (the reference figure's layout)
-    fig, ax = plt.subplots(figsize=(4.5, 3.3))
+    fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
     draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, handles, labels)
@@ -266,18 +274,18 @@ def main():
     save(fig, args.outdir, 'roc', args.dpi)
 
     # ---- PR only
-    fig, ax = plt.subplots(figsize=(4.5, 3.3))
-    draw_pr(ax, data)
+    fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
+    draw_pr(ax, data, style=args.pr_style)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, handles, labels)
     fig.tight_layout(rect=(0, 0, 0.74, 1))
     save(fig, args.outdir, 'pr', args.dpi)
 
     # ---- two panels sharing one legend
-    fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.4))
+    fig, axes = plt.subplots(1, 2, figsize=(min(args.fig_width * 2 + 0.6, 11.5), 3.4))
     draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
     axes[0].set_title('(a) ROC', fontsize=9.5)
-    draw_pr(axes[1], data)
+    draw_pr(axes[1], data, style=args.pr_style)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
     handles, labels = axes[0].get_legend_handles_labels()
     legend_outside(fig, handles, labels, anchor=1.005)
@@ -312,17 +320,18 @@ def main():
         f'ROC 只画 FPR ≤ {key} 的部分（曲线出了窗口就截断），'
         'PR 画全部阈值（`t = 0` 的"全预测为前景"退化点除外）。',
         '',
-        f'| 方法 | pAUC | TPR@FPR={key} ↑ | Pd@t=128 ↑ | Fa@t=128 ↓ | Precision@t=128 | AUC(全范围) | AP(PR) ↑ |',
-        '|---|---:|---:|---:|---:|---:|---:|---:|',
+        f'| 方法 | pAUC@{key} | pAUC@5.0e-04 | TPR@FPR={key} ↑ | Pd@t=128 ↑ | Fa@t=128 ↓ | Precision@t=128 | AUC(全范围) | AP(PR) ↑ |',
+        '|---|---:|---:|---:|---:|---:|---:|---:|---:|',
     ]
     for r in table:
         lines.append(
-            f'| {r["label"]} | {r["pauc"]:.5f} | {r["tpr_at_fpr"][key]:.5f} | '
+            f'| {r["label"]} | {r["pauc"]:.5f} | {r["pauc_5e4"]:.5f} | {r["tpr_at_fpr"][key]:.5f} | '
             f'{r["pd_at_128"]:.5f} | {r["fa_at_128"]:.3e} | '
             f'{r["precision_at_128"]:.5f} | {r["auc_roc"]:.5f} | {r["ap_pr"]:.5f} |')
     lines += [
         '',
-        f'- **pAUC** = FPR ∈ [0, {key}] 内的梯形面积再除以 {key}，即图中 ROC 的归一化面积；这是主指标。',
+        f'- **pAUC@{key}** = 图中窗口 [0, {key}] 的归一化面积（画多宽就积多宽）。',
+        '- **pAUC@5.0e-04** = 各方法操作点（Fa@t=128 ≤ 2.4e-04）所在的低误检窗口，作为排名主指标。',
         '- **AUC(全范围)** 为 FPR ∈ [0, 1] 的全积分，只作参考：几乎不预测前景的方法'
         '（UIU-Net / SCTransNet / ILNet）在 Seal 上反而拿到 0.977 以上，'
         '与"S/MAE 被背景主导"是同一类陷阱，不能当排名依据。',
