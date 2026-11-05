@@ -99,16 +99,23 @@ def load_map(path):
 
 
 def roi_from_gt(gt, margin=MARGIN, min_box=MIN_BOX):
+    """Square ROI around the GT, always fully inside the image.
+
+    The window is a `side x side` square with side = max(min_box, gt_span + 2*margin);
+    when the target sits near a border the window slides inward instead of being clipped,
+    so every panel is a complete square crop (no black padding bars).
+    """
     ys, xs = np.where(gt > 127)
     h, w = gt.shape
     if len(ys) == 0:
-        return 0, min(h, min_box), 0, min(w, min_box)
+        side = int(min(min_box, h, w))
+        return 0, side, 0, side
     cy, cx = int(ys.mean()), int(xs.mean())
     span = max(int(ys.max() - ys.min()), int(xs.max() - xs.min()))
-    half = max(min_box // 2, span // 2 + margin)
-    y0, y1 = max(0, cy - half), min(h, cy + half)
-    x0, x1 = max(0, cx - half), min(w, cx + half)
-    return y0, y1, x0, x1
+    side = int(min(max(min_box, span + 2 * margin), h, w))
+    y0 = min(max(0, cy - side // 2), h - side)
+    x0 = min(max(0, cx - side // 2), w - side)
+    return y0, y0 + side, x0, x0 + side
 
 
 def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
