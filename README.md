@@ -14,7 +14,7 @@
 - 本项目五个对比方法的 Seal 框监督、点监督及 SAM 伪标签适配任务停止执行，历史产物仅在实验文档中存档，不进入跨域主表；相关自动跟进不得重启这些适配任务。
 - 本地 `data/TrainDataset.zip`、`data/TestDataset.zip` 为 S-COD 相关训练与测试归档，`data/Scribble-COD.zip` 提供独立涂鸦标注；须按实际内容区分完整 GT 与 0/1/2 稀疏标签。`data/NESS-Net/`、`data/SSFam/` 另有各自数据归档。优先复用服务器已解压源数据，缺失时再上传对应归档。
 
-最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21～32 行为 12 个全监督 IRSTD 基线（见下一节），每个基线一行，不增加适配、消融或其他补充结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
+最终汇总表为 `docs/Seal量化SOTA表.xlsx`：第 3～20 行为弱监督/跨域对比方法，每个方法只填一组指标；第 21～32 行为 12 个全监督 IRSTD 基线，第 33 行为 SAM3（同属全监督对照），第 34～35 行为本文方法变体（B+Fusion 已填、多模态 LoRA+Fusion 待填）；`Ablation` 工作表另存 CM-LoRA / BISF / Total 消融与末尾 Ours。每个方法每个协议只填一行，不追加其他适配结果。各方法的多组实验和历史结果记录在对应实验文档中。表内采用的实验协议须明确，不能按测试集分数择优拼选。
 
 该表来自腾讯文档，可能新增列或更新协议。合并下载版本时按方法及列标题对应，采用新版本的布局和明确更新；新版本空白处保留现有有效评估结果，同协议的五位小数保留完整精度。新增 IoU、F1、Pd、Fa 四列后，每个方法仍只保留一行；填写时按标题定位列，不依赖旧列号。
 
@@ -59,7 +59,8 @@
 
   UIU-Net 只监督 BCE，第 20 epoch 后滑向"全背景"不动点（val IoU 0），按 val 连续 5 次无改善停止，表中为其 val 最优检查点。HDNet 跑满 120 epoch，val 最优出现在最后一个评估点（第 120 epoch，0.28556）。
 - 热红外 8 位转换结论：用 1–99 百分位裁剪再拉伸会放大约 10 倍背景噪声（目标 SNR 降到 1.5），纯区域损失退化为常数输出（val IoU 恒为 0）；改为逐图 min-max 后目标与背景差值是背景 std 的 2.2–29.7 倍，训练正常。后续不得再用百分位裁剪生成输入。
-- 表中位置：第 21～32 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。第 21～23 行为第一批（2022–2024），第 24～28 行为第二批（2024/2025/2026），第 29～32 行为第三批（2025–2026）。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
+- 表中位置：第 21～32 行，Modal 记 `T`，Supervision 记 `Full GT`，重训/测试列写明「Seal train 全监督重训 → Seal test」。第 21～23 行为第一批（2022–2024），第 24～28 行为第二批（2024/2025/2026），第 29～32 行为第三批（2025–2026）。第 33 行为 SAM3（RGB、Full GT、官方权重测试），第 34～35 行为本文方法变体（B+Fusion 已填、多模态 LoRA+Fusion 待填），第 34/35 行不是对比方法。这些行与第 3～20 行的弱监督跨域结果不是同一协议，不能互相替代或混填。
+- 论文采用的对比集合（**8 个**，重点维护）：**DNA-Net、MSHNet、RPCANet、HDNet、L2SKNet、BGM、RPCANet++、SAM3**。这 8 个是正文表格、定性图（11 样例、7 列版式）、ROC / P-R 曲线（`Ours/roc_pr/v7`）与复杂度对照所用的集合；其余 4 个（UIU-Net、SCTransNet、ILNet、DURD）作为补充基线保留在第 21～32 行与各自实验记录中，不进入正文主对比。改动其中之一（权重、epoch、指标）仍须走本文档的全监督协议并同步实验记录。
 - 复杂度（表中 `Params↓ / GFLOPs↓ / FPS↑` 三列，行 21～32）：单窗 `1×C×256×256`、FP32、batch 1、RTX 5090 实测，脚本 [tools/measure_complexity_one.py](tools/measure_complexity_one.py)（`--kind` 选方法，cwd 须为方法目录），原始 JSON 在服务器 `results/complexity/<kind>.json`。`Params` 取全部 `nn.Parameter`（不是 thop 的计数）；`GFLOPs` 取 thop **MACs**，即各论文写 "FLOPs/GFLOPs" 时的实际口径；`FPS` = 1/中位延迟（三轮 × 每轮 50 次 warm-up + 100 次计时，取最好一轮的中位数；每轮前先做负载把 GPU 时钟从空闲的 180 MHz 拉满，不预热会把 HDNet 误测成 155 ms）。Seal test 一张 622×417 是 **12 个滑窗**，故单图成本 ≈ 12×GFLOPs、单图吞吐 ≈ FPS/12。
 - 复杂度与公开值的对照：有公开 Params 的 9 个与原论文/作者仓库一致（RPCANet++ 的 2.915 vs 2.962 是 thop 不计 `nn.LSTM` 的约定差，thop 口径 2.915336 M、全部参数 2.961582 M，模型相同）；ILNet 论文首页的 0.046 M / 2.19 GFLOPs 指 `ILNet_S`（实测 0.045980 M、512² 下 2.2146 G，与 2.19 G 差 1.1 %），本表训练的是仓库默认 `ILNet_L`（4.040 M），两者不是同一网络；BGM（`BasicUNet_plus` 主干）与 DURD（TGRS26 新文）两文及仓库均未给可比数字，只有我们的实测值。GFLOPs 与第三方 LPCNet 表（RTX 3090，arXiv:2607.04603v3 Tab. I）逐项吻合到 0.4–2.7 %（DNA-Net 14.282 vs 13.9、UIU-Net 54.501 vs 54.2、SCTransNet 10.119 vs 10.0、RPCANet 44.569 vs 44.3、RPCANet++ 190.669 vs 190），据此确认"论文 FLOPs = MACs"；PDDiff 表对 SCTransNet/HDNet 正好 2×、对 MSHNet 3.15×，属其自身口径问题，不作基准。FPS 跨论文不可比（PDDiff 是含整图滑窗的管线口径，ILNet 在 Jetson AGX Xavier 上测）：同批 5090 相对 3090 快 2.1–4.6×，只有 DNA-Net 为 1.45×（延迟由小卷积启动主导，复测分布很紧，非测错）。
 - DRPCA-Net 的 11.23 FPS 是实现开销而非测量噪声：`torch.profiler` 显示单次前向 CUDA 时间的 81.8 % 花在 `ChannelAttention` 的 `nn.AdaptiveMaxPool2d(1)`（每前向 29 次调用），且延迟对 batch 1/2/4 不敏感（85/56/65 ms）。按官方代码如实记录，不改实现。口径、对照表与差异分析见 [Seal 复杂度指标说明](docs/Seal复杂度指标_说明.md)。
