@@ -252,6 +252,8 @@ def main():
                      help='v1 = full PR curve with the (0,1) sentinel; v2 = trimmed')
     ap_.add_argument('--fig-width', type=float, default=4.5,
                      help='single-panel figure width in inches (raise it for a longer x axis)')
+    ap_.add_argument('--square', action='store_true',
+                     help='make the axes box square (1:1) so the rise looks steeper')
     ap_.add_argument('--two-segment', action='store_true',
                      help='draw each ROC as straight rise + straight plateau (knee style)')
     ap_.add_argument('--highlight', default='Ours',
@@ -292,15 +294,19 @@ def main():
               f'AUC={row["auc_roc"]:.4f}')
 
     # ---- ROC only, one polyline per method (the reference figure's layout)
-    fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
+    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else 3.3))
     draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
+    if args.square:
+        ax.set_box_aspect(1)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'roc', args.dpi)
 
     # ---- PR only
-    fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
+    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_width if args.square else 3.3))
     draw_pr(ax, data, style=args.pr_style, highlight=args.highlight)
+    if args.square:
+        ax.set_box_aspect(1)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'pr', args.dpi)
@@ -312,6 +318,9 @@ def main():
     axes[0].set_title('(a) ROC', fontsize=9.5)
     draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
+    if args.square:
+        for a in axes:
+            a.set_box_aspect(1)
     handles, labels = axes[0].get_legend_handles_labels()
     legend_outside(fig, axes[1], handles, labels)
     save(fig, args.outdir, 'roc_pr', args.dpi)
