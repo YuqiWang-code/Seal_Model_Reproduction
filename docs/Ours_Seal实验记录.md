@@ -169,7 +169,7 @@ v2 与 v1 的差别在于**把 03–06 换成各模态自己的解码输出**（
 
 产物：服务器 `Ours/Feature_Map/v2/`（`panels/<order>_<stem>/{full,roi}/01–09.png` 共 180 张、`legend_prob.png`、`legend_feature.png`、`manifest.json`、`Ours_FeatureMap_v2.vsdx` 9.2 MB）；本地 `Ours/Feature_Map/v2/` 只放该 vsdx。重建：`tools/feature_maps_v2.py` + `tools/make_visio_feature_maps_v2.ps1`。
 
-### v3（现行，`Ours/Feature_Map/v3/`）
+### v3（已被 v4 取代，`Ours/Feature_Map/v3/`）
 
 v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/train_logs2/best.pth`、同一 1105 预测），概率面板的 IoU 与 v2 逐位相同。
 
@@ -193,3 +193,29 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 局限（须写进图注）：07 是**峰**不是掩膜，低阈值上的宽度受 72×72 分辨率限制（50% 水平半径中位 15 px），不能用来论证边界精度；10 张是按 F1 选出的头部样本，不是随机抽样。
 
 产物：服务器 `Ours/Feature_Map/v3/`（`panels/<order>_<stem>/{full,roi}/01–09.png` 共 180 张、`raw/<stem>.npz` 缓存、`manifest.json`、两条色标、`Ours_FeatureMap_v3.vsdx`）；本地 `Ours/Feature_Map/v3/` 只放 vsdx。重建：`tools/feature_maps_v3.py`（GPU 约 40 s；`raw/*.npz` 存了响应与四路概率，只改显示时不必再跑模型）+ `tools/make_visio_feature_maps_v3.ps1`（Visio COM，单页 11.15×15.41 in、191 个形状）。
+
+### v4（现行，`Ours/Feature_Map/v4/`）
+
+**为什么重做**：v3 的 10 行取的是"逐图 F1 前 10"，即最容易的一批；它们的 median IoU 0.63 / 0.61 / 0.88 / 0.78 / 0.89 不能当作方法水平。v4 先扫全测试集（`--scan-out`，1,983 张，GPU 约 25 min → `Ours/Feature_Map/v4/scan.csv`），拿到每张图每分支的 IoU 与峰值位置，再按**声明过的规则**取样、并按真实误差上色。
+
+全测试集 GT 框 ≤ 32 px 的子集（n = 1,144）中位 IoU：冻结 SAM3 RGB **0.421** / T **0.429**，CM-LoRA RGB **0.556** / T **0.478**，最终 **0.565**；融合特征峰值落在 GT 框内 **84.1 %**，偏移中位 3.05 px。（全部 1,983 张：0.375 / 0.409 / 0.544 / 0.458 / 0.558。）v3 那组 0.63 → 0.88 → 0.89 是最好的十张，v4 把两个口径并列写在页脚，避免"拿最好样本当平均"。
+
+**取样规则**（写进 manifest 的 `selection`）：GT 框 ≤ 32 px 且最终 IoU ≥ 0.8 的样本（n = 30）里，按冻结 SAM3 RGB 的 IoU 升序等距取 10 张——10 行因此覆盖"冻结模型完全失败（0.00）"到"冻结模型已经够好（0.88）"的整条轴，并保留反例（2498：LoRA 0.80 → 0.50）。行序即该轴升序。
+
+**呈现改动**：
+
+1. **不注入任何噪声**。实测冻结 SAM3 的失败形态不是散点噪声，而是**覆盖过大 / 位置偏移**：7–15 px 的目标上 FP 面积 18–163 px，而 CM-LoRA 降到 0–3 px。v4 直接画这件事——品红 = 预测落在 GT 外（FP），绿 = GT 未被覆盖（FN），青 = GT 边界，白 = 该列在 p = 0.5 的判定边。四种颜色都只由"预测 vs GT"决定，没有人工加工。
+2. 每列标注改成 `IoU x.xx  FP nn`，把"多出来的响应"量化。
+3. 07 沿用 v3 的峰顶窗口（rel 0.85–1，γ 1.5）+ 0.9 等值线 + 峰十字。
+4. 中位数行明确标注为"这 10 张"；全测试集数字单独放在页脚粗体行。
+5. 保留 `--auto-roi`（44–88 px，本批未触发）与 `--plain-heat`（退回无着色版本）两个开关。
+
+**10 行的读数**：raw RGB 中位 0.66 → CM-LoRA RGB 0.87 → final 0.84（该子集 final 中位略低于 RGB 分支，见下）；最坏 FP 面积 163 px → 1 px；融合峰 10/10 在 GT 内，偏移中位 1.8 px。
+
+**必须如实写进图注的三点**：
+
+- T 分支的 LoRA 增益不稳定（示例里 4 张升、3 张降），不能把两个模态写成同等受益；
+- 融合（BSRF）相对 RGB 单分支只有约 +1 个点（0.556 → 0.565），它的作用是"把峰值定到目标上"，不是大幅提分；
+- 10 行是"已解决样本"的分层抽样，不是随机样本，全测试集分布见页脚。
+
+产物：服务器 `Ours/Feature_Map/v4/`（`panels/` 180 张 396×396、`raw/<stem>.npz`、`scan.csv`、`scan_summary.json`、`manifest.json`、两条色标、`Ours_FeatureMap_v4.vsdx`）；本地 `Ours/Feature_Map/v4/` 只放 vsdx。重建：`tools/feature_maps_v4.py`（`--scan-out` 全量扫描 / `--stems` 指定样例，GPU 每 10 张约 5 s）+ `tools/make_visio_feature_maps_v4.ps1`（192 个形状，11.15×15.77 in）。
