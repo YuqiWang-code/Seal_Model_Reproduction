@@ -30,6 +30,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
+import figure_style
+
 MAIN_COLOR = '#d62728'
 COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#8c564b', '#e377c2',
           '#17becf', '#bcbd22', '#7f7f7f', '#393b79', '#637939', '#8c6d31',
@@ -146,7 +148,7 @@ def main():
     cmap = color_map([m['label'] for m in items], args.highlight)
 
     fs = args.font_scale
-    plt.rcParams.update({'font.size': 9 * fs, 'axes.linewidth': 0.8})
+    figure_style.apply(fs)
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
 
     rows = []
@@ -170,16 +172,12 @@ def main():
 
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
-    ax.set_xlabel('Recall', fontsize=10 * fs)
-    ax.set_ylabel('Precision', fontsize=10 * fs)
+    figure_style.axis_labels(ax, 'Recall', 'Precision', fs)
     ax.set_xticks(np.linspace(0, 1, 6))
-    ax.set_yticks(np.linspace(0, 1, 6))
-    ax.grid(True, ls='-', lw=0.45, color='0.86', zorder=0)
-    for s in ('top', 'right'):
-        ax.spines[s].set_visible(False)
+    figure_style.finish(ax, fs, y_ticks=np.linspace(0, 1, 6))
     if args.title:
         ax.set_title(args.title, fontsize=9.5 * fs)
-    ax.legend(fontsize=6.3 * fs, ncol=args.legend_ncol, loc=args.legend_loc,
+    ax.legend(fontsize=figure_style.LEGEND_PT * fs, ncol=args.legend_ncol, loc=args.legend_loc,
               frameon=True, edgecolor='0.85', framealpha=0.93,
               labelspacing=0.26, handlelength=1.6, borderpad=0.4)
 

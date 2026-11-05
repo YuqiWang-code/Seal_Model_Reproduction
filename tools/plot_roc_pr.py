@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
+import figure_style
+
 # Ours first (red); baselines get clearly separated hues, no near-duplicates.
 MAIN_COLOR = '#d62728'          # reserved for the highlighted method
 COLORS = [
@@ -183,10 +185,8 @@ def at_threshold(cv, thr):
 
 
 def style_axes(ax):
-    ax.grid(True, linestyle=':', linewidth=0.55, color='0.72', alpha=0.9)
-    for s in ('top', 'right'):
-        ax.spines[s].set_visible(False)
-    ax.tick_params(labelsize=8 * FS, width=0.8, length=3)
+    """Shared typography with tools/plot_pr_object.py (see tools/figure_style.py)."""
+    figure_style.finish(ax, FS, y_ticks=np.linspace(0, 1, 6))
 
 
 def two_segment(cv, xmax, knee_frac):
@@ -222,11 +222,9 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, hi
                 solid_capstyle='round', label=label)
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, 1.02)
-    ax.set_xlabel('False Positive Rate (FPR)', fontsize=9 * FS)
-    ax.set_ylabel('True Positive Rate (TPR)', fontsize=9 * FS)
+    figure_style.axis_labels(ax, 'False Positive Rate (FPR)', 'True Positive Rate (TPR)', FS)
     ax.set_xticks(np.linspace(0, xmax, 5))
     ax.ticklabel_format(axis='x', style='sci', scilimits=(-4, -4), useMathText=True)
-    ax.yaxis.set_major_locator(MaxNLocator(6))
     style_axes(ax)
 
 
@@ -257,8 +255,7 @@ def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours', cut_fp
                     markeredgecolor='white', markeredgewidth=0.5)
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
-    ax.set_xlabel('Recall', fontsize=9 * FS)
-    ax.set_ylabel('Precision', fontsize=9 * FS)
+    figure_style.axis_labels(ax, 'Recall', 'Precision', FS)
     style_axes(ax)
 
 
