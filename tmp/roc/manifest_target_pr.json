@@ -1,0 +1,60 @@
+{
+ "methods": [
+  {
+   "label": "DNA-Net",
+   "pr": "tmp/roc/target_pr\\DNANet.json"
+  },
+  {
+   "label": "UIU-Net",
+   "pr": "tmp/roc/target_pr\\UIU-Net.json"
+  },
+  {
+   "label": "MSHNet",
+   "pr": "tmp/roc/target_pr\\MSHNet.json"
+  },
+  {
+   "label": "SCTransNet",
+   "pr": "tmp/roc/target_pr\\SCTransNet.json"
+  },
+  {
+   "label": "RPCANet",
+   "pr": "tmp/roc/target_pr\\RPCANet.json"
+  },
+  {
+   "label": "HDNet",
+   "pr": "tmp/roc/target_pr\\HDNet.json"
+  },
+  {
+   "label": "ILNet",
+   "pr": "tmp/roc/target_pr\\ILNet.json"
+  },
+  {
+   "label": "L2SKNet",
+   "pr": "tmp/roc/target_pr\\L2SKNet.json"
+  },
+  {
+   "label": "BGM",
+   "pr": "tmp/roc/target_pr\\BGM.json"
+  },
+  {
+   "label": "DRPCA-Net",
+   "pr": "tmp/roc/target_pr\\DRPCANet.json"
+  },
+  {
+   "label": "RPCANet++",
+   "pr": "tmp/roc/target_pr\\RPCANetpp.json"
+  },
+  {
+   "label": "DURD",
+   "pr": "tmp/roc/target_pr\\DURD.json"
+  },
+  {
+   "label": "SAM3",
+   "pr": "tmp/roc/target_pr\\SAM3.json"
+  },
+  {
+   "label": "Ours",
+   "pr": "tmp/roc/target_pr\\Ours1105.json"
+  }
+ ]
+}
