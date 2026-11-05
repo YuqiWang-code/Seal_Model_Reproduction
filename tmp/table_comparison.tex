@@ -1,0 +1,97 @@
+\begin{table*}[t]
+    \centering
+    \caption{Comparison of efficiency and accuracy metrics (\%) with state-of-the-art methods. 
+    The $F_a$ values are reported in units of $10^{-6}$. $\uparrow$ and $\downarrow$ indicate that higher and lower values are better, respectively. 
+    The best results are highlighted in bold red, and the second-best results in blue.
+    }
+    \label{tab:comparison}
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{llccccccc}
+    \toprule
+    \multirow{2}{*}{Methods} &
+    \multirow{2}{*}{Pub.} &
+    \multicolumn{3}{c}{Efficiency Metrics} &
+    \multicolumn{4}{c}{Accuracy Metrics} \\
+    \cmidrule(lr){3-5}
+    \cmidrule(lr){6-9}
+    & & Params$\downarrow$ & GFLOPs$\downarrow$ & FPS$\uparrow$
+    & IoU$\uparrow$ & $F_1\uparrow$ & $P_d\uparrow$
+    & $F_a \downarrow$ \\
+    \midrule
+    BGM
+    & TGRS25
+    & 4.08 & 6.77 & \second{212.10}
+    & \best{30.74} & \best{47.02} & 78.68 & 96.32 \\
+    
+    DNA-Net
+    & TIP22
+    & 4.70 & 14.28 & 64.20
+    & 30.00 & 46.15 & 79.05 & 87.30 \\
+    
+    UIU-Net
+    & TIP23
+    & 50.54 & 54.50 & 118.40
+    & 21.49 & 35.37 & 68.74 & 29.65 \\
+    
+    MSHNet
+    & CVPR24
+    & 4.07 & \second{6.11} & 152.30
+    & 29.23 & 45.23 & \second{80.94}
+    & \second{67.28} \\
+    
+    RPCANet
+    & WACV24
+    & \best{0.68} & 44.57 & 211.30
+    & \second{30.64} & \second{46.91}
+    & 80.62 & 77.57 \\
+    
+    SCTransNet
+    & TGRS24
+    & 11.33 & 10.12 & 109.20
+    & 20.29 & 33.74 & 62.21 & 25.28 \\
+    
+    HDNet
+    & TGRS25
+    & 3.68 & \best{5.70} & 85.50
+    & 27.26 & 42.84 & \best{82.14}
+    & \best{54.50} \\
+    
+    ILNet
+    & TAES25
+    & 4.04 & 21.42 & 108.40
+    & 19.17 & 32.18 & 58.95 & 19.30 \\
+    
+    DRPCA-Net
+    & TGRS25
+    & 1.17 & 73.84 & 11.20
+    & 29.99 & 46.14 & 76.85 & 104.04 \\
+    
+    L2SKNet
+    & TGRS25
+    & \second{0.90} & 6.90 & \best{332.20}
+    & 30.09 & 46.26 & 77.20 & 86.24 \\
+    
+    RPCANet++
+    & TPAMI26
+    & 2.96 & 190.67 & 80.40
+    & 30.10 & 46.27 & 76.92 & 88.16 \\
+    
+    DURD
+    & TGRS26
+    & 2.47 & 52.85 & 125.30
+    & 30.06 & 46.23 & 77.58 & 102.84 \\
+    
+    SAM3
+    & ICLR26
+    & 473.59  & 7149.94  & 3.30 
+    & 22.47 & 36.70 & 68.79 & 350.80 \\
+    
+    \midrule
+    Ours
+    & --
+    & 9.09  & 110.11  & 13.61 
+    & 51.93 & 68.36 & 89.15 & 17.17 \\
+    \bottomrule
+    \end{tabular}
+    }
+\end{table*}
