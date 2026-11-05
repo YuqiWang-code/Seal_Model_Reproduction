@@ -141,6 +141,45 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
+def image_panel_roi(img, roi, target=384, mode='full'):
+    """Image column = the whole scene, with ONE red box marking the magnified ROI.
+
+    mode='full'    : the 622x417 frame squeezed into a square (keeps the whole scene;
+                     the box is drawn square on purpose — it marks the crop, and a square
+                     matches the square panels from Mask onward);
+    mode='crop417' : a 417x417 window (full height, shifted to keep the ROI inside) so the
+                     image is not distorted and the box is the true ROI rectangle.
+    """
+    h, w = img.shape[:2]
+    y0, y1, x0, x1 = roi
+    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+
+    if mode == 'crop417':
+        side = min(h, w)
+        x0c = int(min(max(0, round(cx - side / 2.0)), w - side))
+        y0c = int(min(max(0, round(cy - side / 2.0)), h - side))
+        crop = img[y0c:y0c + side, x0c:x0c + side]
+        panel = cv2.resize(cv2.cvtColor(crop, cv2.COLOR_GRAY2BGR), (target, target),
+                           interpolation=cv2.INTER_AREA)
+        k = target / float(side)
+        bx0, bx1 = int(round((x0 - x0c) * k)), int(round((x1 - x0c) * k))
+        by0, by1 = int(round((y0 - y0c) * k)), int(round((y1 - y0c) * k))
+        cv2.rectangle(panel, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
+        return panel
+
+    panel = cv2.resize(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), (target, target),
+                       interpolation=cv2.INTER_AREA)
+    sx, sy = target / float(w), target / float(h)
+    half = (x1 - x0) * (sx * sy) ** 0.5 / 2.0          # area-preserving square
+    px, py = cx * sx, cy * sy
+    bx0, bx1 = int(round(px - half)), int(round(px + half))
+    by0, by1 = int(round(py - half)), int(round(py + half))
+    bx0, by0 = max(0, bx0), max(0, by0)
+    bx1, by1 = min(target - 1, bx1), min(target - 1, by1)
+    cv2.rectangle(panel, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
+    return panel
+
+
 def roi_crop_canvas(img_bgr, roi, target=384):
     """Crop to the ROI, upscale nearest-neighbour, pad to a square canvas."""
     y0, y1, x0, x1 = roi
@@ -184,11 +223,12 @@ def draw_gt_boxes(canvas, gt_bin, roi, k, ox, oy, box_pad=8):
     return canvas
 
 
-def diag_panel(pred_bin, gt_bin, roi, roi_mode, target=384, box_pad=8):
-    """TP/FP/FN colour panel: TP white, FP red, FN green, plus a red GT locator box.
+def diag_panel(pred_bin, gt_bin, roi, roi_mode, target=384, box_pad=8, draw_box=False):
+    """TP/FP/FN colour panel: TP white, FP red, FN green.
 
     Used for the Visio assembly so each method's error pattern (miss = green,
-    false alarm = red) is visible at a glance.
+    false alarm = red) is visible at a glance. `draw_box=False` keeps the panels clean —
+    the only red box in the figure is the one in the Image column marking the crop.
     """
     h, w = gt_bin.shape
     colour = np.zeros((h, w, 3), np.uint8)
@@ -199,10 +239,14 @@ def diag_panel(pred_bin, gt_bin, roi, roi_mode, target=384, box_pad=8):
     y0, y1, x0, x1 = roi
     if roi_mode:
         canvas, k, ox, oy = roi_crop_canvas(colour, roi, target)
-        return draw_gt_boxes(canvas, gt_bin, roi, k, ox, oy, box_pad)
+        if draw_box:
+            return draw_gt_boxes(canvas, gt_bin, roi, k, ox, oy, box_pad)
+        return canvas
 
-    # 整幅模式：每个目标一个框
+    # 整幅模式：每个目标一个框（draw_box=False 时只返回彩色图）
     panel = colour.copy()
+    if not draw_box:
+        return panel
     n_lab, labels = cv2.connectedComponents(gt_bin.astype(np.uint8), connectivity=8)
     boxes = []
     for lab in range(1, n_lab):
@@ -345,6 +389,8 @@ def main():
                          '<dir>/<nn>_<id>/2d/<col>.png and .../3d/<col>.png')
     ap.add_argument('--roi-min', type=int, default=MIN_BOX, help='minimum ROI side (px)')
     ap.add_argument('--roi-margin', type=int, default=MARGIN, help='padding around the GT bbox (px)')
+    ap.add_argument('--image-mode', default='full', choices=['full', 'crop417'],
+                    help='roi 版式的 Image 列：full = 整幅压成正方形；crop417 = 417x417 原比例窗口')
     ap.add_argument('--diag', action='store_true',
                     help='2D panels = TP white / FP red / FN green + red GT box (for Visio)')
     ap.add_argument('--roi-panels', action='store_true',
@@ -445,13 +491,9 @@ def main():
         for name, path, kind in columns:
             if kind == 'image':
                 if args.roi_panels:
-                    # roi 版式：Image 列也是同一块 ROI（热红外原图，6 倍放大），
-                    # 这样 11 列视野完全一致；诊断模式下套同样的定位框
-                    panel, kk, oxx, oyy = roi_crop_canvas(
-                        cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), roi)
-                    if args.diag:
-                        draw_gt_boxes(panel, gt > 127, roi, kk, oxx, oyy)
-                    panels.append(panel)
+                    # roi 版式：Image 列 = 整幅场景压缩成正方形 + 唯一一个正方形红框，
+                    # 表示其余各列就是这块区域放大出来的（Mask 之后不再画框）
+                    panels.append(image_panel_roi(img, roi, mode=args.image_mode))
                 else:
                     panels.append(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
                 surfaces.append(img[sy0:sy1, sx0:sx1])
