@@ -146,7 +146,7 @@ v9 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 3D 的 Z 轴用 `--z-mode shared` 固定 0–255：所有列都是同一量纲的概率图，跨列可比（PDDiff 也是这么做的）；峰高=真实响应强度，颜色用 `PowerNorm(gamma=0.45)` 让中等响应也偏暖色，避免"响应弱就看不出峰"。
 
-Visio 版由 [tools/make_visio_qualitative.ps1](tools/make_visio_qualitative.ps1) 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
+Visio 版由 [tools/make_visio_qualitative.ps1](../tools/make_visio_qualitative.ps1) 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
 
 仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v9）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
