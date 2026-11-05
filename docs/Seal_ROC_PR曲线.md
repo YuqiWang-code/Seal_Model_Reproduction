@@ -78,16 +78,21 @@ Seal test 1,983 张预测上的 ROC / Precision-Recall 曲线。版式对齐 IRS
 
 **像素级**：阈值 `pred >= 128` 时 precision / recall 可逐位复原表中 F1 与 IoU。
 
-| 方法 | Precision@128 | Recall@128 | 由此算 F1 | 表中 F1 | 由此算 IoU | 表中 IoU |
+| 方法 / 预测批次 | Precision@128 | Recall@128 | 由此算 F1 | 表中 F1 | 由此算 IoU | 表中 IoU |
 |---|---:|---:|---:|---:|---:|---:|
-| Ours | 0.64628 | 0.59415 | 0.61905 | 0.61912 | 0.44831 | 0.44835 |
+| Ours（1105，现行，= 第 20 行） | 0.58130 | 0.82963 | 0.68361 | 0.68361 | 0.51931 | 0.51931 |
+| Ours（旧预测，历史） | 0.64628 | 0.59415 | 0.61905 | 0.61912 | 0.44831 | 0.44835 |
 | BGM | 0.36578 | 0.65800 | 0.46990 | 0.47019 | 0.30743 | 0.30735 |
 
-**目标级**：`t = 128` 的 Pd / Fa 与表中 13 行**全部逐位吻合**（同定义、同批预测），例如 Ours 0.82731 / 2.100e-06（表 0.82731 / 2.0998e-06）、BGM 0.78681 / 9.632e-05（表 0.78681 / 9.6318e-05）、ILNet 0.58946 / 1.930e-05。
+1105 批次的像素操作点与表内数值在五位小数内一致（histogram 分箱带来的 1e-5 级差异）；旧预测的 0.619/0.448 是 2026-11-04 版表值，现只作历史对照。
+
+**目标级**：`t = 128` 的 Pd / Fa 与表中 13 行**全部逐位吻合**（同定义、同批预测），例如 Ours 0.82731 / 2.100e-06（旧预测，表旧值 0.82731 / 2.0998e-06）、BGM 0.78681 / 9.632e-05（表 0.78681 / 9.6318e-05）、ILNet 0.58946 / 1.930e-05。Ours 的 1105 批次目标级曲线为 `Ours/roc_pr/v12_20261105/`，`t = 128` 处为 Pd 0.89151 / Fa 1.717e-05，与表中第 20 行一致。
 
 ## 指标
 
 ### 像素级（v5，两个窗口的 pAUC 并列）
+
+下表是 v5 版数值，**Ours 行仍为旧预测**；1105 批次的像素级结果为 `pAUC@5×10⁻⁴` **0.85234**、`pAUC@8×10⁻⁴` 0.89420、`AP` **0.69984**、`Pd@t=128` 0.82963、`Fa@t=128` 1.228e-04、`TPR@FPR=8e-4` 0.964（v10/v11 的 `curves.json`），其余 12 个基线两批相同。
 
 | 方法 | pAUC@5×10⁻⁴ ↑（主） | pAUC@8×10⁻⁴ | TPR@FPR=8e-4 | Pd@t=128 ↑ | Fa@t=128 ↓ | AP(PR) ↑ |
 |---|---:|---:|---:|---:|---:|---:|
@@ -109,7 +114,9 @@ Seal test 1,983 张预测上的 ROC / Precision-Recall 曲线。版式对齐 IRS
 - `pAUC@8×10⁻⁴` 是 v5 放大后的窗口面积。窗口放宽后 SCTransNet / ILNet / UIU-Net 的 TPR 从 0.80 继续爬到 0.88（它们是弥散输出，阈值降一点就多覆盖一片前景），这三根的面积因此反超 Ours；**这不是把图画宽就变差，而是"把误检预算放大到 8×10⁻⁴ 时，弥散型方法确实更占便宜"**。写论文时如果要报面积，请报 `pAUC@5×10⁻⁴` 并注明窗口。
 
 
-### 目标级（v3）
+### 目标级（v3；现行 v12）
+
+下表是 v3 版（Ours 为旧预测），其余 12 个基线两批相同。**现行 v12（1105 批次）中 Ours 为：拐点 Fa 6.027e-06、平台 Pd 0.92198、Pd@t=128 0.89151、Fa@t=128 1.717e-05**，与量化表第 20 行逐位一致；图像见 `Ours/roc_pr/v12_20261105/pd_fa.png` 与 `pd_fa_log.png`。
 
 | 方法 | 拐点 Fa | 平台 Pd ↑ | Pd@t=128 ↑ | Fa@t=128 ↓ |
 |---|---:|---:|---:|---:|
@@ -130,10 +137,10 @@ Seal test 1,983 张预测上的 ROC / Precision-Recall 曲线。版式对齐 IRS
 ## 读图注意
 
 - **不要用全范围 AUC 排名**。几乎不预测前景的方法（UIU-Net / SCTransNet / ILNet）在 Seal 上反而拿到 0.977–0.981 的全范围 AUC，因为它们的背景预测几乎全零、ROC 贴着左上角走"什么都不选"的捷径。这与[S/MAE 被背景主导](Seal全监督基线评估汇总.md#平凡基线全背景预测)是同一类陷阱，主指标取低 FPR 区间的 pAUC。
-- **目标级图里 Ours 的平台与误检同时最好**：平台 Pd 0.834 最高，而拐点 Fa 只有 1.2×10⁻⁶，比次优的 HDNet（5.2×10⁻⁵）低 40 倍——即"更低的误检换来更高的检出"。这是 v3 相对像素级图最有说服力的地方。
-- **目标级图的横轴建议用 log**。13 个方法的拐点 Fa 从 1.2×10⁻⁶ 到 9.1×10⁻⁵ 跨了 70 倍，线性轴下 Ours 会被压成贴着 y 轴的一条竖线；v3 同时给了 `pd_fa.png`（线性，0–9.5×10⁻⁵）和 `pd_fa_log.png`（log，3×10⁻⁷–9.5×10⁻⁵，推荐）。
-- **两段直线是近似**。真实曲线在拐点后仍有小幅起伏（Ours 的平台从 0.834 缓慢降到 0.807，因为阈值降低后连通域会合并、目标数被吞掉）。原始 63 点曲线都在 `pd_fa_curves.json` / `curves.json` 里，需要原样画就加 `--no-two-segment`（v2 就是原曲线版）。
-- **像素级 Pd ≠ 表中目标级 Pd**：像素级 `Pd@t=128 = 0.594` 是前景像素召回率，表里 `0.827` 是目标命中率，别互相引用。
+- **目标级图里 Ours 的平台与误检同时最好**（v12，1105 批次）：平台 Pd 0.922 最高，而拐点 Fa 只有 6.0×10⁻⁶，比次优的 HDNet（5.2×10⁻⁵）低 8.6 倍——即"更低的误检换来更高的检出"。
+- **目标级图的横轴建议用 log**。13 个方法的拐点 Fa 从 6.0×10⁻⁶ 到 1.04×10⁻⁴ 跨 17 倍，线性轴下 Ours 会被压成贴着 y 轴的一条竖线；v12 同时给了 `pd_fa.png`（线性，0–9.5×10⁻⁵）和 `pd_fa_log.png`（log，推荐）。
+- **两段直线是近似**。真实曲线在拐点后仍有小幅起伏（Ours 的平台从 0.922 缓慢降到 0.744，因为阈值降低后连通域会合并、目标数被吞掉）。原始 63 点曲线都在 `pd_fa_curves.json` / `curves.json` 里，需要原样画就加 `--no-two-segment`（v2 就是原曲线版）。
+- **像素级 Pd ≠ 表中目标级 Pd**：像素级 `Pd@t=128`（1105 为 0.830，旧预测 0.594）是前景像素召回率，表里 `0.891`（1105 批次）是目标命中率，别互相引用。
 
 ## 复现
 
@@ -148,6 +155,14 @@ scp -r yqwang@172.18.232.202:/share_datasets/Seal_Model_Reproduction/results/tar
 # 2) Ours 的像素级直方图（本地，用户指定用 Ours/test_maps）
 python tools/roc_hist.py --maps Ours/test_maps --gt Ours/Seal_test_GT \
     --out tmp/roc/Ours__test_maps.json --label Ours
+
+# 2b) Ours 的目标级曲线（服务器，1105 批次，单方法约 20 min；旧结果先备份）
+ssh yqwang@172.18.232.202 'cd /share_datasets/Seal_Model_Reproduction && \
+  cp -f results/target_curves/Ours.json results/target_curves/Ours_prev_20261105.json && \
+  /home/yqwang/miniforge3/envs/fct_sam_seal/bin/python tools/target_curves.py \
+    --maps Ours/test_maps --gt Seal_data/test/GT \
+    --out results/target_curves/Ours.json --label Ours'
+scp yqwang@172.18.232.202:/share_datasets/Seal_Model_Reproduction/results/target_curves/Ours.json tmp/roc/target/Ours.json
 
 # 3) 出图（v5：两段直线 + 横轴 8e-4 + PR 用 v1 版式）
 python tools/plot_roc_pr.py --manifest tmp/roc/manifest_v2.json \
@@ -176,6 +191,7 @@ python tools/plot_target_curves.py --manifest tmp/roc/manifest_target_v1.json \
 | `v9_20261105/` | Ours(1105) + 13 个对比方法，横轴 8×10⁻⁴ 宽扁版式 |
 | `v10_20261105/` | **当前推荐（正文主图）**：Ours + 8 个重点对比方法，横轴 16×10⁻⁴ + 正方形面板 |
 | `v11_20261105/` | **当前推荐（全量）**：Ours + 13 个对比方法，同 v10 版式 |
+| `v12_20261105/` | **当前推荐（目标级）**：Ours 换成 1105 批次后重算的 Pd–Fa（`results/target_curves/Ours.json`，旧预测存档 `Ours_prev_20261105.json`），线性 + log；Ours 拐点 Fa 6.027e-06、平台 Pd 0.92198、Pd@t=128 0.89151、Fa@t=128 1.717e-05 |
 
 ## 已知局限
 

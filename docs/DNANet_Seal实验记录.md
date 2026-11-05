@@ -63,7 +63,7 @@ $PY evaluate_small_targets.py --pred_root results/DNANet/Seal/fullsup_test_maps 
 
 四项指标由根目录 `evaluate.py` 的四个原函数计算，小目标四项由 `evaluate_small_targets.py` 在同一批预测上计算。完整精度见 `docs/DNANet_Seal评估产物/eight_metrics.json`，原始两份 JSON 同目录。
 
-作为对照：Ours（RGB-T、框监督）S 0.49915、Fw 0.67338、E 0.66731、MAE 0.00015、IoU 0.44835、F1 0.61912、Pd 0.82731、Fa 2.10e-06。DNA-Net 全监督在 test 上的 IoU/Pd 接近 Ours，但 Fw 明显更低、Fa 高约 40 倍，说明其预测的连通域更"散"，小目标级惩罚更重。
+作为对照：Ours（RGB-T、框监督，1105 批次）S 0.49956、Fw 0.61966、E 0.69695、MAE 0.00020248、IoU 0.51931、F1 0.68361、Pd 0.89151、Fa 1.72e-05。DNA-Net 全监督在 test 上的 IoU/Pd 都低于 Ours（0.300/0.790 vs 0.519/0.892），Fw 低 0.11，Fa 高 5.1 倍，说明其预测的连通域更"散"，小目标级惩罚更重。
 
 ## 复杂度
 

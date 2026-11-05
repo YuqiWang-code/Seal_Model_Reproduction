@@ -1,6 +1,6 @@
 # Seal 小目标指标评估
 
-评估日期：2026-11-03。六组结果均使用量化主表中 S、Fw、E、MAE 对应的同一批 1,983 张预测；不重新选择权重，不重新推理。NESS-Net 复用已完成的同目录小目标评估结果。
+评估日期：2026-11-03。六组结果均使用量化主表中 S、Fw、E、MAE 对应的同一批 1,983 张预测；不重新选择权重，不重新推理。NESS-Net 复用已完成的同目录小目标评估结果。**Ours 行于 2026-11-05 改用 1105 批次预测重算**（主表第 20 行同步），其余五组仍为 2026-11-03 结果。
 
 统一入口为根目录 `evaluate_small_targets.py`，指标实现为 `metrics.py` 的 `AS1000Metrics`。定义见[小目标评价指标：定义与代码对照](小目标评价指标_定义与代码对照.md)。固定预测 >0.5、GT >128、8 连通、质心距离严格小于 3 像素的扫描顺序一对一匹配。IoU/F1 为累计像素计数；Pd 为检出目标数/GT 目标数；Fa 为未匹配预测连通域面积/总像素数。所有表值都是原始比例。
 
@@ -13,7 +13,7 @@
 | MIR-Net | 0.00080272 | 0.00160416 | 0.00243803 | 0.0182267484 |
 | SSFam | 0.00099438 | 0.00198679 | 0.28741704 | 0.0402274131 |
 | NESS-Net | 0.00073333 | 0.00146558 | 0.00514696 | 0.0329542496 |
-| Ours | 0.44835069 | 0.61911897 | 0.82730597 | 0.0000020998 |
+| Ours | 0.51930934 | 0.68361238 | 0.89150752 | 0.0000171735 |
 
 每组 GT 共 7,383 个连通域、514,338,642 个像素。PNG 文件名及原尺寸须完全对应；不额外进行归一化、形态学处理或面积筛选。原四项指标及其固定函数保持不变。
 
@@ -67,9 +67,9 @@ S-COD原始涂鸦训练；stage2 epoch100；Seal跨域测试。
 
 已有测试预测；RGB-T/Box。
 
-- 预测：`/share_datasets/Seal_Model_Reproduction/Ours/test_maps`。
-- 原四项指标记录：`/share_datasets/Seal_Model_Reproduction/Ours/unified_metrics.json`。
-- 小目标完整结果：[Ours.json](小目标指标评估_20261103/Ours.json)。
+- 预测：`/share_datasets/Seal_Model_Reproduction/Ours/test_maps`（1105 批次）。
+- 原四项指标记录：服务器 `results/ours1105_metrics.json`，本地副本 `docs/Ours_Seal评估产物/ours1105_metrics.json`。
+- 小目标完整结果：服务器 `results/ours1105_small.json`，本地副本 [ours1105_small.json](Ours_Seal评估产物/ours1105_small.json)；旧预测结果见 [Ours.json](小目标指标评估_20261103/Ours.json)。
 
 ## 复算
 
@@ -84,7 +84,7 @@ cd /share_datasets/Seal_Model_Reproduction
 ## 核对结果
 
 1. **计数自洽**：六个 JSON 的 IoU、F1、Pd、Fa 均可由存储的 `tp/fp/fn/n_detected/n_gt/false_alarm_pixels/total_pixels` 精确复算，差值 0（复算脚本 `tmp/verify_small_target_jsons.py`）。`n_gt = 7,383`、`total_pixels = 514,338,642` 在六组间完全一致，即同一批 GT 与同一批 1,983 张原尺寸预测。
-2. **像素数与独立记录一致**：`total_pixels / 1,983 = 259,374 = 417×622`，与 Ours 记录的 GT 尺寸、GT 前景占比 0.00020553（tp+fn = 105,712）一致；Ours 的像素 precision/recall 64.64%/59.39% 也可由 tp+fp、tp+fn 复现。
+2. **像素数与独立记录一致**：`total_pixels / 1,983 = 259,374 = 417×622`，与 Ours 记录的 GT 尺寸、GT 前景占比 0.00020553（tp+fn = 105,712）一致；Ours 1105 批次的像素 precision/recall 58.13%/82.96% 也可由 tp+fp、tp+fn 复现（旧预测为 64.64%/59.39%）。
 3. **协议一致**：六组均为 `AS1000Metrics` 默认参数（阈值 >0.5、GT >128、8 连通、距离 <3、全数据集累计），`protocol` 字段逐项相同。
 4. **与 `docs/小目标评价指标.pdf` 草稿的差异**：该草稿使用 `pred > 0`、像素级假阳 Fa、`距离 <= 3` 与 ×100 百分数；本项目按已发表官方代码采用 `prob > 0.5`、未匹配连通域 Fa、`距离 < 3` 和 0～1 原始比例。差异明细与数值影响（Ours 的 Fa 相差 31.8 倍）见[小目标评价指标：定义与代码对照](小目标评价指标_定义与代码对照.md#与-docs小目标评价指标pdf-参考实现的差异)。表值只与同口径结果比较。
 5. **跨方法可比性**：五个对比方法的 `*/infer_seal.py` 都对预测做逐图 min-max 归一化，>0.5 因此是各图动态范围的中点而非校准概率，弱响应图会被拉伸。SSFam 的 Pd 0.28742 与 IoU 0.00099 并存即为典型：大量斑点落在 GT 质心 3 像素内，但几乎没有像素重叠。Pd/Fa 须与 IoU、F1 合看，见定义对照的已知问题。
@@ -112,7 +112,7 @@ cd /share_datasets/Seal_Model_Reproduction
 
 三组预测目录为 `results/{DNANet,MSHNet,UIU-Net,SCTransNet,RPCANet,HDNet,ILNet,RPCANetpp,L2SKNet,BGM,DRPCANet,DURD}/Seal/fullsup_test_maps`，GT 计数与上表相同（7,383 个连通域、514,338,642 像素），因为用的是同一批 test GT 与同名原尺寸 PNG。完整计数见 `docs/<Method>_Seal评估产物/fullsup_small_metrics.json`。
 
-这一组 Fa（约 3e-5～9e-5）比五个弱监督跨域方法低 2～3 个数量级，Pd 却高得多：全监督模型确实学到了目标响应，但预测连通域更"干净"；与 Ours（IoU 0.44835、Fa 2.10e-06）相比仍有明显差距。
+这一组 Fa（1.9e-5～1.0e-4）比五个弱监督跨域方法低 2～3 个数量级，Pd 却高得多：全监督模型确实学到了目标响应，但预测连通域更"干净"；与 Ours（IoU 0.51931、F1 0.68361、Pd 0.89151、Fa 1.72e-05）相比，差距主要在 IoU/F1/Pd，Fa 上 Ours 只比最低的 ILNet（1.93e-05）低 11%。
 
 ## 待评估方法
 

@@ -1,0 +1,18 @@
+{
+  "pred_root": "Ours/test_maps",
+  "gt_root": "Seal_data/test/GT",
+  "n_images": 1983,
+  "gt_fg_ratio_mean_pct": 0.02055299589953811,
+  "pred_fg_ratio_mean_pct_thr128": 0.029333203395594767,
+  "precision_img_mean_pct": 61.87817504185126,
+  "recall_img_mean_pct": 84.6384955317445,
+  "precision_pooled_pct": 58.130070523357546,
+  "recall_pooled_pct": 82.96314514908431,
+  "images_without_fg_thr128": 0,
+  "zero_pixel_ratio_pct": 99.93230860534878,
+  "mid_pixel_ratio_pct_1_254": 0.06159618860602739,
+  "tp": 87702,
+  "fp": 63170,
+  "fn": 18010,
+  "total_pixels": 514338642
+}
