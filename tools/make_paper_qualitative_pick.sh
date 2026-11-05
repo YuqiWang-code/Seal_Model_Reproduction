@@ -11,11 +11,11 @@
 #   roi  —— 每个面板直接给红框区域（6 倍最近邻放大），小目标更易读
 #
 # 用法（服务器）： bash tools/make_paper_qualitative_pick.sh [full|roi|all] [输出目录]
-#   输出目录默认 qualitative_paper/latest；建议每次改版都给一个新目录（如
-#   qualitative_paper/v3_20261120），服务器保留历史版本、本地只下载最新一版。
+#   输出目录默认 Ours/qualitative/latest；建议每次改版都给一个新目录（如
+#   Ours/qualitative/v7_20261120），服务器保留历史版本、本地只下载最新一版。
 set -u
 MODE="${1:-all}"
-OUT="${2:-qualitative_paper/latest}"
+OUT="${2:-Ours/qualitative/latest}"
 cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-/home/yqwang/miniforge3/envs/fct_sam_seal/bin/python}"
 

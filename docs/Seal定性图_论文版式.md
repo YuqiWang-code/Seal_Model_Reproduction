@@ -69,7 +69,7 @@ python tools/build_paper_qualitative.py \
             DURD=results/DURD/Seal/test_binary \
             RPCANet=results/RPCANet/Seal/test_binary \
   --ours Ours=results/Ours_new/Seal/test_binary \
-  --out qualitative_paper --tag seal_final
+  --out Ours/qualitative/v6_20261105 --tag seal_final
 ```
 
 注意事项：
@@ -112,18 +112,18 @@ python tools/build_paper_qualitative.py \
 
 （`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
 
-构建：`bash tools/make_paper_qualitative_pick.sh all qualitative_paper/v6_20261105`（第二个参数是输出目录，默认 `qualitative_paper/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
+构建：`bash tools/make_paper_qualitative_pick.sh all Ours/qualitative/v6_20261105`（第二个参数是输出目录，默认 `Ours/qualitative/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
 
 ### 版本
 
 | 版本 | 服务器目录 | 本地目录 | 说明 |
 |---|---|---|---|
-| v1 | `qualitative_paper/user_pick/` | 已删除 | 首版：3D 无刻度、有黑色粗轴线、列间距 0.02、Image 列 `gray+sigma3` |
-| v2 | `qualitative_paper/v2_20261105/` | 已删除 | 列间距压到 0.004、2D 行按真实比例、3D 加网格+整数刻度+轴名、去掉黑粗轴线、3D 盒子 `zoom=0.78` |
-| v3 | `qualitative_paper/v3_20261105/` | 已删除 | 3D 刻度 1.8 pt、`zoom=0.85`；新增单图拆分 `panels_roi/` 与 Visio 版 |
-| v4 | `qualitative_paper/v4_20261105/` | 已删除 | 3D 盒子铺满格子：每个 3D 先单独渲染（0.873×0.733 in @1200 dpi，与格子同尺寸同字号）→ 裁白边（26 px）→ `aspect='auto'` 贴回；拼图里的 3D 行因此变成位图，PDF 从 5–10 MB 降到 1–2.3 MB |
-| v5 | `qualitative_paper/v5_20261105/` | 已删除 | 3D 更满（裁边 26→6 px）+ 峰更高更亮：平滑 σ 2.0→0.9、`vmax`=平滑后峰值、Z 轴统一 0–255、盒子 z 比例 0.55→1.00、自定义 `seal3d` 色带（深蓝底→青→黄→亮红）+ `PowerNorm(0.45)`；新增 `--diag` 诊断面板（TP 白 / FP 红 / FN 绿 + 红框），Visio 改用诊断面板 |/n| v6（当前） | `qualitative_paper/v6_20261105/` | `Ours/qualitative/v6_20261105/` | 诊断面板的红框放大：从「GT 外扩 8 px」（384 面板里约 40 px）改成**至少占面板 36%（约 138 px）、3 px 线**，居中套在 GT 上；其余与 v5 相同 |
-| v6（当前） | `qualitative_paper/v6_20261105/` | `Ours/qualitative/v6_20261105/` | 诊断面板的红框放大：从「GT 外扩 8 px」（384 面板里约 40 px、2 px 线）改成**至少占面板 36%（约 138 px）、3 px 线**，居中套在 GT 上；其余与 v5 相同 |
+| v1 | `Ours/qualitative/v1_20261104_11col/` | 已删除 | 首版：3D 无刻度、有黑色粗轴线、列间距 0.02、Image 列 `gray+sigma3` |
+| v2 | `Ours/qualitative/v2_20261105/` | 已删除 | 列间距压到 0.004、2D 行按真实比例、3D 加网格+整数刻度+轴名、去掉黑粗轴线、3D 盒子 `zoom=0.78` |
+| v3 | `Ours/qualitative/v3_20261105/` | 已删除 | 3D 刻度 1.8 pt、`zoom=0.85`；新增单图拆分 `panels_roi/` 与 Visio 版 |
+| v4 | `Ours/qualitative/v4_20261105/` | 已删除 | 3D 盒子铺满格子：每个 3D 先单独渲染（0.873×0.733 in @1200 dpi，与格子同尺寸同字号）→ 裁白边（26 px）→ `aspect='auto'` 贴回；拼图里的 3D 行因此变成位图，PDF 从 5–10 MB 降到 1–2.3 MB |
+| v5 | `Ours/qualitative/v5_20261105/` | 已删除 | 3D 更满（裁边 26→6 px）+ 峰更高更亮：平滑 σ 2.0→0.9、`vmax`=平滑后峰值、Z 轴统一 0–255、盒子 z 比例 0.55→1.00、自定义 `seal3d` 色带（深蓝底→青→黄→亮红）+ `PowerNorm(0.45)`；新增 `--diag` 诊断面板（TP 白 / FP 红 / FN 绿 + 红框），Visio 改用诊断面板 |/n| v6（当前） | `Ours/qualitative/v6_20261105/` | `Ours/qualitative/v6_20261105/` | 诊断面板的红框放大：从「GT 外扩 8 px」（384 面板里约 40 px）改成**至少占面板 36%（约 138 px）、3 px 线**，居中套在 GT 上；其余与 v5 相同 |
+| v6（当前） | `Ours/qualitative/v6_20261105/` | `Ours/qualitative/v6_20261105/` | 诊断面板的红框放大：从「GT 外扩 8 px」（384 面板里约 40 px、2 px 线）改成**至少占面板 36%（约 138 px）、3 px 线**，居中套在 GT 上；其余与 v5 相同 |
 
 服务器保留全部历史版本；本地只留最新一版，**整个 `Ours/qualitative/` 不进 git**（单版 100 MB 量级，`.gitignore` 已整目录排除）。
 

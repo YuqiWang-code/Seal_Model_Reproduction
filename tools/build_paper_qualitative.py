@@ -23,7 +23,7 @@ Example
                   HDNet=…/results/HDNet/Seal/test_binary \
                   L2SKNet=…/results/L2SKNet/Seal/test_binary \
         --ours Ours=…/results/Ours/Seal/test_binary \
-        --out …/qualitative_paper --tag seal
+        --out …/Ours/qualitative --tag seal
 """
 import argparse
 import json
@@ -311,7 +311,7 @@ def main():
     ap.add_argument('--roi-panels', action='store_true',
                     help='2D row = upscaled ROI instead of full frame + inset')
     ap.add_argument('--z-mode', default='per-panel', choices=['shared', 'per-panel'])
-    ap.add_argument('--out', default=str(SEAL / 'qualitative_paper'))
+    ap.add_argument('--out', default=str(SEAL / 'Ours' / 'qualitative'))
     ap.add_argument('--tag', default='seal')
     ap.add_argument('--dpi', type=int, default=600)
     ap.add_argument('--fig-width', type=float, default=7.2, help='figure width in inches')
