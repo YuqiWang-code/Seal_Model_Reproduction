@@ -194,7 +194,7 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 
 产物：服务器 `Ours/Feature_Map/v3/`（`panels/<order>_<stem>/{full,roi}/01–09.png` 共 180 张、`raw/<stem>.npz` 缓存、`manifest.json`、两条色标、`Ours_FeatureMap_v3.vsdx`）；本地 `Ours/Feature_Map/v3/` 只放 vsdx。重建：`tools/feature_maps_v3.py`（GPU 约 40 s；`raw/*.npz` 存了响应与四路概率，只改显示时不必再跑模型）+ `tools/make_visio_feature_maps_v3.ps1`（Visio COM，单页 11.15×15.41 in、191 个形状）。
 
-### v4（现行，`Ours/Feature_Map/v4/`）
+### v4（已被 v5 取代，`Ours/Feature_Map/v4/`）
 
 **为什么重做**：v3 的 10 行取的是"逐图 F1 前 10"，即最容易的一批；它们的 median IoU 0.63 / 0.61 / 0.88 / 0.78 / 0.89 不能当作方法水平。v4 先扫全测试集（`--scan-out`，1,983 张，GPU 约 25 min → `Ours/Feature_Map/v4/scan.csv`），拿到每张图每分支的 IoU 与峰值位置，再按**声明过的规则**取样、并按真实误差上色。
 
@@ -219,3 +219,19 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 - 10 行是"已解决样本"的分层抽样，不是随机样本，全测试集分布见页脚。
 
 产物：服务器 `Ours/Feature_Map/v4/`（`panels/` 180 张 396×396、`raw/<stem>.npz`、`scan.csv`、`scan_summary.json`、`manifest.json`、两条色标、`Ours_FeatureMap_v4.vsdx`）；本地 `Ours/Feature_Map/v4/` 只放 vsdx。重建：`tools/feature_maps_v4.py`（`--scan-out` 全量扫描 / `--stems` 指定样例，GPU 每 10 张约 5 s）+ `tools/make_visio_feature_maps_v4.ps1`（192 个形状，11.15×15.77 in）。
+
+### v5（现行，`Ours/Feature_Map/v5/`）
+
+**版式**：只留列名 + 每行（原图 / 热力图）+ 底部两段色标——没有标题、箭头带、阶段小字、逐格注记、中位数行、页脚长文；左列只写样例编号。九列仍是 RGB、T、SAM3 (RGB)、SAM3 (T)、CM-LoRA (RGB)、CM-LoRA (T)、BSRF 特征、最终预测、GT。03–06 / 08 是各分支的解码概率（固定 0–1，显示 gamma 0.75，全列同一条曲线），07 是融合层通道 L2（峰顶窗口 85–100 %、γ 1.5）。`--annotate` 可恢复 v4 的等值线/误差着色，`--prob-gamma` 调色调。
+
+**取样**：从"GT 框 ≤ 32 px 且最终 IoU ≥ 0.8"的 30 张里，按**冻结 SAM3 RGB 的预测面积 ÷ CM-LoRA RGB 的预测面积**降序取 10 张，即冻结模型过覆盖最严重的十例（面积比 1.4–284×，最小 2802、最大 2845：raw 1990 px vs LoRA 7 px，而 GT 只有 8 px）。这样每行都能在热图上直接读出"大面积弥散 → 紧致单块 → 单峰 → 目标形状"。规则写进 manifest 的 `selection`。
+
+| 样例 | 2845 | 3343 | 3372 | 3315 | 3173 | 2105 | 3842 | 2754 | 3000 | 2802 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| raw RGB 预测面积 (px) | 1990 | 163 | 108 | 48 | 38 | 25 | 18 | 28 | 18 | 32 |
+| CM-LoRA RGB (px) | 7 | 16 | 19 | 8 | 10 | 7 | 8 | 14 | 11 | 23 |
+| GT (px) | 8 | 15 | 17 | 10 | 9 | 7 | 12 | 13 | 9 | 21 |
+
+**必须写明**：这十行是**冻结模型失败最严重**的十例，不是随机样本；全测试集分布仍是 0.421 → 0.556 → 0.565（见 v4 小节），正文引用时要说清是 worst-case 展示。
+
+产物：服务器 `Ours/Feature_Map/v5/`（`panels/` 180 张 396×396、`manifest.json`、两条色标、`Ours_FeatureMap_v5.vsdx`；本地 `Ours/Feature_Map/v5/` 只放 vsdx）。重建：`tools/feature_maps_v5.py --stems 2845,3343,3372,3315,3173,2105,3842,2754,3000,2802` + `tools/make_visio_feature_maps_v5.ps1`（113 个形状，11.25×12.52 in）。
