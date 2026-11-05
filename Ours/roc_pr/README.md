@@ -1,6 +1,6 @@
-# Ours/roc_pr：Seal test 的 ROC / P-R 曲线
+# Ours/roc_pr：Seal test 的 ROC / P-R / Pd–Fa 曲线
 
-像素级 ROC 与 Precision-Recall 曲线，方法集 = Ours（`Ours/test_maps`）+ 12 个全监督 IRSTD 基线（服务器 `results/<Method>/Seal/fullsup_test_maps`）。口径、指标表与读图注意事项见 [docs/Seal_ROC_PR曲线.md](../../docs/Seal_ROC_PR曲线.md)。
+曲线方法集 = Ours（`Ours/test_maps`）+ 12 个全监督 IRSTD 基线（服务器 `results/<Method>/Seal/fullsup_test_maps`）。口径、指标表与读图注意事项见 [docs/Seal_ROC_PR曲线.md](../../docs/Seal_ROC_PR曲线.md)。
 
 ## 版本
 
@@ -8,8 +8,12 @@
 
 | 版本 | 内容 | 备注 |
 |---|---|---|
-| `v1_20261105/` | Ours + 12 基线；`roc`、`pr`、`roc_pr` 三张图 + `curves.json` + `summary.md` | 首版：ROC 只画窗口内的点、PR 含 (0,1) 哨兵，曲线会在末点"断掉" |
-| `v2_20261105/` | 同上 | 按示例图重画：每方法一条完整折线（冲出右侧边框）、PR 去掉竖直尖刺、图例按 pAUC 排序；**指标数值与 v1 完全一致**，当前推荐 |
+| `v1_20261105/` | 像素级 | 首版：ROC 只画窗口内的点（末点断掉），PR 含 (0,1) 哨兵 |
+| `v2_20261105/` | 像素级 | 整条折线交给坐标轴裁剪、PR 去尖刺、图例按 pAUC 排序（原曲线版） |
+| `v3_20261105/` | 目标级 Pd–Fa | **两段直线**（0,0 → 拐点 → 平台）；`pd_fa.png` 线性轴、`pd_fa_log.png` log 轴（推荐） |
+| `v4_20261105/` | 像素级 ROC | **两段直线**（`--two-segment`），示例图同款；PR 保持原曲线 |
+
+两段直线的定义：平台 = 该方法在右边框处的取值（像素级取 TPR@FPR=5×10⁻⁴，目标级取 max Pd），拐点 = 沿横轴升序第一个达到 `0.98 × 平台` 的点。
 
 ## 每个版本目录里的文件
 
@@ -17,26 +21,34 @@
 |---|---|
 | `roc.png` / `roc.pdf` | 单幅 ROC（TPR vs FPR，x 轴 ×10⁻⁴） |
 | `pr.png` / `pr.pdf` | 单幅 Precision-Recall |
-| `roc_pr.png` / `roc_pr.pdf` | 并排两联图：(a) ROC + (b) P-R，右侧统一图例 |
-| `curves.json` | 13 个方法的逐阈值 FPR/TPR、PR 点，以及 pAUC / AP / Pd@128 / Fa@128 |
-| `summary.md` | 上述指标表 |
+| `roc_pr.png` / `roc_pr.pdf` | 并排两联：(a) ROC + (b) P-R，右侧统一图例 |
+| `pd_fa.png` / `pd_fa.pdf` | 目标级 Pd–Fa（线性横轴） |
+| `pd_fa_log.png` / `pd_fa_log.pdf` | 目标级 Pd–Fa（log 横轴） |
+| `curves.json` / `pd_fa_curves.json` | 逐阈值曲线与指标；重画任意版本都靠它 |
+| `summary.md` | 该版本的指标表 |
 
 ## 重新生成
 
 ```bash
-# 服务器：12 个基线的直方图（~3 KB/方法，写在 results/roc_hist/）
+# 服务器：像素级直方图（~3 KB/方法）与目标级曲线
 ssh yqwang@172.18.232.202 'cd /share_datasets/Seal_Model_Reproduction && bash tools/roc_hist_all.sh'
+ssh yqwang@172.18.232.202 'cd /share_datasets/Seal_Model_Reproduction && bash tools/target_curves_all.sh'   # 约 1.5 h
 scp -r yqwang@172.18.232.202:/share_datasets/Seal_Model_Reproduction/results/roc_hist tmp/roc/server
+scp -r yqwang@172.18.232.202:/share_datasets/Seal_Model_Reproduction/results/target_curves tmp/roc/target
 
-# 本地：Ours 直方图 + 出图
+# 本地：Ours 像素级直方图 + 出图
 python tools/roc_hist.py --maps Ours/test_maps --gt Ours/Seal_test_GT \
     --out tmp/roc/Ours__test_maps.json --label Ours
+
+# 像素级两段直线（v4 这一版）
 python tools/plot_roc_pr.py --manifest tmp/roc/manifest_v2.json \
-    --outdir Ours/roc_pr/v3_YYYYMMDD --title "Seal test (1,983 images)"
+    --outdir Ours/roc_pr/v4_20261105 --title "Seal test (1,983 images)" --two-segment
+
+# 目标级（v3 这一版，线性 + log 各出一次）
+python tools/plot_target_curves.py --manifest tmp/roc/manifest_target_v1.json \
+    --outdir Ours/roc_pr/v3_20261105 --title "Seal test (1,983 images)"
+python tools/plot_target_curves.py --manifest tmp/roc/manifest_target_v1.json \
+    --outdir Ours/roc_pr/v3_20261105 --title "Seal test (1,983 images)" --xscale log
 ```
 
-换版本时把 `--outdir` 换成新的 `v3_*` 目录即可，旧版本保持不动。
-
-目标级 Pd–Fa 曲线（更接近示例图的"平台"形态）用 `tools/target_curves.py` +
-`tools/target_curves_all.sh` 先算 `results/target_curves/<Method>.json`，再用
-`tools/plot_target_curves.py` 出图（13 个方法并行约 1.5 小时）。
+换版本时把 `--outdir` 换成新的 `v5_*` 目录即可，旧版本保持不动；去掉 `--two-segment` 就是原始折线版。

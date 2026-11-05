@@ -145,15 +145,32 @@ def style_axes(ax):
     ax.tick_params(labelsize=8, width=0.8, length=3)
 
 
-def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0):
-    """Plot the whole ROC polyline; the axes clip it at the window border.
+def two_segment(cv, xmax, knee_frac):
+    """Reduce a ROC curve to two straight segments: rise to the knee, then flat.
 
-    Clipping only the points inside the window would cut every curve where it
-    leaves the plot instead of letting it run off the right edge, which is what
-    the reference figures look like.
+    The knee is the first point (ascending FPR) whose TPR reaches ``knee_frac`` of
+    the TPR at the right border; the plateau is that border TPR. This is the
+    "straight before the knee, straight after the knee" look of the IRSTD ROC
+    figures, and it keeps every curve inside the window.
     """
+    f, t = cv['fpr_plot'], cv['tpr_plot']
+    plateau = float(np.interp(xmax, f, t)) if f[-1] > xmax else float(t[-1])
+    keep = f <= xmax
+    f_in, t_in = f[keep], t[keep]
+    hit = np.flatnonzero(t_in >= knee_frac * plateau)
+    knee_f = float(f_in[hit[0]]) if hit.size else 0.0
+    knee_t = float(t_in[hit[0]]) if hit.size else 0.0
+    return np.array([0.0, knee_f, xmax]), np.array([0.0, knee_t, plateau])
+
+
+def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98):
+    """Plot one polyline per method; the axes clip it at the window border."""
     for i, (label, cv) in enumerate(data):
-        ax.plot(cv['fpr_plot'], cv['tpr_plot'], color=COLORS[i % len(COLORS)],
+        if two:
+            f, t = two_segment(cv, xmax, knee_frac)
+        else:
+            f, t = cv['fpr_plot'], cv['tpr_plot']
+        ax.plot(f, t, color=COLORS[i % len(COLORS)],
                 lw=lw_main if i == 0 else lw,
                 zorder=5 if i == 0 else 3,
                 solid_capstyle='round', label=label)
@@ -204,6 +221,10 @@ def main():
     ap_.add_argument('--title', default='')
     ap_.add_argument('--xmax', type=float, default=5e-4, help='FPR window for ROC and pAUC')
     ap_.add_argument('--dpi', type=int, default=600)
+    ap_.add_argument('--two-segment', action='store_true',
+                     help='draw each ROC as straight rise + straight plateau (knee style)')
+    ap_.add_argument('--knee-frac', type=float, default=0.98,
+                     help='knee = first point whose TPR >= this fraction of the border TPR')
     args = ap_.parse_args()
 
     manifest = load(args.manifest)
@@ -238,7 +259,7 @@ def main():
 
     # ---- ROC only, one polyline per method (the reference figure's layout)
     fig, ax = plt.subplots(figsize=(4.5, 3.3))
-    draw_roc(ax, data, args.xmax)
+    draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
     handles, labels = ax.get_legend_handles_labels()
     legend_outside(fig, handles, labels)
     fig.tight_layout(rect=(0, 0, 0.74, 1))
@@ -254,7 +275,7 @@ def main():
 
     # ---- two panels sharing one legend
     fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.4))
-    draw_roc(axes[0], data, args.xmax)
+    draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
     axes[0].set_title('(a) ROC', fontsize=9.5)
     draw_pr(axes[1], data)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
