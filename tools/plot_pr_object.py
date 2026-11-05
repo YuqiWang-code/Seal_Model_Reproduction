@@ -76,6 +76,36 @@ def object_curve(rec, envelope=True):
     return r, p
 
 
+def round_polyline(xs, ys, radius, samples=14):
+    """Fillet every interior corner with a quadratic Bezier (rounded elbows).
+
+    ``radius`` is in axis units (both axes are 0-1, so one number works).  A corner
+    whose adjacent segments are shorter than the radius automatically gets a smaller
+    fillet (the tangent offsets are clamped to half a segment), so dense measured
+    points stay intact and only the long straight runs get visibly softened.
+    """
+    pts = np.column_stack([np.asarray(xs, float), np.asarray(ys, float)])
+    if radius <= 0 or pts.shape[0] < 3:
+        return pts[:, 0], pts[:, 1]
+    out = [pts[0]]
+    for i in range(1, pts.shape[0] - 1):
+        a, v, b = pts[i - 1], pts[i], pts[i + 1]
+        va, vb = a - v, b - v
+        la, lb = float(np.linalg.norm(va)), float(np.linalg.norm(vb))
+        if la < 1e-9 or lb < 1e-9:
+            out.append(v)
+            continue
+        ta, tb = min(radius / la, 0.5), min(radius / lb, 0.5)
+        p1, p2 = v + va * ta, v + vb * tb
+        out.append(p1)
+        for t in np.linspace(0.0, 1.0, samples + 2)[1:-1]:
+            out.append((1 - t) ** 2 * p1 + 2 * (1 - t) * t * v + t ** 2 * p2)
+        out.append(p2)
+    out.append(pts[-1])
+    arr = np.asarray(out)
+    return arr[:, 0], arr[:, 1]
+
+
 def ap_step(rec, prec):
     """AP with the (0,1) sentinel and the (1,0) closing point (sklearn-style steps)."""
     r = np.concatenate([[0.0], rec, [1.0]])
@@ -96,6 +126,8 @@ def main():
     ap.add_argument('--highlight', default='Ours')
     ap.add_argument('--legend-loc', default='lower left')
     ap.add_argument('--legend-ncol', type=int, default=2)
+    ap.add_argument('--corner-radius', type=float, default=0.018,
+                    help='fillet radius in axis units for the elbows (0 = sharp corners)')
     ap.add_argument('--close', dest='close', action='store_true',
                     help='draw the dashed closing segment to (1, 0)')
     ap.add_argument('--no-close', dest='close', action='store_false')
@@ -122,19 +154,12 @@ def main():
         if args.close:
             xs = np.concatenate([xs, [1.0]])
             ys = np.concatenate([ys, [0.0]])
-            ax.plot(xs[:-1], ys[:-1], color=cmap[m['label']],
-                    lw=2.1 if main_ else 1.15, marker='o',
-                    ms=3.0 if main_ else 2.3, mfc='white', mew=0.85,
-                    zorder=6 if main_ else 3,
-                    label=f"{m['label']}  [AP={score:.3f}]")
-            ax.plot([xs[-2], 1.0], [ys[-2], 0.0], color=cmap[m['label']],
-                    lw=1.5 if main_ else 0.9, ls=(0, (3.2, 2.0)), alpha=0.9,
-                    zorder=5 if main_ else 2)
-        else:
-            ax.plot(xs, ys, color=cmap[m['label']], lw=2.1 if main_ else 1.15,
-                    marker='o', ms=3.0 if main_ else 2.3, mfc='white', mew=0.85,
-                    zorder=6 if main_ else 3,
-                    label=f"{m['label']}  [AP={score:.3f}]")
+        # 整条线一条实线画完（闭合段也实线），不画点；把每个拐角做圆倒角
+        xs, ys = round_polyline(xs, ys, args.corner_radius)
+        ax.plot(xs, ys, color=cmap[m['label']], solid_capstyle='round',
+                solid_joinstyle='round',
+                lw=2.1 if main_ else 1.15, zorder=6 if main_ else 3,
+                label=f"{m['label']}  [AP={score:.3f}]")
 
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
