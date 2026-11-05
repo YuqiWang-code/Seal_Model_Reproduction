@@ -165,22 +165,46 @@ def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8, box_f
         canvas = np.zeros((max(ch, cw), max(ch, cw), 3), np.uint8)
         oy, ox = (canvas.shape[0] - ch) // 2, (canvas.shape[1] - cw) // 2
         canvas[oy:oy + ch, ox:ox + cw] = crop
-        # GT box in the upscaled ROI: centred on the GT, at least box_frac of the panel
-        cx = ox + (gx0 + gx1) / 2.0 * k - x0 * k
-        cy = oy + (gy0 + gy1) / 2.0 * k - y0 * k
-        gt_w = (gx1 - gx0 + 1) * k
-        gt_h = (gy1 - gy0 + 1) * k
-        half = max(box_frac * canvas.shape[1], gt_w, gt_h) / 2.0 + box_pad
-        bx0, bx1 = int(round(cx - half)), int(round(cx + half))
-        by0, by1 = int(round(cy - half)), int(round(cy + half))
-        bx0, by0 = max(0, bx0), max(0, by0)
-        bx1 = min(canvas.shape[1] - 1, bx1)
-        by1 = min(canvas.shape[0] - 1, by1)
-        cv2.rectangle(canvas, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
+
+        # 一个 mask 里有多个目标就各画一个框；单个目标用大框，多个目标按数量收一点
+        n_lab, labels = cv2.connectedComponents(gt_bin.astype(np.uint8), connectivity=8)
+        comps = []
+        for lab in range(1, n_lab):
+            ys2, xs2 = np.where(labels == lab)
+            if len(ys2) == 0:
+                continue
+            comps.append((int(xs2.min()), int(xs2.max()), int(ys2.min()), int(ys2.max())))
+        if not comps:
+            comps = [(gx0, gx1, gy0, gy1)]
+        frac = 0.36 if len(comps) == 1 else max(0.12, min(0.26, 0.45 / len(comps)))
+        H, W = canvas.shape[:2]
+        for (cx0, cx1, cy0, cy1) in comps:
+            cx = ox + (cx0 + cx1) / 2.0 * k - x0 * k
+            cy = oy + (cy0 + cy1) / 2.0 * k - y0 * k
+            span = max(frac * W, (cx1 - cx0 + 1) * k, (cy1 - cy0 + 1) * k)
+            half = span / 2.0 + box_pad
+            bx0, bx1 = int(round(cx - half)), int(round(cx + half))
+            by0, by1 = int(round(cy - half)), int(round(cy + half))
+            bx0, by0 = max(0, bx0), max(0, by0)
+            bx1, by1 = min(W - 1, bx1), min(H - 1, by1)
+            cv2.rectangle(canvas, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
         return canvas
 
+    # 整幅模式：每个目标一个框
     panel = colour.copy()
-    cv2.rectangle(panel, (x0, y0), (x1, y1), RED, 2, cv2.LINE_AA)
+    n_lab, labels = cv2.connectedComponents(gt_bin.astype(np.uint8), connectivity=8)
+    boxes = []
+    for lab in range(1, n_lab):
+        ys2, xs2 = np.where(labels == lab)
+        if len(ys2) == 0:
+            continue
+        boxes.append((int(xs2.min()), int(xs2.max()), int(ys2.min()), int(ys2.max())))
+    if not boxes:
+        boxes = [(x0, x1, y0, y1)]
+    for (cx0, cx1, cy0, cy1) in boxes:
+        cv2.rectangle(panel, (max(0, cx0 - box_pad), max(0, cy0 - box_pad)),
+                      (min(w - 1, cx1 + box_pad), min(h - 1, cy1 + box_pad)),
+                      RED, 2, cv2.LINE_AA)
     return panel
 
 
@@ -216,8 +240,8 @@ def trim_white(img_bgr, pad=10, thr=250):
     return img_bgr[y0:y1, x0:x1]
 
 
-def render_surface_png(arr, path, vmax, cmap='jet',
-                       size_in=(0.873, 0.733), dpi=1200, pad=6):
+def render_surface_png(arr, path, vmax, cmap='jet', gamma=0.45,
+                       size_in=(0.873, 0.733), dpi=1200, pad=14):
     """One 3D box as a standalone PNG, tight-cropped so the box fills the frame.
 
     `arr` is the already-smoothed response crop. Rendered at one cell of the composite
@@ -227,7 +251,7 @@ def render_surface_png(arr, path, vmax, cmap='jet',
     path.parent.mkdir(parents=True, exist_ok=True)
     f = plt.figure(figsize=size_in, dpi=dpi, facecolor='white')
     ax = f.add_subplot(111, projection='3d')
-    add_surface(ax, arr, vmax=vmax, cmap=cmap)
+    add_surface(ax, arr, vmax=vmax, cmap=cmap, gamma=gamma)
     f.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
     import io
 
@@ -240,46 +264,50 @@ def render_surface_png(arr, path, vmax, cmap='jet',
     return path
 
 
-def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=1.7):
-    """PDDiff Fig. 9 style surface: filled frame, light grid, thin grey axes, tick labels.
+def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=2.2, gamma=0.45):
+    """PDDiff Fig. 9 style surface with a legible wireframe and tick labels.
 
     `arr` must already be smoothed; `vmax` is normally the peak of `arr`, so the target
-    response always reaches the top of the box (tall, obvious peak) and gets the hot end
-    of the colour map.
+    response always reaches the top of the box. `gamma=None` switches the colour mapping
+    to linear (used for the Image column, where the surface is an intensity map).
     """
     h, w = arr.shape
     step = max(1, min(h, w) // 48)
     yy, xx = np.mgrid[0:h:step, 0:w:step]
     zz = arr[::step, ::step]
-    norm = PowerNorm(gamma=0.45, vmin=0, vmax=vmax)
-    ax.plot_surface(xx, yy, zz, cmap=cmap, norm=norm, rstride=1, cstride=1, linewidth=0,
-                    antialiased=True, shade=False)
+    norm = PowerNorm(gamma=gamma, vmin=0, vmax=vmax) if gamma else None
+    if norm is None:
+        ax.plot_surface(xx, yy, zz, cmap=cmap, vmin=0, vmax=vmax, rstride=1, cstride=1,
+                        linewidth=0, antialiased=True, shade=False)
+    else:
+        ax.plot_surface(xx, yy, zz, cmap=cmap, norm=norm, rstride=1, cstride=1,
+                        linewidth=0, antialiased=True, shade=False)
     ax.set_zlim(0, vmax)
     ax.view_init(elev=26, azim=-64)
 
     # 坐标刻度：X/Y 是裁剪块像素坐标，Z 是响应值；取整数"好刻度"，与 PDDiff 一致
-    loc = MaxNLocator(nbins=4, integer=True, steps=[1, 2, 2.5, 5, 10])
+    loc = MaxNLocator(nbins=3, integer=True, steps=[1, 2, 2.5, 5, 10])
     ax.xaxis.set_major_locator(loc)
     ax.yaxis.set_major_locator(loc)
-    ax.zaxis.set_major_locator(MaxNLocator(nbins=4, integer=True, steps=[1, 2, 2.5, 5, 10]))
-    ax.tick_params(axis='x', labelsize=tick_font, pad=-3.0, length=0.4, width=0.15,
-                   colors='0.45')
-    ax.tick_params(axis='y', labelsize=tick_font, pad=-3.0, length=0.4, width=0.15,
-                   colors='0.45')
-    ax.tick_params(axis='z', labelsize=tick_font, pad=-1.5, length=0.4, width=0.15,
-                   colors='0.45')
-    ax.set_xlabel('X', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
-    ax.set_ylabel('Y', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
-    ax.set_zlabel('Z', fontsize=tick_font + 0.3, labelpad=-4, color='0.15')
+    ax.zaxis.set_major_locator(MaxNLocator(nbins=3, integer=True, steps=[1, 2, 2.5, 5, 10]))
+    for axis in ('x', 'y'):
+        ax.tick_params(axis=axis, labelsize=tick_font, pad=-3.0, length=0.9, width=0.4,
+                       colors='0.10')
+    ax.tick_params(axis='z', labelsize=tick_font, pad=-1.5, length=0.9, width=0.4,
+                   colors='0.10')
+    # 面板只有 0.87 in 宽，再放 X/Y/Z 轴名会和刻度数字撞在一起，只保留三向刻度数字
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_zlabel('')
 
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 1))
-        axis.pane.set_edgecolor((0.85, 0.85, 0.85, 1))   # 细浅灰外框
-        axis.pane.set_linewidth(0.3)
-        axis._axinfo['grid'].update(color=(0.86, 0.86, 0.86, 1), linewidth=0.22)
-        # 去掉 matplotlib 默认的黑色粗轴线，改成很细的灰线（PDDiff 没有黑粗线）
-        axis.line.set_color((0.55, 0.55, 0.55, 1))
-        axis.line.set_linewidth(0.22)
+        axis.pane.set_edgecolor((0.72, 0.72, 0.72, 1))   # 外框要看得见
+        axis.pane.set_linewidth(0.5)
+        axis._axinfo['grid'].update(color=(0.62, 0.62, 0.62, 1), linewidth=0.45)
+        # 去掉 matplotlib 默认的黑色粗轴线，改成细而清楚的灰线
+        axis.line.set_color((0.30, 0.30, 0.30, 1))
+        axis.line.set_linewidth(0.4)
 
     ax.grid(True)
     ax.set_box_aspect((1, 1, 1.00), zoom=0.88)
@@ -445,15 +473,18 @@ def main():
             for spine in ax.spines.values():
                 spine.set_color('black'), spine.set_linewidth(0.3)
         for j, surf in enumerate(surfaces):
-            cmap = 'gray' if columns[j][2] == 'image' else SURF_CMAP
-            smooth = 5.0 if columns[j][2] == 'image' else 0.9
+            is_img = columns[j][2] == 'image'
+            cmap = SURF_CMAP if is_img else SURF_CMAP
+            smooth = 5.0 if is_img else 0.9
             arr = gaussian_filter(surf.astype(np.float32), smooth)
             peak = float(arr.max())
             vmax = 255.0 if args.z_mode == 'shared' else max(20.0, peak)
+            # Image 列：彩色（PDDiff 那样），用线性映射；预测列用 PowerNorm 提亮峰
+            gamma = None if is_img else 0.45
             col = safe_name(columns[j][0])
-            p3d = cache_root / f'{stem}_{j:02d}_{col}_{int(round(vmax))}.png'
+            p3d = cache_root / f'{stem}_{j:02d}_{col}_{int(round(vmax))}_{"lin" if is_img else "pow"}.png'
             if not p3d.exists():
-                render_surface_png(arr, p3d, vmax=vmax, cmap=cmap)
+                render_surface_png(arr, p3d, vmax=vmax, cmap=cmap, gamma=gamma)
             if split_root is not None:
                 dst = split_root / f'{si + 1:02d}_{stem}' / '3d' / f'{j:02d}_{col}.png'
                 dst.parent.mkdir(parents=True, exist_ok=True)
