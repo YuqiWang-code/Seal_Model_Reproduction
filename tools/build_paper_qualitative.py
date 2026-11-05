@@ -134,11 +134,13 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
-def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8):
+def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8, box_frac=0.36):
     """TP/FP/FN colour panel: TP white, FP red, FN green, plus a red GT box.
 
     Used for the Visio assembly so each method's error pattern (miss = green,
-    false alarm = red) is visible at a glance.
+    false alarm = red) is visible at a glance. The red box is deliberately large
+    (>= box_frac of the panel side) — it is there to point at the target, and a
+    box the size of a few pixels disappears at print size.
     """
     h, w = gt_bin.shape
     colour = np.zeros((h, w, 3), np.uint8)
@@ -163,14 +165,18 @@ def diag_panel(pred_bin, gt_bin, gt, roi, roi_mode, target=384, box_pad=8):
         canvas = np.zeros((max(ch, cw), max(ch, cw), 3), np.uint8)
         oy, ox = (canvas.shape[0] - ch) // 2, (canvas.shape[1] - cw) // 2
         canvas[oy:oy + ch, ox:ox + cw] = crop
-        # GT box in the upscaled ROI
-        bx0 = ox + (gx0 - x0) * k - box_pad
-        bx1 = ox + (gx1 - x0) * k + box_pad
-        by0 = oy + (gy0 - y0) * k - box_pad
-        by1 = oy + (gy1 - y0) * k + box_pad
-        thick = 2
-        cv2.rectangle(canvas, (max(0, bx0), max(0, by0)), (min(canvas.shape[1] - 1, bx1),
-                      min(canvas.shape[0] - 1, by1)), RED, thick, cv2.LINE_AA)
+        # GT box in the upscaled ROI: centred on the GT, at least box_frac of the panel
+        cx = ox + (gx0 + gx1) / 2.0 * k - x0 * k
+        cy = oy + (gy0 + gy1) / 2.0 * k - y0 * k
+        gt_w = (gx1 - gx0 + 1) * k
+        gt_h = (gy1 - gy0 + 1) * k
+        half = max(box_frac * canvas.shape[1], gt_w, gt_h) / 2.0 + box_pad
+        bx0, bx1 = int(round(cx - half)), int(round(cx + half))
+        by0, by1 = int(round(cy - half)), int(round(cy + half))
+        bx0, by0 = max(0, bx0), max(0, by0)
+        bx1 = min(canvas.shape[1] - 1, bx1)
+        by1 = min(canvas.shape[0] - 1, by1)
+        cv2.rectangle(canvas, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
         return canvas
 
     panel = colour.copy()
