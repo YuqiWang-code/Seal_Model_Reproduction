@@ -220,7 +220,7 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 
 产物：服务器 `Ours/Feature_Map/v4/`（`panels/` 180 张 396×396、`raw/<stem>.npz`、`scan.csv`、`scan_summary.json`、`manifest.json`、两条色标、`Ours_FeatureMap_v4.vsdx`）；本地 `Ours/Feature_Map/v4/` 只放 vsdx。重建：`tools/feature_maps_v4.py`（`--scan-out` 全量扫描 / `--stems` 指定样例，GPU 每 10 张约 5 s）+ `tools/make_visio_feature_maps_v4.ps1`（192 个形状，11.15×15.77 in）。
 
-### v5（现行，`Ours/Feature_Map/v5/`）
+### v5（特征取对应热图版，已被 v6 取代；`Ours/Feature_Map/v5/`）
 
 **版式**：只留列名 + 每行（原图 / 热力图）+ 底部两段色标——没有标题、箭头带、阶段小字、逐格注记、中位数行、页脚长文；左列只写样例编号。九列仍是 RGB、T、SAM3 (RGB)、SAM3 (T)、CM-LoRA (RGB)、CM-LoRA (T)、BSRF 特征、最终预测、GT。03–06 / 08 是各分支的解码概率（固定 0–1，显示 gamma 0.75，全列同一条曲线），07 是融合层通道 L2（峰顶窗口 85–100 %、γ 1.5）。`--annotate` 可恢复 v4 的等值线/误差着色，`--prob-gamma` 调色调。
 
@@ -235,3 +235,18 @@ v3 只改**呈现**：模型、权重、预测都没动（同一 `Ours/CODE/trai
 **必须写明**：这十行是**冻结模型失败最严重**的十例，不是随机样本；全测试集分布仍是 0.421 → 0.556 → 0.565（见 v4 小节），正文引用时要说清是 worst-case 展示。
 
 产物：服务器 `Ours/Feature_Map/v5/`（`panels/` 180 张 396×396、`manifest.json`、两条色标、`Ours_FeatureMap_v5.vsdx`；本地 `Ours/Feature_Map/v5/` 只放 vsdx）。重建：`tools/feature_maps_v5.py --stems 2845,3343,3372,3315,3173,2105,3842,2754,3000,2802` + `tools/make_visio_feature_maps_v5.ps1`（113 个形状，11.25×12.52 in）。
+
+### v6（现行，`Ours/Feature_Map/v6/`）
+
+**内容回到 v1**：03–07 各列是**主干特征**的热力图（`backbone_fpn[-1]` 的通道 L2，逐图 2–98 % 拉伸后上色），这正是 v1 好看的原因——特征图有结构，而解码概率本身就接近二值。列还是九列：`RGB / T / w/o CM-LoRA (RGB) / w/o CM-LoRA (T) / w/ CM-LoRA (RGB) / w/ CM-LoRA (T) / BSRF fused / Prediction / GT`；08 是最终预测（固定 0–1），09 是 GT，全图**没有任何标注或注记**。
+
+相对 v1 只做了"稍微处理"：
+
+1. **几何统一**：ROI = `max(64, GT bbox + 2×24)`、面板 384 px（本批全部 64 px / 6×）。v1 因为收了一个 182 px 的大目标（3517），那一行倍率与其它行不同。
+2. **重新选样**（`--stems`，写进 manifest 的 `selection`）：在"GT bbox ≤ 32 px 且最终 IoU ≥ 0.8 且融合特征峰值距 GT 质心 ≤ 6 px"的 28 张里，按**融合特征的靶内外强度比**（1.56–1.90）等距取 10 张：3974、3372、2180、2732、2498、2226、2931、2773、2146、2105。行序即该比值降序，所以上面几行的热点更集中。
+3. **版式干净**：只有列名 + 每行（左侧 `stem / F1 / IoU`）+ 底部一段两截色标（特征逐图归一、预测固定 0–1）。
+4. 逐图响应图与预测缓存到 `raw/<stem>.npz`，以后只改显示不必再跑 GPU。
+
+**读图限制**：特征列是**逐图 2–98 % 归一化**，颜色只表示该图内的相对强弱，跨行、跨列都不能比较绝对强度；预测列是固定 0–1，两者不要混读。十行是按"融合特征集中度"分层抽的已解决样本，不是随机样本。
+
+产物：服务器 `Ours/Feature_Map/v6/`（`panels/` 180 张 384×384、`raw/`、`manifest.json`、两条色标、`Ours_FeatureMap_v6.vsdx`）；本地 `Ours/Feature_Map/v6/` 只放 vsdx。重建：`tools/feature_maps_v6.py --stems 3974,3372,2180,2732,2498,2226,2931,2773,2146,2105`（默认 ROI 64 / 6×，`--roi-min/--roi-margin/--panel-px` 可调）+ `tools/make_visio_feature_maps_v6.ps1`（113 个形状，11.31×12.46 in）。
