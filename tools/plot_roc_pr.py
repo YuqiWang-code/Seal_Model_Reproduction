@@ -32,6 +32,11 @@ COLORS = [
     '#4e79a7', '#a55194', '#76b7b2', '#59a14f',
 ]
 
+# Every hard-coded point size below is multiplied by this. It is set from
+# --font-scale, so a figure can be re-rendered with larger type without touching
+# any other layout decision.
+FS = 1.0
+
 
 def color_map(data, highlight):
     """One colour per curve; the highlighted method always gets the red."""
@@ -181,7 +186,7 @@ def style_axes(ax):
     ax.grid(True, linestyle=':', linewidth=0.55, color='0.72', alpha=0.9)
     for s in ('top', 'right'):
         ax.spines[s].set_visible(False)
-    ax.tick_params(labelsize=8, width=0.8, length=3)
+    ax.tick_params(labelsize=8 * FS, width=0.8, length=3)
 
 
 def two_segment(cv, xmax, knee_frac):
@@ -217,8 +222,8 @@ def draw_roc(ax, data, xmax, lw=1.15, lw_main=2.0, two=False, knee_frac=0.98, hi
                 solid_capstyle='round', label=label)
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, 1.02)
-    ax.set_xlabel('False Positive Rate (FPR)', fontsize=9)
-    ax.set_ylabel('True Positive Rate (TPR)', fontsize=9)
+    ax.set_xlabel('False Positive Rate (FPR)', fontsize=9 * FS)
+    ax.set_ylabel('True Positive Rate (TPR)', fontsize=9 * FS)
     ax.set_xticks(np.linspace(0, xmax, 5))
     ax.ticklabel_format(axis='x', style='sci', scilimits=(-4, -4), useMathText=True)
     ax.yaxis.set_major_locator(MaxNLocator(6))
@@ -252,8 +257,8 @@ def draw_pr(ax, data, lw=1.15, lw_main=2.0, style='v1', highlight='Ours', cut_fp
                     markeredgecolor='white', markeredgewidth=0.5)
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
-    ax.set_xlabel('Recall', fontsize=9)
-    ax.set_ylabel('Precision', fontsize=9)
+    ax.set_xlabel('Recall', fontsize=9 * FS)
+    ax.set_ylabel('Precision', fontsize=9 * FS)
     style_axes(ax)
 
 
@@ -267,6 +272,7 @@ def save(fig, outdir, stem, dpi):
 
 
 def legend_inside(ax, loc, labels, ncol=1, fontsize=6.4):
+    fontsize = fontsize * FS
     """Legend inside the axes (keeps the exported PNG square)."""
     ax.legend(fontsize=fontsize, frameon=True, ncol=ncol, loc=loc,
               labelspacing=0.28, handlelength=1.8, borderpad=0.4,
@@ -274,6 +280,7 @@ def legend_inside(ax, loc, labels, ncol=1, fontsize=6.4):
 
 
 def legend_outside(fig, ax, handles, labels, ncol=1, fontsize=7.4, gap=0.012):
+    fontsize = fontsize * FS
     """Legend hugging the right edge of `ax` (figure coordinates).
 
     Anchoring at a fixed figure fraction left a wide blank band between the
@@ -316,9 +323,13 @@ def main():
                      help='only draw PR thresholds with FPR <= this (e.g. same window as ROC)')
     ap_.add_argument('--highlight', default='Ours',
                      help='label drawn thicker/on top; ignored when absent')
+    ap_.add_argument('--font-scale', type=float, default=1.0,
+                     help='multiply every font size (axis labels, ticks, legend) by this')
     ap_.add_argument('--knee-frac', type=float, default=0.98,
                      help='knee = first point whose TPR >= this fraction of the border TPR')
     args = ap_.parse_args()
+    global FS
+    FS = args.font_scale
 
     manifest = load(args.manifest)
     methods = manifest['methods'] if isinstance(manifest, dict) else manifest
@@ -381,11 +392,11 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize=(min(args.fig_width * 2 + 0.6, 11.5), 3.4))
     fig.subplots_adjust(wspace=0.14, left=0.06, right=0.9)
     draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac, highlight=args.highlight)
-    axes[0].set_title('(a) ROC', fontsize=9.5)
+    axes[0].set_title('(a) ROC', fontsize=9.5 * FS)
     draw_pr(axes[1], data, style=args.pr_style, highlight=args.highlight, cut_fpr=args.pr_cut_fpr,
             endpoint_dot=args.pr_endpoint_dot, min_pred=args.pr_min_pred,
             close=args.pr_close)
-    axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
+    axes[1].set_title('(b) Precision-Recall', fontsize=9.5 * FS)
     if args.square:
         for a in axes:
             a.set_box_aspect(1)

@@ -130,6 +130,8 @@ def main():
                     help='append "[AP=0.xxx]" to each legend entry')
     ap.add_argument('--no-show-ap', dest='show_ap', action='store_false')
     ap.set_defaults(show_ap=False)
+    ap.add_argument('--font-scale', type=float, default=1.0,
+                    help='multiply every font size by this')
     ap.add_argument('--corner-radius', type=float, default=0.018,
                     help='fillet radius in axis units for the elbows (0 = sharp corners)')
     ap.add_argument('--close', dest='close', action='store_true',
@@ -143,7 +145,8 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
     cmap = color_map([m['label'] for m in items], args.highlight)
 
-    plt.rcParams.update({'font.size': 9, 'axes.linewidth': 0.8})
+    fs = args.font_scale
+    plt.rcParams.update({'font.size': 9 * fs, 'axes.linewidth': 0.8})
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
 
     rows = []
@@ -167,16 +170,16 @@ def main():
 
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
-    ax.set_xlabel('Recall', fontsize=10)
-    ax.set_ylabel('Precision', fontsize=10)
+    ax.set_xlabel('Recall', fontsize=10 * fs)
+    ax.set_ylabel('Precision', fontsize=10 * fs)
     ax.set_xticks(np.linspace(0, 1, 6))
     ax.set_yticks(np.linspace(0, 1, 6))
     ax.grid(True, ls='-', lw=0.45, color='0.86', zorder=0)
     for s in ('top', 'right'):
         ax.spines[s].set_visible(False)
     if args.title:
-        ax.set_title(args.title, fontsize=9.5)
-    ax.legend(fontsize=6.3, ncol=args.legend_ncol, loc=args.legend_loc,
+        ax.set_title(args.title, fontsize=9.5 * fs)
+    ax.legend(fontsize=6.3 * fs, ncol=args.legend_ncol, loc=args.legend_loc,
               frameon=True, edgecolor='0.85', framealpha=0.93,
               labelspacing=0.26, handlelength=1.6, borderpad=0.4)
 

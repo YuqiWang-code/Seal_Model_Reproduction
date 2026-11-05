@@ -221,7 +221,7 @@ P-R 曲线是**按 256 个阈值扫出来的**，和 ROC 用同一份直方图�
 | 文件 | 口径 | 形状 | Ours 的关键数 |
 |---|---|---|---|
 | `pr_2.{png,pdf}` | **像素级**、sklearn 惯例（256 个阈值含 `t=0`"全预测"、精度 (0,1) 哨兵） | 从 (0,1) 沿真实阈值下降到右下角，Ours 在 recall 0.9 之后陡降 | AP 0.700，与 `summary.md` 的 AP 一致 |
-| `pr_obj.{png,pdf}` | **对象级**（每个目标/每个预测连通域算一个样本，匹配规则与表中 Pd/Fa 完全相同） | 高精度平台 + 右端陡降，**与参考图同形**；画布与 `roc` 完全一致（`--fig-width 6.705 --fig-height 3.259`，PNG 3589×1871） | 精度@t=128 0.960，AP 0.890（图例只用方法名，AP 见本表；要标在图上加 `--show-ap`） |
+| `pr_obj.{png,pdf}` | **对象级**（每个目标/每个预测连通域算一个样本，匹配规则与表中 Pd/Fa 完全相同） | 高精度平台 + 右端陡降，**与参考图同形**；画布与 `roc` 完全一致（`--fig-width 6.686 --fig-height 3.239 --font-scale 1.25`，PNG 3645×1907） | 精度@t=128 0.960，AP 0.890（图例只用方法名，AP 见本表；要标在图上加 `--show-ap`） |
 
 对象级的定义与实现（[tools/target_pr.py](tools/target_pr.py)、[tools/target_pr_all.sh](tools/target_pr_all.sh)、出图 [tools/plot_pr_object.py](tools/plot_pr_object.py)）：
 
@@ -235,6 +235,9 @@ P-R 曲线是**按 256 个阈值扫出来的**，和 ROC 用同一份直方图�
 真曲线（像素级）：![pr_2](assets/seal_pr_pixel_v13.png)
 
 参考图同形的对象级版：![pr_obj](assets/seal_pr_obj_v13.png)
+
+> 字号：`roc` 与 `pr_obj` 都用 `--font-scale 1.25` 出图（轴标签 9→11.25 pt、刻度 8→10 pt、图例 6.4→8 pt），两张 PNG 同为 3645×1907。`tools/plot_roc_pr.py` 与 `tools/plot_pr_object.py` 都带这个开关，默认 1.0；v13 里的 `pr.png` / `roc_pr.png` 仍是 1.0 版，若要整目录统一，用同一命令加 `--font-scale 1.25` 重画即可。
+
 
 
 
