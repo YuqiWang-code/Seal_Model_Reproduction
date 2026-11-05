@@ -135,7 +135,27 @@ def roi_panel(sheet, roi, target=384):
     return cv2.cvtColor(canvas, cv2.COLOR_GRAY2BGR)
 
 
-def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=2.1):
+def safe_name(name):
+    return name.replace('+', 'p').replace('/', '_').replace(' ', '_')
+
+
+def render_surface_png(surf, path, vmax, cmap='jet', smooth=2.0,
+                       size_in=(1.6, 1.344), dpi=600):
+    """One 3D box as a standalone PNG, rendered at the size it will be placed in Visio.
+
+    1.6 x 1.344 in matches one cell of the composite figure (cell_w x 0.84*cell_w),
+    so the tick labels keep the same visual size when pasted back at 1:1.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    f = plt.figure(figsize=size_in, dpi=dpi, facecolor='white')
+    ax = f.add_subplot(111, projection='3d')
+    add_surface(ax, surf, vmax=vmax, cmap=cmap, smooth=smooth)
+    f.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0)
+    f.savefig(path, dpi=dpi, facecolor='white')
+    plt.close(f)
+
+
+def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=1.8):
     """PDDiff Fig. 9 style surface: white panes, light grid, thin grey axes, tick labels."""
     arr = data.astype(np.float32)
     if smooth > 0:
@@ -154,12 +174,12 @@ def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=2.1):
     ax.xaxis.set_major_locator(loc)
     ax.yaxis.set_major_locator(loc)
     ax.zaxis.set_major_locator(MaxNLocator(nbins=5, integer=True, steps=[1, 2, 2.5, 5, 10]))
-    ax.tick_params(axis='x', labelsize=tick_font, pad=-3.0, length=0.5, width=0.2,
-                   colors='0.25')
-    ax.tick_params(axis='y', labelsize=tick_font, pad=-3.0, length=0.5, width=0.2,
-                   colors='0.25')
-    ax.tick_params(axis='z', labelsize=tick_font, pad=-1.5, length=0.5, width=0.2,
-                   colors='0.25')
+    ax.tick_params(axis='x', labelsize=tick_font, pad=-3.0, length=0.4, width=0.15,
+                   colors='0.45')
+    ax.tick_params(axis='y', labelsize=tick_font, pad=-3.0, length=0.4, width=0.15,
+                   colors='0.45')
+    ax.tick_params(axis='z', labelsize=tick_font, pad=-1.5, length=0.4, width=0.15,
+                   colors='0.45')
     ax.set_xlabel('X', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
     ax.set_ylabel('Y', fontsize=tick_font + 0.3, labelpad=-9, color='0.15')
     ax.set_zlabel('Z', fontsize=tick_font + 0.3, labelpad=-4, color='0.15')
@@ -170,11 +190,11 @@ def add_surface(ax, data, vmax=255.0, smooth=2.0, cmap='jet', tick_font=2.1):
         axis.pane.set_linewidth(0.3)
         axis._axinfo['grid'].update(color=(0.86, 0.86, 0.86, 1), linewidth=0.22)
         # 去掉 matplotlib 默认的黑色粗轴线，改成很细的灰线（PDDiff 没有黑粗线）
-        axis.line.set_color((0.45, 0.45, 0.45, 1))
-        axis.line.set_linewidth(0.25)
+        axis.line.set_color((0.55, 0.55, 0.55, 1))
+        axis.line.set_linewidth(0.22)
 
     ax.grid(True)
-    ax.set_box_aspect((1, 1, 0.55), zoom=0.78)
+    ax.set_box_aspect((1, 1, 0.55), zoom=0.85)
     ax.margins(0)
 
 
@@ -193,6 +213,9 @@ def main():
     ap.add_argument('--image-stretch', default='percentile', choices=['none', 'percentile'],
                     help='display-only background stretch for the Image column')
     ap.add_argument('--crop3d', type=int, default=192)
+    ap.add_argument('--split-dir', default=None,
+                    help='also write every panel as its own PNG under '
+                         '<dir>/<nn>_<id>/2d/<col>.png and .../3d/<col>.png')
     ap.add_argument('--roi-min', type=int, default=MIN_BOX, help='minimum ROI side (px)')
     ap.add_argument('--roi-margin', type=int, default=MARGIN, help='padding around the GT bbox (px)')
     ap.add_argument('--roi-panels', action='store_true',
@@ -210,6 +233,9 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    split_root = Path(args.split_dir) if args.split_dir else None
+    if split_root is not None:
+        split_root.mkdir(parents=True, exist_ok=True)
 
     if args.font:
         plt.rcParams['font.family'] = 'sans-serif'
@@ -324,6 +350,16 @@ def main():
             cmap = 'gray' if columns[j][2] == 'image' else 'jet'
             smooth = 5.0 if columns[j][2] == 'image' else 2.0
             add_surface(ax, surf, vmax=vmax, cmap=cmap, smooth=smooth)
+            if split_root is not None:
+                render_surface_png(surf, split_root / f'{si + 1:02d}_{stem}' / '3d' /
+                                   f'{j:02d}_{safe_name(columns[j][0])}.png',
+                                   vmax=vmax, cmap=cmap, smooth=smooth)
+
+        if split_root is not None:
+            sdir = split_root / f'{si + 1:02d}_{stem}' / '2d'
+            sdir.mkdir(parents=True, exist_ok=True)
+            for j, panel in enumerate(panels):
+                cv2.imwrite(str(sdir / f'{j:02d}_{safe_name(columns[j][0])}.png'), panel)
 
     png = out / f'{args.tag}_qualitative.png'
     pdf = out / f'{args.tag}_qualitative.pdf'
@@ -340,6 +376,7 @@ def main():
         'surf_maps': {k: str(v) for k, v in surf_dirs.items()},
         'roi_margin_px': args.roi_margin, 'min_roi_px': args.roi_min, 'inset_zoom': ZOOM,
         'roi_panels': bool(args.roi_panels),
+        'split_dir': str(split_root) if split_root is not None else None,
         'header_colors': HEADER_COLORS,
     }
     (out / f'{args.tag}_meta.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding='utf-8')
