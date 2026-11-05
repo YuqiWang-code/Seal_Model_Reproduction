@@ -221,7 +221,7 @@ P-R 曲线是**按 256 个阈值扫出来的**，和 ROC 用同一份直方图�
 | 文件 | 口径 | 形状 | Ours 的关键数 |
 |---|---|---|---|
 | `pr_2.{png,pdf}` | **像素级**、sklearn 惯例（256 个阈值含 `t=0`"全预测"、精度 (0,1) 哨兵） | 从 (0,1) 沿真实阈值下降到右下角，Ours 在 recall 0.9 之后陡降 | AP 0.700，与 `summary.md` 的 AP 一致 |
-| `pr_obj.{png,pdf}` | **对象级**（每个目标/每个预测连通域算一个样本，匹配规则与表中 Pd/Fa 完全相同） | 高精度平台 + 右端陡降，**与参考图同形** | 精度@t=128 0.960，AP 0.890 |
+| `pr_obj.{png,pdf}` | **对象级**（每个目标/每个预测连通域算一个样本，匹配规则与表中 Pd/Fa 完全相同） | 高精度平台 + 右端陡降，**与参考图同形** | 精度@t=128 0.960，AP 0.890（图例只用方法名，AP 见本表；要标在图上加 `--show-ap`） |
 
 对象级的定义与实现（[tools/target_pr.py](tools/target_pr.py)、[tools/target_pr_all.sh](tools/target_pr_all.sh)、出图 [tools/plot_pr_object.py](tools/plot_pr_object.py)）：
 

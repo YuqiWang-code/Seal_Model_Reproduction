@@ -126,6 +126,10 @@ def main():
     ap.add_argument('--highlight', default='Ours')
     ap.add_argument('--legend-loc', default='lower left')
     ap.add_argument('--legend-ncol', type=int, default=2)
+    ap.add_argument('--show-ap', dest='show_ap', action='store_true',
+                    help='append "[AP=0.xxx]" to each legend entry')
+    ap.add_argument('--no-show-ap', dest='show_ap', action='store_false')
+    ap.set_defaults(show_ap=False)
     ap.add_argument('--corner-radius', type=float, default=0.018,
                     help='fillet radius in axis units for the elbows (0 = sharp corners)')
     ap.add_argument('--close', dest='close', action='store_true',
@@ -159,7 +163,7 @@ def main():
         ax.plot(xs, ys, color=cmap[m['label']], solid_capstyle='round',
                 solid_joinstyle='round',
                 lw=2.1 if main_ else 1.15, zorder=6 if main_ else 3,
-                label=f"{m['label']}  [AP={score:.3f}]")
+                label=f"{m['label']}  [AP={score:.3f}]" if args.show_ap else m['label'])
 
     ax.set_xlim(0, 1.0)
     ax.set_ylim(0, 1.02)
