@@ -1,22 +1,19 @@
-# 生成定性对比图的 Visio 可编辑版（Windows + 已装 Visio，走 COM）。
-# 用法：powershell -File tools/make_visio_qualitative.ps1 -PanelRoot <...>\panels_diag -OutFile <...>.vsdx
-# 输出：第 1 页 "ALL"（所有样例纵向摞在一页，表头只在最上面出现一次）+ 每样例一页。
 param(
-    [string]$PanelRoot = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v7_20261105\panels_diag",
-    [string]$OutFile   = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v7_20261105\seal_qualitative_11col.vsdx",
-    [switch]$NoAllPage,
-    [double]$AllColW = 1.30
+    [string]$PanelRoot = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v3_20261105\panels_roi",
+    [string]$OutFile   = "F:\Code_Repositories_2\CursorCode\Seal_Model_Reproduction\Ours\qualitative\v3_20261105\seal_qualitative_11col.vsdx"
 )
 
 $ErrorActionPreference = 'Stop'
 
-$colW  = 1.6      # inch, one column (per-sample pages)
-$left  = 0.35
-$headH = 0.42
-$imgH  = 1.6      # 2D panels are square
-$gap   = 0.12
-$capH  = 0.28
-$pageW = $left * 2 + 11 * $colW
+$colW      = 1.6      # inch, one column
+$left      = 0.35
+$headH     = 0.42
+$imgH      = 1.6      # 2D panels are square
+$surfH     = 1.344    # 3D panels 960x806 -> ratio
+$gap       = 0.12
+$capH      = 0.28
+$pageW     = $left * 2 + 11 * $colW
+$pageH     = $headH + $imgH + $gap + $surfH + $gap + $capH + 2 * $left * 0.6
 
 $colors = @{
     'Image' = @(237, 125, 49);   # ED7D31
@@ -40,14 +37,6 @@ function Add-Label($page, $text, $x0, $y0, $x1, $y1, $fill, $fontColor, $size = 
     return $s
 }
 
-function Get-ImgAspect($path) {
-    Add-Type -AssemblyName System.Drawing
-    $im = [System.Drawing.Image]::FromFile($path)
-    $r = $im.Height / $im.Width
-    $im.Dispose()
-    return $r
-}
-
 function Add-Picture($page, $path, $x0, $y0, $w, $h) {
     $shp = $page.Import($path)
     Set-Cell $shp 'Width'  "$w in"
@@ -58,17 +47,8 @@ function Add-Picture($page, $path, $x0, $y0, $w, $h) {
     return $shp
 }
 
-function Get-ColStyle($name) {
-    if ($name -eq 'Image') { return @{ fill = $colors['Image']; fc = @(0, 0, 0) } }
-    if ($name -eq 'Mask')  { return @{ fill = $colors['Mask'];  fc = @(0, 0, 0) } }
-    if ($name -eq 'Ours')  { return @{ fill = $colors['ours'];  fc = @(255, 255, 255) } }
-    return @{ fill = $colors['base']; fc = @(255, 255, 255) }
-}
-
 $samples = Get-ChildItem -Path $PanelRoot -Directory | Sort-Object Name
-$colNames = (Get-ChildItem (Join-Path $samples[0].FullName '2d') -Filter *.png | Sort-Object Name).BaseName
-$surfRatio = Get-ImgAspect (Join-Path $samples[0].FullName ("3d\" + $colNames[0] + ".png"))
-"pages: ALL + $($samples.Count)   colW(all)=$AllColW  3D ratio=$([math]::Round($surfRatio,3))"
+"pages: $($samples.Count)  page: $pageW x $pageH in"
 
 $visio = $null
 try {
@@ -77,54 +57,9 @@ try {
     try { $visio.AlertResponse = 7 } catch { }
 
     $doc = $visio.Documents.Add("")
+    $colNames = (Get-ChildItem (Join-Path $samples[0].FullName '2d') -Filter *.png | Sort-Object Name).BaseName
+
     $first = $true
-
-    # ---- 第 1 页：ALL，所有样例纵向摞起来，表头只出现一次 ----
-    if (-not $NoAllPage) {
-        $aHead = 0.34
-        $aSurf = $AllColW * $surfRatio
-        $aBlk = $AllColW + 0.06 + $aSurf + 0.30
-        $aTop = 0.25
-        $allW = $left * 2 + 11 * $AllColW
-        $allH = $aTop + $aHead + $samples.Count * $aBlk + $aTop
-
-        $page = $doc.Pages.Item(1); $first = $false
-        $page.NameU = 'ALL'
-        Set-Cell $page.PageSheet 'PageWidth'  "$allW in"
-        Set-Cell $page.PageSheet 'PageHeight' "$allH in"
-
-        $yCursor = $allH - $aTop
-        # 表头
-        for ($j = 0; $j -lt $colNames.Count; $j++) {
-            $file = $colNames[$j]; $name = ($file -replace '^\d+_', '') -replace '^RPCANetpp$', 'RPCANet++'
-            $st = Get-ColStyle $name
-            $x0 = $left + $j * $AllColW
-            Add-Label $page $name $x0 ($yCursor - $aHead) ($x0 + $AllColW) $yCursor $st.fill $st.fc 8 1 | Out-Null
-        }
-        $yCursor -= ($aHead + $gap)
-
-        foreach ($smp in $samples) {
-            $yImg = $yCursor - $AllColW
-            for ($j = 0; $j -lt $colNames.Count; $j++) {
-                $file = $colNames[$j]
-                $x0 = $left + $j * $AllColW
-                Add-Picture $page (Join-Path $smp.FullName "2d\$file.png") $x0 $yImg $AllColW $AllColW | Out-Null
-            }
-            $yCursor = $yImg - 0.06
-            $ySurf = $yCursor - $aSurf
-            for ($j = 0; $j -lt $colNames.Count; $j++) {
-                $file = $colNames[$j]
-                $x0 = $left + $j * $AllColW
-                Add-Picture $page (Join-Path $smp.FullName "3d\$file.png") $x0 $ySurf $AllColW $aSurf | Out-Null
-            }
-            $yCursor = $ySurf - 0.30
-        }
-        "page ALL: $($page.Shapes.Count) shapes  ${allW}x${allH} in"
-    }
-
-    # ---- 每个样例一页 ----
-    $pageH = $headH + $imgH + $gap + ($colW * $surfRatio) + $gap + $capH + 2 * $left * 0.6
-    $surfH = $colW * $surfRatio
     foreach ($smp in $samples) {
         if ($first) { $page = $doc.Pages.Item(1); $first = $false }
         else        { $page = $doc.Pages.Add() }
@@ -140,9 +75,13 @@ try {
         for ($j = 0; $j -lt $colNames.Count; $j++) {
             $file = $colNames[$j]; $name = ($file -replace '^\d+_', '') -replace '^RPCANetpp$', 'RPCANet++'
             $x0 = $left + $j * $colW
-            $st = Get-ColStyle $name
 
-            Add-Label $page $name $x0 $yHead ($x0 + $colW) ($yHead + $headH) $st.fill $st.fc 10 1 | Out-Null
+            if ($name -eq 'Image') { $fill = $colors['Image']; $fc = @(0, 0, 0) }
+            elseif ($name -eq 'Mask') { $fill = $colors['Mask']; $fc = @(0, 0, 0) }
+            elseif ($name -eq 'Ours') { $fill = $colors['ours']; $fc = @(255, 255, 255) }
+            else { $fill = $colors['base']; $fc = @(255, 255, 255) }
+
+            Add-Label $page $name $x0 $yHead ($x0 + $colW) ($yHead + $headH) $fill $fc 10 1 | Out-Null
             Add-Picture $page (Join-Path $smp.FullName "2d\$file.png") $x0 $yImg $colW $imgH | Out-Null
             Add-Picture $page (Join-Path $smp.FullName "3d\$file.png") $x0 $ySurf $colW $surfH | Out-Null
         }
