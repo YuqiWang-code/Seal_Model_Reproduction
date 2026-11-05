@@ -48,3 +48,5 @@ Ours/qualitative/
 # 定性图/曲线成品压缩包与临时调试图（成品在服务器 Ours/qualitative、Ours/roc_pr，本地只留 docs/assets 预览）
 tmp/figdl/
 tmp/fullsup3/
+tmp/*.png
+tmp/*.vsdx
