@@ -124,7 +124,9 @@ Seal GT 的平均前景面积占比为 0.00020553，因此全黑预测的平均 
 
 1105 批次计数：tp 87,702、fp 63,170、fn 18,010、n_gt 7,383、n_pred 6,853、n_detected 6,582、false_alarm_pixels 8,833、total_pixels 514,338,642。完整精度、计数及协议见 [`ours1105_small.json`](Ours_Seal评估产物/ours1105_small.json)（服务器 `results/ours1105_small.json`）；旧预测见 [Ours.json](小目标指标评估_20261103/Ours.json)；横向结果见[Seal 小目标指标评估](Seal小目标指标评估汇总.md)。
 
-## 特征响应图（`Ours/Feature_Map/v1/`）
+## 特征响应图
+
+### v1（第一版，`Ours/Feature_Map/v1/`，历史）
 
 用最终权重（`Ours/CODE/train_logs2/best.pth` + 两套模态 LoRA + 共享 LoRA3 + `M1`/BSRF）为 10 个样例出 9 列响应图：
 
@@ -143,3 +145,26 @@ Seal GT 的平均前景面积占比为 0.00020553，因此全黑预测的平均 
 - 产物：服务器 `Ours/Feature_Map/v1/`：`panels/<order>_<stem>/{full,roi}/01_rgb … 09_gt.png`（180 张）、`manifest.json`、`ranking.json`、`Ours_FeatureMap_v1.vsdx`（23.05 MB，一页 10 行 × 9 列，行首标 stem + F1/IoU，表头按列分组配色）；本地 `Ours/Feature_Map/v1/` **只放该 vsdx**，`Ours/Feature_Map/` 与 `tmp/feature_v1/` 按 `.gitignore` 不入库。
 - 复现：服务器 `CUDA_VISIBLE_DEVICES=1 Ours/venv_ours/bin/python tools/feature_maps.py --out Ours/Feature_Map/v1 --topk 10 --rank-by f1`（脚本 `tools/feature_maps.py`，日志 `logs/feature_maps_v1.log`）；Visio 由 `tools/make_visio_feature_maps.ps1`（Visio COM）从 `panels/` 重新生成。
 - 读数提示：前 8 行 ROI 均为 64×64（×6 后 384×384），第 10 行 3517 的 GT 较大、ROI 为 182×182，特征格相对更细；响应峰位置与第 8 列预测、第 9 列 GT 一致。
+
+### v2（现行，`Ours/Feature_Map/v2/`）
+
+v2 与 v1 的差别在于**把 03–06 换成各模态自己的解码输出**（而不是 backbone 特征），只保留 07 作为特征图，这样九列讲的是同一条链路：单模态原始输出 → 单模态适配输出 → 跨模态融合特征 → 最终输出 → GT。
+
+| 列 | 内容 | 应呈现的特质 |
+|---|---|---|
+| 1–2 | RGB / T 原图（ROI ×6，1 px 青框标 GT） | 目标 3–5 px、RGB 常与背景同色，T 上更亮；框用来快速定位 |
+| 3–4 | `decode(冻结 SAM3, 单模态特征, box)` 的 sigmoid 概率 | 原始 SAM 只靠单模态：位置可能对，但形状散、常有远处误检（本批 median IoU RGB 0.504 / T 0.607，3343、3173 的 RGB 分支直接为 0） |
+| 5–6 | 同上，但换成 LoRA+LoRA3 的单模态模型（BSRF 之前） | CM-LoRA 应把响应收紧到目标附近：median IoU RGB 0.884 / T 0.762；最明显的是 RGB 分支（0.00→0.94、0.00→0.90） |
+| 7 | `M1` 融合特征 `backbone_fpn[-1]`（72×72）的通道 L2 | 两路信息的互补结果：单个热点覆盖目标，背景被压低（峰值 10/10 落在 GT 框内，距质心中位 2.28 px，inside/outside 中位 1.64×） |
+| 8 | 最终融合预测（与 `test.py` 同一路径） | 应等于或优于任一单模态分支：median IoU 0.889，范围 0.818–1.000 |
+| 9 | GT mask | 参照 |
+
+处理原则（为什么这么做）：
+
+1. **概率类统一 0–1 固定色标**（03–06、08）：v1 逐图 min-max 会把弱预测也拉成满色，跨列看不出"谁更可信"；固定标度后颜色直接对应概率。
+2. **03–06 用单模态解码输出而不是 backbone 特征**：主干末层是 72×72（stride≈14 px/格），目标不足 1 格，特征图无法代表"该模态判成什么样"；单模态解码才有 IoU 可量、可比较。07 保留特征，因为这一层正是 BSRF 融合的那一层。
+3. **07 用通道 L2 + 逐图 2–98% 归一化**：融合层分辨率同上，画出来是**感受野热点**而非 mask；逐图归一化保证形状可读，绝对强度靠 caption 的 peak ratio。改用全局标度会把各图压成一片橙红（已试过，不可读）。
+4. **聚合方式的实测比较**（`tools/feature_maps_analyze.py` → `v1/aggregation_stats.json`）：通道均值被 DC 分量淹没（peak-in-GT 0–1/10）、PCA1 抓到的是背景方差方向（0/10）、通道 max 略好但噪声大、**通道 L2 的 contrast 与局部化最平衡**，故用 L2；"按 GT 选通道的 top-k"peak 命中 8/9 但用了 GT，只能当可视化、不能当证据，未采用。
+5. **ROI 与标注**：ROI 仍 6×（边长 `max(64, bbox+2×24)`，夹在图像内）；每行左侧写 final F1/IoU，每列下方写该分支 IoU，07 下方写 peak 距离与 inside/outside 比。
+
+产物：服务器 `Ours/Feature_Map/v2/`（`panels/<order>_<stem>/{full,roi}/01–09.png` 共 180 张、`legend_prob.png`、`legend_feature.png`、`manifest.json`、`Ours_FeatureMap_v2.vsdx` 9.2 MB）；本地 `Ours/Feature_Map/v2/` 只放该 vsdx。重建：`tools/feature_maps_v2.py` + `tools/make_visio_feature_maps_v2.ps1`。
