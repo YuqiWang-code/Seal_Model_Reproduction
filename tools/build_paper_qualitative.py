@@ -53,6 +53,8 @@ RED = (0, 0, 255)          # BGR
 ZOOM = 10
 MARGIN = 32
 MIN_BOX = 80
+# 3D 面板固定输出画布（1200 dpi 下 0.873x0.733 in 裁边后的实际尺寸），保证所有面板同比例
+SURF_W, SURF_H = 848, 804
 
 # 3D 响应面配色：浅蓝底（亮、不压抑）+ 暖色峰（金 → 橙 → 红）
 SURF_CMAP = LinearSegmentedColormap.from_list('seal3d', [
@@ -317,13 +319,31 @@ def trim_white(img_bgr, pad=10, thr=250):
     return img_bgr[y0:y1, x0:x1]
 
 
+def pad_to_canvas(img_bgr, W, H):
+    """Center the trimmed 3D render on a fixed WxH white canvas (no distortion).
+
+    固定画布保证所有 3D 面板同尺寸，Visio/拼图按同一比例摆放；内容大于画布时按比例缩小。
+    """
+    h, w = img_bgr.shape[:2]
+    if h > H or w > W:
+        s = min(W / float(w), H / float(h))
+        img_bgr = cv2.resize(img_bgr, (max(1, int(w * s)), max(1, int(h * s))),
+                             interpolation=cv2.INTER_AREA)
+        h, w = img_bgr.shape[:2]
+    out = np.full((H, W, 3), 255, np.uint8)
+    y0, x0 = (H - h) // 2, (W - w) // 2
+    out[y0:y0 + h, x0:x0 + w] = img_bgr
+    return out
+
+
 def render_surface_png(arr, path, vmax, cmap='jet', gamma=0.45,
-                       size_in=(0.873, 0.733), dpi=1200, pad=14):
+                       size_in=(0.873, 0.733), dpi=1200, pad=14,
+                       canvas=(SURF_W, SURF_H)):
     """One 3D box as a standalone PNG, tight-cropped so the box fills the frame.
 
     `arr` is the already-smoothed response crop. Rendered at one cell of the composite
     figure (0.873 x 0.733 in) with the same tick font, then the white border is trimmed
-    to `pad` px, so pasting it back with aspect='auto' fills the cell.
+    to `pad` px and centred on a fixed `canvas` so every panel shares one aspect ratio.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     f = plt.figure(figsize=size_in, dpi=dpi, facecolor='white')
@@ -333,15 +353,19 @@ def render_surface_png(arr, path, vmax, cmap='jet', gamma=0.45,
     import io
 
     buf = io.BytesIO()
-    f.savefig(buf, format='png', dpi=dpi, facecolor='white')
+    # bbox_inches='tight'：3D 轴的刻度数字会画到 axes 之外，不 tight 就会被画布裁掉
+    f.savefig(buf, format='png', dpi=dpi, facecolor='white',
+              bbox_inches='tight', pad_inches=0.02)
     plt.close(f)
     img = cv2.imdecode(np.frombuffer(buf.getvalue(), np.uint8), cv2.IMREAD_COLOR)
     img = trim_white(img, pad=pad)
+    if canvas:
+        img = pad_to_canvas(img, canvas[0], canvas[1])
     cv2.imwrite(str(path), img)
     return path
 
 
-def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=2.2, gamma=0.40):
+def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=2.35, gamma=0.40):
     """PDDiff Fig. 9 style surface with a legible wireframe and tick labels.
 
     `arr` must already be smoothed; `vmax` is normally the peak of `arr`, so the target
@@ -368,9 +392,9 @@ def add_surface(ax, arr, vmax=255.0, cmap=SURF_CMAP, tick_font=2.2, gamma=0.40):
     ax.yaxis.set_major_locator(loc)
     ax.zaxis.set_major_locator(MaxNLocator(nbins=3, integer=True, steps=[1, 2, 2.5, 5, 10]))
     for axis in ('x', 'y'):
-        ax.tick_params(axis=axis, labelsize=tick_font, pad=-3.0, length=0.9, width=0.4,
+        ax.tick_params(axis=axis, labelsize=tick_font, pad=-4.2, length=0.9, width=0.4,
                        colors='0.10')
-    ax.tick_params(axis='z', labelsize=tick_font, pad=-1.5, length=0.9, width=0.4,
+    ax.tick_params(axis='z', labelsize=tick_font, pad=-2.2, length=0.9, width=0.4,
                    colors='0.10')
     # 面板只有 0.87 in 宽，再放 X/Y/Z 轴名会和刻度数字撞在一起，只保留三向刻度数字
     ax.set_xlabel('')
