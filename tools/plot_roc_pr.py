@@ -210,9 +210,16 @@ def save(fig, outdir, stem, dpi):
     return png, pdf
 
 
-def legend_outside(fig, handles, labels, ncol=1, fontsize=7.4, anchor=1.02):
+def legend_outside(fig, ax, handles, labels, ncol=1, fontsize=7.4, gap=0.012):
+    """Legend hugging the right edge of `ax` (figure coordinates).
+
+    Anchoring at a fixed figure fraction left a wide blank band between the
+    axes and the legend, which is what the caption/figure gap complaint was.
+    """
+    pos = ax.get_position()
     fig.legend(handles, labels, fontsize=fontsize, frameon=True, ncol=ncol,
-               loc='center left', bbox_to_anchor=(anchor, 0.5),
+               loc='center left',
+               bbox_to_anchor=(pos.x1 + gap, pos.y0 + pos.height / 2.0),
                labelspacing=0.34, handlelength=2.1, borderpad=0.5,
                edgecolor='0.8')
 
@@ -269,27 +276,25 @@ def main():
     fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
     draw_roc(ax, data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
     handles, labels = ax.get_legend_handles_labels()
-    legend_outside(fig, handles, labels)
-    fig.tight_layout(rect=(0, 0, 0.74, 1))
+    legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'roc', args.dpi)
 
     # ---- PR only
     fig, ax = plt.subplots(figsize=(args.fig_width, 3.3))
     draw_pr(ax, data, style=args.pr_style)
     handles, labels = ax.get_legend_handles_labels()
-    legend_outside(fig, handles, labels)
-    fig.tight_layout(rect=(0, 0, 0.74, 1))
+    legend_outside(fig, ax, handles, labels)
     save(fig, args.outdir, 'pr', args.dpi)
 
     # ---- two panels sharing one legend
     fig, axes = plt.subplots(1, 2, figsize=(min(args.fig_width * 2 + 0.6, 11.5), 3.4))
+    fig.subplots_adjust(wspace=0.28, left=0.06, right=0.9)
     draw_roc(axes[0], data, args.xmax, two=args.two_segment, knee_frac=args.knee_frac)
     axes[0].set_title('(a) ROC', fontsize=9.5)
     draw_pr(axes[1], data, style=args.pr_style)
     axes[1].set_title('(b) Precision-Recall', fontsize=9.5)
     handles, labels = axes[0].get_legend_handles_labels()
-    legend_outside(fig, handles, labels, anchor=1.005)
-    fig.tight_layout(rect=(0, 0, 0.88, 1))
+    legend_outside(fig, axes[1], handles, labels)
     save(fig, args.outdir, 'roc_pr', args.dpi)
 
     # ---- numbers
