@@ -140,20 +140,19 @@ def compose_panel(sheet, roi, with_box=True, with_inset=True, zoom=ZOOM):
     return panel
 
 
-def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX):
+def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX, gt_box=None, pad=4):
     """Image column = the whole scene, with ONE red box marking the magnified ROI.
 
-    mode='full'    : the 622x417 frame squeezed into a square (keeps the whole scene;
-                     the box is drawn square on purpose — it marks the crop, and a square
-                     matches the square panels from Mask onward);
-    mode='crop417' : a 417x417 window (full height, shifted to keep the ROI inside) so the
-                     image is not distorted and the box is the true ROI rectangle.
+    The box is square and keeps a fixed floor size (``min_box`` scaled, ≈48 px) so the
+    panels look uniform; when the GT itself is larger than that floor (2688/2120/2894),
+    the box grows to ``max(GT span) + 2*pad`` so the whole target stays inside. Placement
+    is clamped to the panel while guaranteeing the GT rectangle is covered.
     """
     h, w = img.shape[:2]
     y0, y1, x0, x1 = roi
-    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
 
     if mode == 'crop417':
+        cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
         side = min(h, w)
         x0c = int(min(max(0, round(cx - side / 2.0)), w - side))
         y0c = int(min(max(0, round(cy - side / 2.0)), h - side))
@@ -169,25 +168,33 @@ def image_panel_roi(img, roi, target=384, mode='full', min_box=MIN_BOX):
     panel = cv2.resize(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR), (target, target),
                        interpolation=cv2.INTER_AREA)
     sx, sy = target / float(w), target / float(h)
-    # 所有样例统一框：按"标准 64 px ROI"换算（≈48 px 边长），不随实际 ROI 变大
-    half = min_box * (sx * sy) ** 0.5 / 2.0
-    px, py = cx * sx, cy * sy
-    bx0, bx1 = int(round(px - half)), int(round(px + half))
-    by0, by1 = int(round(py - half)), int(round(py + half))
-    # 框超出面板时整体平移回面板内（ROI 贴图像边缘时会发生），避免画出被切掉一半的框
-    if bx0 < 0:
-        bx1 -= bx0
-        bx0 = 0
-    if bx1 > target - 1:
-        bx0 -= (bx1 - (target - 1))
-        bx1 = target - 1
-    if by0 < 0:
-        by1 -= by0
-        by0 = 0
-    if by1 > target - 1:
-        by0 -= (by1 - (target - 1))
-        by1 = target - 1
+    uni = min_box * (sx * sy) ** 0.5          # 统一框边长下限（64 px ROI → 约 48 px）
+
+    if gt_box is None:
+        gx0, gx1 = x0 * sx, x1 * sx
+        gy0, gy1 = y0 * sy, y1 * sy
+    else:
+        gx0, gx1 = gt_box[0] * sx, (gt_box[2] + 1) * sx
+        gy0, gy1 = gt_box[1] * sy, (gt_box[3] + 1) * sy
+    gx1 = min(gx1, target - 1.0)
+    gy1 = min(gy1, target - 1.0)
+
+    side = max(uni, (gx1 - gx0) + 2 * pad, (gy1 - gy0) + 2 * pad)
+    side = min(side, float(target - 1))
+    half = side / 2.0
+
+    def place(lo, hi):
+        b0 = int(round((lo + hi) / 2.0 - half))
+        b0 = min(max(b0, 0), int(round(target - 1 - side)))
+        return b0, b0 + int(round(side))
+
+    bx0, bx1 = place(gx0, gx1)
+    by0, by1 = place(gy0, gy1)
+    # 兜底：保证 GT 矩形完全落在框内
+    bx0, bx1 = min(bx0, int(np.floor(gx0))), max(bx1, int(np.ceil(gx1)))
+    by0, by1 = min(by0, int(np.floor(gy0))), max(by1, int(np.ceil(gy1)))
     bx0, by0 = max(0, bx0), max(0, by0)
+    bx1, by1 = min(target - 1, bx1), min(target - 1, by1)
     cv2.rectangle(panel, (bx0, by0), (bx1, by1), RED, 3, cv2.LINE_AA)
     return panel
 
@@ -493,6 +500,9 @@ def main():
         img = load_image(stem, args.image, args.image_gamma, args.image_stretch)
         img_raw = load_image(stem, args.image, 1.0, 'none')
         roi = roi_from_gt(gt, margin=args.roi_margin, min_box=args.roi_min)
+        _ys, _xs = np.where(gt > 127)
+        gt_box = None if len(_ys) == 0 else (int(_xs.min()), int(_ys.min()),
+                                             int(_xs.max()), int(_ys.max()))
         y0, y1, x0, x1 = roi
         cy, cx = (y0 + y1) // 2, (x0 + x1) // 2
         half = args.crop3d // 2
@@ -506,7 +516,7 @@ def main():
                     # roi 版式：Image 列 = 整幅场景压缩成正方形 + 唯一一个正方形红框，
                     # 表示其余各列就是这块区域放大出来的（Mask 之后不再画框）
                     panels.append(image_panel_roi(img, roi, mode=args.image_mode,
-                                                   min_box=args.roi_min))
+                                                   min_box=args.roi_min, gt_box=gt_box))
                 else:
                     panels.append(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
                 surfaces.append(img[sy0:sy1, sx0:sx1])

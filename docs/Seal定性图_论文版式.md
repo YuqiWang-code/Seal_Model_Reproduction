@@ -112,7 +112,7 @@ python tools/build_paper_qualitative.py \
 
 （`2688/2120/2894` 是多目标或细长目标，视野被 `--roi-min 64` 自动放大到 98–138 px。）
 
-构建：`bash tools/make_paper_qualitative_pick.sh all Ours/qualitative/v11_20261105`（第二个参数是输出目录，默认 `Ours/qualitative/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
+构建：`bash tools/make_paper_qualitative_pick.sh all Ours/qualitative/v12_20261105`（第二个参数是输出目录，默认 `Ours/qualitative/latest`；**每次改版都给新目录**，别覆盖旧版）。`full`/`roi` 二选一也行。
 
 ### 版本
 
@@ -128,11 +128,12 @@ python tools/build_paper_qualitative.py \
 | v8 | 已删除 | 已删除 | **Image 列改成同一块 ROI 的 6 倍放大**（原来整幅 622×417），诊断模式下套与其它列完全相同的 GT 定位框——之前 Image 的红框是「ROI 窗口」、其它列是「GT 定位框」，两者不对应；顺带 Image 列从 0.85×0.57 in 的小图变成与其它列同尺寸 |
 | v9 | 已删除 | 已删除 | **去掉黑边**：ROI 改成「固定边长正方形、贴边整体内移」，`side = min(max(min_box, span+2·margin), H, W)`，窗口永远完整落在图像内，不再出现 64×43 这种被裁后补黑的非方形；贴边目标的 GT 因此不在正中心而靠近对应边框（红框跟 GT 走，位置仍正确） |
 | v10 | 已删除 | 已删除 | **红框只留一个**：Image 列回到整幅 622×417（压缩成正方形）并画唯一一个正方形红框，表示后面各列是这块区域放大出来的；Mask…Ours 不再画任何红框（保留 TP 白/FP 红/FN 绿）。红框边长按 ROI 面积换算（`ROI×sqrt(sx·sy)`），64 px ROI → 约 12.5% 面板。另提供 `--image-mode crop417`（417×417 原比例窗口，不变形、框即真实 ROI） |
-| v11（当前） | `Ours/qualitative/v11_20261105/` | `Ours/qualitative/v11_20261105/` | **Ours 换成 1105 最新预测**（`Ours/test_maps` 由旧预测改名 `test_maps_20261105_prev`，新预测解到 `test_maps`）；版式与 v10 全同。11 个样例在新预测下 F1 0.55–0.87、目标全检出，9 个胜过全部基线、2 个仅比 SAM3 低 0.01–0.02，因此沿用原 11 张；**Image 列红框尺寸统一**：边长固定 `64×sqrt(384/622×384/417) ≈ 48 px`（含边框实测 51–54 px），不随 GT 跨度变化，大目标（2688/2120/2894）的框比真实 ROI 小，红框只作定位符号 |
+| v11 | 已删除 | 已删除 | **Ours 换成 1105 最新预测**（`Ours/test_maps` 由旧预测改名 `test_maps_20261105_prev`，新预测解到 `test_maps`）；版式与 v10 全同。11 个样例在新预测下 F1 0.55–0.87、目标全检出，9 个胜过全部基线、2 个仅比 SAM3 低 0.01–0.02，因此沿用原 11 张；**Image 列红框尺寸统一**：边长固定 `64×sqrt(384/622×384/417) ≈ 48 px`（含边框实测 51–54 px），不随 GT 跨度变化 |
+| v12（当前） | `Ours/qualitative/v12_20261105/` | `Ours/qualitative/v12_20261105/` | **Image 列红框改成「48 px 下限 + 按 GT 放大」**：v11 的统一 48 px 让 2688（GT 49×57）、2120（19×97）、2894（98×72）三个大目标露到框外，Visio 的 08_2688 与 10_2894 页尤其明显。v12 边长取 `max(48, max(GT 宽, GT 高) 换算到面板坐标 + 2×4 px)`，以 GT 包围盒为中心并按「必须完整包住 GT 矩形」钳制；实测 8 张小目标仍 51–53 px，三个大目标分别放大到 64×62 / 102×102 / 79×77 px，11/11 通过包含性检查。其余版式、样例与 1105 预测与 v11 相同 |
 
 服务器保留全部历史版本；本地只留最新一版，**整个 `Ours/qualitative/` 不进 git**（单版 100 MB 量级，`.gitignore` 已整目录排除）。
 
-v11 产物（600 dpi PNG + 矢量 PDF + meta）：
+v12 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 | 文件 | 内容 | 尺寸 |
 |---|---|---|
@@ -142,7 +143,7 @@ v11 产物（600 dpi PNG + 矢量 PDF + meta）：
 | `seal_pick6_roi_*` / `seal_pick5_roi_*` | 同上拆两张 | 5760×6290 / 5760×5267 px |
 | `seal_diag_roi_qualitative.*` | 诊断版拼图（TP 白 / FP 红 / FN 绿 + 红框） | 5760×11408 px |
 | `panels_roi/…` / `panels_diag/…` | 单图拆分各 242 张：`<nn>_<id>/2d|3d/<col>.png` | 2D 384×384；3D ~923×806（已裁白边） |
-| `seal_qualitative_11col.vsdx` | Visio 可编辑版（诊断面板）：11 页，34 个独立形状/页 | 页面 18.3×4.3 in |
+| `seal_qualitative_11col.vsdx` | Visio 可编辑版（诊断面板）：12 页（`ALL` + 11 页），34 个独立形状/页 | 页面 18.3×4.3 in |
 
 单图拆分的 3D 图就是拼图里贴的那张（同一次渲染、缓存目录 `<out>/_3d_cache/`），所以 Visio 里看到的效果与拼图完全一致。
 
@@ -150,7 +151,7 @@ v11 产物（600 dpi PNG + 矢量 PDF + meta）：
 
 Visio 版由 [tools/make_visio_qualitative.ps1](../tools/make_visio_qualitative.ps1) 用 Visio COM 生成（仅 Windows + 已装 Visio 可用）：表头是带填充/文字/雅黑的矩形，图片是嵌入的图片形状，页脚一行说明——都能单独选中改格式。
 
-仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v11）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
+仓库内预览（1800 px 宽，仅用于查看版式，已同步为 v12）：[`seal_qualitative_pick6_roi.png`](assets/seal_qualitative_pick6_roi.png)、[`seal_qualitative_pick5_roi.png`](assets/seal_qualitative_pick5_roi.png)、[`seal_qualitative_pick11_full.png`](assets/seal_qualitative_pick11_full.png)。
 
 从图上直接能读到的事实（对照表 21～32 行）：
 
