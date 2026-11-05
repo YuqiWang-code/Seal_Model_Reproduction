@@ -1,0 +1,9 @@
+﻿曲线 v7：Ours 保留 + 8 个对比方法（更正 v6 误删 Ours）
+
+- 方法集 = Ours（Ours/test_maps）+ DNA-Net / MSHNet / RPCANet / HDNet / L2SKNet / BGM / RPCANet++ / SAM3 共 9 条
+- Ours 红色加粗置顶（--highlight Ours）；SAM3 用 Ours/SAM3-test_maps
+- 画法沿用 v5：两段直线、横轴 0-8e-4、图宽 6.8 in、P-R 用 v1 版式、图例贴紧坐标轴
+- 结果：Ours 两个窗口 pAUC（0.64391 / 0.65945）与 AP（0.50404）都是第一，Fa@t=128 6.7e-5 比其余 8 个（1.1-4.4e-4）低一个量级；
+  SAM3 平台最高 0.737 但拐点在 4.9e-4、Fa 是 Ours 的 6.6 倍
+- v6_20261105 标注为误删 Ours 的历史版本，由 v7 取代
+- 同步到服务器 Ours/roc_pr/v7_20261105/（sha256 与本地一致）
